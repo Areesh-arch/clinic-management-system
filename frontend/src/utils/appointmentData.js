@@ -1,0 +1,38 @@
+export const appointments = [
+  {
+    id: 1,
+    time: "09:00 AM",
+    patient: "Ayesha Khan",
+    doctor: "Dr. Sarah Ahmed",
+    treatment: "Laser Therapy",
+    status: "Completed",
+    date: "Today",
+  },
+  {
+    id: 2,
+    time: "10:30 AM",
+    patient: "Ali Ahmed",
+    doctor: "Dr. Sarah Ahmed",
+    treatment: "Acne Treatment",
+    status: "Pending",
+    date: "Today",
+  },
+  {
+    id: 3,
+    time: "12:00 PM",
+    patient: "Sara Noor",
+    doctor: "Dr. Hamza Ali",
+    treatment: "Chemical Peel",
+    status: "Cancelled",
+    date: "Tomorrow",
+  },
+  {
+    id: 4,
+    time: "03:30 PM",
+    patient: "Usman Tariq",
+    doctor: "Dr. Hamza Ali",
+    treatment: "Hydra Facial",
+    status: "Completed",
+    date: "Tomorrow",
+  },
+];
