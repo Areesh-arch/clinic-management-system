@@ -1,5 +1,7 @@
 import app.models
+from app.models.tenant import Tenant
 from app.models.user import User
+from app.models.patient import Patient
 
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config
