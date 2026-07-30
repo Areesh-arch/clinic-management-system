@@ -1,5 +1,11 @@
-function Login() {
-  return <h1>Login Page</h1>;
-}
+import LoginCard from "../../components/login/LoginCard";
 
-export default Login;
+export default function Login() {
+  return (
+    <div className="min-h-screen bg-[#FCFBF8] flex items-center justify-center px-6">
+
+      <LoginCard />
+
+    </div>
+  );
+}

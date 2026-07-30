@@ -1,4 +1,8 @@
 import { useState } from "react";
+
+import AppointmentModal from "../../components/appointments/AppointmentModal";
+import AppointmentForm from "../../components/appointments/AppointmentForm";
+
 import Layout from "../../components/layout/Layout";
 
 import AppointmentHeader from "../../components/appointments/AppointmentHeader";
@@ -19,21 +23,49 @@ function Appointments() {
 
       <div className="space-y-8">
 
-        <AppointmentHeader />
+        <AppointmentHeader
+              onAddAppointment={() => setShowModal(true)}
+        />
 
-        <AppointmentStats />
+        <AppointmentSearch
+          search={search}
+          setSearch={setSearch}
+      />
 
         <div className="flex flex-col lg:flex-row justify-between gap-4">
 
-          <AppointmentSearch />
+  <AppointmentFilters
+    doctor={doctor}
+    setDoctor={setDoctor}
+    status={status}
+    setStatus={setStatus}
+    date={date}
+    setDate={setDate}
+  />
 
-          <AppointmentFilters />
+</div>
 
-        </div>
-
-        <AppointmentTable />
+        <AppointmentTable
+  search={search}
+  doctor={doctor}
+  status={status}
+  date={date}
+/>
 
       </div>
+
+      {showModal && (
+
+  <AppointmentModal
+    open={showModal}
+    onClose={() => setShowModal(false)}
+  >
+
+    <AppointmentForm />
+
+  </AppointmentModal>
+
+)}
 
     </Layout>
   );

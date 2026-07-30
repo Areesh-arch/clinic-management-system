@@ -3,9 +3,10 @@ import {
   FiUsers,
   FiCalendar,
   FiPackage,
-  FiSettings,
   FiCamera,
+  FiSettings,
   FiClipboard,
+  FiUserCheck,
 } from "react-icons/fi";
 
 import { NavLink } from "react-router-dom";
@@ -28,15 +29,20 @@ function Sidebar() {
       path: "/appointments",
     },
     {
+      name: "Doctors",
+      icon: <FiUserCheck />,
+      path: "/doctors",
+    },
+    {
       name: "Treatments",
       icon: <FiClipboard />,
       path: "/treatments",
     },
     {
-      name: "Photos",
-      icon: <FiCamera />,
-      path: "/photos",
-    },
+  name: "Photos",
+  icon: <FiCamera />,
+  path: "/photos",
+},
     {
       name: "Inventory",
       icon: <FiPackage />,
@@ -53,9 +59,7 @@ function Sidebar() {
     <aside className="hidden lg:flex flex-col w-72 bg-[#FCFBF8] border-r border-[#E6E1D8]">
 
       {/* Logo */}
-
       <div className="px-8 py-8">
-
         <h1 className="text-4xl font-bold text-[#7A9E7E]">
           DermaCare
         </h1>
@@ -63,25 +67,21 @@ function Sidebar() {
         <p className="text-[#7E867F] mt-2">
           Dermatology Clinic
         </p>
-
       </div>
 
       {/* Menu */}
-
       <nav className="flex-1 px-5 space-y-3">
 
         {menus.map((item) => (
-
           <NavLink
             key={item.name}
             to={item.path}
             className={({ isActive }) =>
               `flex items-center gap-4 rounded-2xl px-5 py-4 transition-all duration-300
-              
               ${
                 isActive
                   ? "bg-[#A8C5A0] text-white shadow-md"
-                  : "text-[#45524A] hover:scale-105 transition-all duration-300"
+                  : "text-[#45524A] hover:scale-105"
               }`
             }
           >
@@ -92,21 +92,16 @@ function Sidebar() {
             <span className="font-medium">
               {item.name}
             </span>
-
           </NavLink>
-
         ))}
 
       </nav>
 
       {/* Footer */}
-
       <div className="p-6 border-t border-[#E6E1D8]">
-
         <p className="text-sm text-[#8C938D]">
           Version 1.0.0
         </p>
-
       </div>
 
     </aside>
