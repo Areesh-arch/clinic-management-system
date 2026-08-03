@@ -3,7 +3,7 @@ from datetime import date
 from sqlalchemy import Date, ForeignKey, Float, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.database.database import Base
+from app.models.base import Base
 from app.models.mixins import TimestampMixin
 
 

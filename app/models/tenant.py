@@ -1,39 +1,60 @@
-from sqlalchemy import String, Boolean
-from sqlalchemy.orm import Mapped, mapped_column
+from __future__ import annotations
+from typing import TYPE_CHECKING
+from sqlalchemy import Enum, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database.database import Base
-from app.models.mixins import TimestampMixin
+from app.models.base import Base
+from app.models.enums import TenantStatus
+from app.models.mixins import IDMixin, TimestampMixin
 
+if TYPE_CHECKING:
+    from app.models.subscription import Subscription
+    from app.models.user import User
+    from app.models.patient import Patient
 
-class Tenant(Base, TimestampMixin):
+class Tenant(Base, IDMixin, TimestampMixin):
+    """
+    Represents a dermatology clinic (tenant) in the SaaS platform.
+    """
+
     __tablename__ = "tenants"
 
-    id: Mapped[int] = mapped_column(primary_key=True, index=True)
-
-    clinic_name: Mapped[str] = mapped_column(String(150), nullable=False)
-
-    owner_name: Mapped[str] = mapped_column(String(100), nullable=False)
-
-    email: Mapped[str] = mapped_column(
+    business_name: Mapped[str] = mapped_column(
         String(255),
+        nullable=False,
+    )
+
+    subdomain: Mapped[str] = mapped_column(
+        String(100),
         unique=True,
-        nullable=False
+        nullable=False,
+        index=True,
     )
 
-    phone: Mapped[str] = mapped_column(String(20))
-
-    address: Mapped[str] = mapped_column(String(255))
-
-    city: Mapped[str] = mapped_column(String(100))
-
-    country: Mapped[str] = mapped_column(String(100))
-
-    subscription_plan: Mapped[str] = mapped_column(
-        String(20),
-        default="basic"
+    status: Mapped[TenantStatus] = mapped_column(
+        Enum(TenantStatus),
+        default=TenantStatus.ACTIVE,
+        nullable=False,
     )
 
-    is_active: Mapped[bool] = mapped_column(
-        Boolean,
-        default=True
+        # Relationships
+    users: Mapped[list["User"]] = relationship(
+        "User",
+        back_populates="tenant",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+    subscriptions: Mapped[list["Subscription"]] = relationship(
+        "Subscription",
+        back_populates="tenant",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+    patients: Mapped[list["Patient"]] = relationship(
+        "Patient",
+        back_populates="tenant",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
