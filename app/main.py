@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.api.v1.endpoints import patient
+from app.api.v1.routes import api_router
 from app.core.config import settings
 
 app = FastAPI(
@@ -23,4 +23,4 @@ def health():
     }
 
 
-app.include_router(patient.router)
+app.include_router(api_router)
