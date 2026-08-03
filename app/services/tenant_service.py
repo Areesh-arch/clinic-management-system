@@ -1,14 +1,8 @@
 from datetime import datetime, timedelta
 
-from app.models.enums import (
-    SubscriptionPlan,
-    SubscriptionStatus,
-)
-from app.schemas.subscription import SubscriptionCreate
-from app.crud.subscription import create_subscription
-
 from sqlalchemy.orm import Session
 
+from app.crud.subscription import create_subscription
 from app.crud.tenant import (
     create_tenant,
     delete_tenant,
@@ -16,11 +10,19 @@ from app.crud.tenant import (
     get_tenant,
     update_tenant,
 )
+from app.models.enums import (
+    SubscriptionPlan,
+    SubscriptionStatus,
+    UserRole,
+)
 from app.models.tenant import Tenant
+from app.schemas.subscription import SubscriptionCreate
 from app.schemas.tenant import (
     TenantCreate,
     TenantUpdate,
 )
+from app.schemas.user import UserCreate
+from app.services.user_service import create_new_user
 
 
 def create_new_tenant(
@@ -28,11 +30,12 @@ def create_new_tenant(
     tenant: TenantCreate,
 ) -> Tenant:
     """
-    Create a tenant and its default trial subscription.
+    Create a clinic, its trial subscription,
+    and its owner user in a single transaction.
     """
 
     try:
-        # Create tenant (no commit yet)
+        # Create tenant
         db_tenant = create_tenant(
             db=db,
             tenant=tenant,
@@ -40,6 +43,7 @@ def create_new_tenant(
 
         now = datetime.utcnow()
 
+        # Create default trial subscription
         subscription = SubscriptionCreate(
             tenant_id=db_tenant.id,
             plan=SubscriptionPlan.BASIC,
@@ -54,7 +58,21 @@ def create_new_tenant(
             subscription=subscription,
         )
 
-        # Commit both together
+        # Create clinic owner
+        owner = UserCreate(
+            tenant_id=db_tenant.id,
+            full_name=tenant.owner_name,
+            email=tenant.owner_email,
+            password=tenant.owner_password,
+            role=UserRole.OWNER,
+        )
+
+        create_new_user(
+            db=db,
+            user=owner,
+        )
+
+        # Commit everything together
         db.commit()
 
         db.refresh(db_tenant)

@@ -22,7 +22,11 @@ def create_user(
     )
 
     db.add(db_user)
-    db.commit()
+
+    # Send INSERT to PostgreSQL without committing
+    db.flush()
+
+    # Load generated values (id, timestamps, etc.)
     db.refresh(db_user)
 
     return db_user
