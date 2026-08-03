@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, EmailStr
 
 from app.models.enums import TenantStatus
 
@@ -23,12 +23,17 @@ class TenantBase(BaseModel):
     )
 
 
-class TenantCreate(TenantBase):
+class TenantCreate(BaseModel):
     """
-    Schema used when creating a tenant.
+    Data required to register a new clinic.
     """
 
-    pass
+    business_name: str
+    subdomain: str
+
+    owner_name: str
+    owner_email: EmailStr
+    owner_password: str
 
 
 class TenantUpdate(BaseModel):
