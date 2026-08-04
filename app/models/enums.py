@@ -22,9 +22,8 @@ class SubscriptionStatus(str, Enum):
 
 
 class UserRole(str, Enum):
+    SUPER_ADMIN = "super_admin"
     OWNER = "owner"
-    DOCTOR = "doctor"
-    RECEPTIONIST = "receptionist"
     STAFF = "staff"
 
 
