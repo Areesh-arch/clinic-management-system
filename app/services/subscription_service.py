@@ -3,10 +3,12 @@ from sqlalchemy.orm import Session
 from app.crud.subscription import (
     create_subscription,
     delete_subscription,
-    get_all_subscriptions,
-    get_subscription,
+    get_subscription_by_id,
+    get_subscription_by_tenant,
+    get_subscriptions,
     update_subscription,
 )
+
 from app.models.subscription import Subscription
 from app.schemas.subscription import (
     SubscriptionCreate,
@@ -14,69 +16,68 @@ from app.schemas.subscription import (
 )
 
 
-def create_new_subscription(
+def create_subscription_service(
     db: Session,
-    subscription: SubscriptionCreate,
+    subscription_data: SubscriptionCreate,
 ) -> Subscription:
     """
-    Business logic for creating a subscription.
+    Create a subscription for a tenant.
+
+    Prevents creating multiple subscriptions
+    for the same tenant.
     """
 
+    existing_subscription = get_subscription_by_tenant(
+        db,
+        subscription_data.tenant_id,
+    )
+
+    if existing_subscription:
+        raise ValueError(
+            "Tenant already has a subscription."
+        )
+
     return create_subscription(
-        db=db,
-        subscription=subscription,
+        db,
+        subscription_data,
     )
 
 
-def get_subscription_by_id(
+def get_subscription_service(
     db: Session,
     subscription_id: int,
 ) -> Subscription | None:
-    """
-    Return subscription by ID.
-    """
-
-    return get_subscription(
-        db=db,
-        subscription_id=subscription_id,
+    return get_subscription_by_id(
+        db,
+        subscription_id,
     )
 
 
-def get_subscriptions(
+def list_subscriptions_service(
     db: Session,
 ) -> list[Subscription]:
-    """
-    Return all subscriptions.
-    """
-
-    return get_all_subscriptions(db)
+    return get_subscriptions(db)
 
 
-def update_existing_subscription(
+def update_subscription_service(
     db: Session,
-    db_subscription: Subscription,
-    subscription: SubscriptionUpdate,
+    subscription: Subscription,
+    subscription_data: SubscriptionUpdate,
 ) -> Subscription:
-    """
-    Update subscription.
-    """
 
     return update_subscription(
-        db=db,
-        db_subscription=db_subscription,
-        subscription=subscription,
+        db,
+        subscription,
+        subscription_data,
     )
 
 
-def remove_subscription(
+def delete_subscription_service(
     db: Session,
-    db_subscription: Subscription,
+    subscription: Subscription,
 ) -> None:
-    """
-    Delete subscription.
-    """
 
     delete_subscription(
-        db=db,
-        db_subscription=db_subscription,
+        db,
+        subscription,
     )

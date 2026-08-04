@@ -1,3 +1,9 @@
+from app.api.permissions import require_roles
+from app.api.features import require_feature
+from app.models.enums import UserRole
+from app.models.feature import Feature
+from app.models.user import User
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -20,7 +26,6 @@ router = APIRouter(
     tags=["Patients"],
 )
 
-
 # Temporary tenant_id
 # Later we'll get this from the logged-in user.
 TENANT_ID = 1
@@ -34,13 +39,22 @@ TENANT_ID = 1
 def create_patient(
     patient: PatientCreate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(
+    require_roles(
+        UserRole.OWNER,
+        UserRole.STAFF,
+    )
+),
+    
+    _: User = Depends(
+        require_feature(Feature.PATIENTS)
+    ),
 ):
     return create_patient_service(
-        db=db,
-        patient_data=patient,
-        tenant_id=TENANT_ID,
-    )
-
+    db=db,
+    patient_data=patient,
+    tenant_id=current_user.tenant_id,
+)
 
 @router.get(
     "/",
@@ -48,6 +62,15 @@ def create_patient(
 )
 def list_patients(
     db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+)
+    ),
+    _: User = Depends(
+        require_feature(Feature.PATIENTS)
+    ),
 ):
     return list_patients_service(db)
 

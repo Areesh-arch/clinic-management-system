@@ -18,12 +18,12 @@ class User(Base, IDMixin, TimestampMixin):
 
     __tablename__ = "users"
 
-    tenant_id: Mapped[int] = mapped_column(
+    tenant_id: Mapped[int | None] = mapped_column(
     ForeignKey(
         "tenants.id",
         ondelete="CASCADE",
     ),
-    nullable=False,
+    nullable=True,
     index=True,
 )
 

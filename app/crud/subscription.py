@@ -9,37 +9,23 @@ from app.schemas.subscription import (
 
 def create_subscription(
     db: Session,
-    subscription: SubscriptionCreate,
+    subscription_data: SubscriptionCreate,
 ) -> Subscription:
-    """
-    Create a new subscription.
-    """
-
-    db_subscription = Subscription(
-        tenant_id=subscription.tenant_id,
-        plan=subscription.plan,
-        status=subscription.status,
-        starts_at=subscription.starts_at,
-        ends_at=subscription.ends_at,
-        trial_ends_at=subscription.trial_ends_at,
+    subscription = Subscription(
+        **subscription_data.model_dump()
     )
 
-    db.add(db_subscription)
+    db.add(subscription)
+    db.commit()
+    db.refresh(subscription)
 
-    db.flush()
-    db.refresh(db_subscription)
-
-    return db_subscription
+    return subscription
 
 
-def get_subscription(
+def get_subscription_by_id(
     db: Session,
     subscription_id: int,
 ) -> Subscription | None:
-    """
-    Get subscription by ID.
-    """
-
     return (
         db.query(Subscription)
         .filter(Subscription.id == subscription_id)
@@ -47,45 +33,48 @@ def get_subscription(
     )
 
 
-def get_all_subscriptions(
+def get_subscriptions(
     db: Session,
 ) -> list[Subscription]:
-    """
-    Get all subscriptions.
-    """
-
     return db.query(Subscription).all()
+
+
+def get_subscription_by_tenant(
+    db: Session,
+    tenant_id: int,
+) -> Subscription | None:
+    return (
+        db.query(Subscription)
+        .filter(
+            Subscription.tenant_id == tenant_id
+        )
+        .first()
+    )
 
 
 def update_subscription(
     db: Session,
-    db_subscription: Subscription,
-    subscription: SubscriptionUpdate,
+    subscription: Subscription,
+    subscription_data: SubscriptionUpdate,
 ) -> Subscription:
-    """
-    Update subscription.
-    """
 
-    update_data = subscription.model_dump(
+    update_data = subscription_data.model_dump(
         exclude_unset=True
     )
 
     for key, value in update_data.items():
-        setattr(db_subscription, key, value)
+        setattr(subscription, key, value)
 
     db.commit()
-    db.refresh(db_subscription)
+    db.refresh(subscription)
 
-    return db_subscription
+    return subscription
 
 
 def delete_subscription(
     db: Session,
-    db_subscription: Subscription,
+    subscription: Subscription,
 ) -> None:
-    """
-    Delete subscription.
-    """
 
-    db.delete(db_subscription)
+    db.delete(subscription)
     db.commit()

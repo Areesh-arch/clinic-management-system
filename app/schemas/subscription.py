@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 from app.models.enums import (
     SubscriptionPlan,
@@ -8,53 +8,30 @@ from app.models.enums import (
 )
 
 
-class SubscriptionBase(BaseModel):
-    """
-    Common fields shared by all subscription schemas.
-    """
-
-    plan: SubscriptionPlan
-    status: SubscriptionStatus
-
-
-class SubscriptionCreate(SubscriptionBase):
-    """
-    Used when creating a subscription.
-    """
-
+class SubscriptionCreate(BaseModel):
     tenant_id: int
-
+    plan: SubscriptionPlan
     starts_at: datetime
     ends_at: datetime | None = None
     trial_ends_at: datetime
 
 
 class SubscriptionUpdate(BaseModel):
-    """
-    Used when updating a subscription.
-    """
-
     plan: SubscriptionPlan | None = None
     status: SubscriptionStatus | None = None
+    starts_at: datetime | None = None
     ends_at: datetime | None = None
+    trial_ends_at: datetime | None = None
 
 
-class SubscriptionResponse(SubscriptionBase):
-    """
-    Returned by the API.
-    """
-
+class SubscriptionResponse(BaseModel):
     id: int
-
     tenant_id: int
-
+    plan: SubscriptionPlan
+    status: SubscriptionStatus
     starts_at: datetime
     ends_at: datetime | None
     trial_ends_at: datetime
 
-    created_at: datetime
-    updated_at: datetime
-
-    model_config = ConfigDict(
-        from_attributes=True,
-    )
+    class Config:
+        from_attributes = True

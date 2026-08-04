@@ -1,3 +1,6 @@
+from app.api.permissions import require_roles
+from app.models.enums import UserRole
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -39,7 +42,9 @@ def login(
 
 @router.get("/me")
 def me(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        require_roles(UserRole.OWNER),
+    ),
 ):
     return {
         "id": current_user.id,
@@ -47,4 +52,14 @@ def me(
         "email": current_user.email,
         "role": current_user.role.value,
         "tenant_id": current_user.tenant_id,
+    }
+    
+@router.get("/owner-test")
+def owner_test(
+    current_user: User = Depends(require_roles(UserRole.OWNER)),
+):
+    return {
+        "message": "Welcome Owner!",
+        "user": current_user.full_name,
+        "role": current_user.role.value,
     }
