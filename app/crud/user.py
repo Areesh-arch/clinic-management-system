@@ -1,45 +1,59 @@
 from sqlalchemy.orm import Session
 
-from app.core.security import hash_password
 from app.models.user import User
-from app.schemas.user import UserCreate
+from app.schemas.user import UserCreate, UserUpdate
 
 
 def create_user(
     db: Session,
-    user: UserCreate,
+    user_data: UserCreate,
+    tenant_id: int | None,
+    password_hash: str,
 ) -> User:
     """
     Create a new user.
+
+    If tenant_id is provided, use it (Owner flow).
+    Otherwise use user_data.tenant_id (Super Admin flow).
     """
 
-    db_user = User(
-        tenant_id=user.tenant_id,
-        full_name=user.full_name,
-        email=user.email,
-        password_hash=hash_password(user.password),
-        role=user.role,
+    resolved_tenant_id = (
+        tenant_id
+        if tenant_id is not None
+        else user_data.tenant_id
     )
 
-    db.add(db_user)
+    user = User(
+        tenant_id=resolved_tenant_id,
+        full_name=user_data.full_name,
+        email=user_data.email,
+        password_hash=password_hash,
+        role=user_data.role,
+        is_active=user_data.is_active,
+    )
 
-    # Send INSERT to PostgreSQL without committing
-    db.flush()
+    db.add(user)
+    db.commit()
+    db.refresh(user)
 
-    # Load generated values (id, timestamps, etc.)
-    db.refresh(db_user)
+    return user
 
-    return db_user
+
+def get_user_by_id(
+    db: Session,
+    user_id: int,
+) -> User | None:
+    return (
+        db.query(User)
+        .filter(User.id == user_id)
+        .first()
+    )
 
 
 def get_user_by_email(
     db: Session,
     email: str,
 ) -> User | None:
-    """
-    Get user by email.
-    """
-
     return (
         db.query(User)
         .filter(User.email == email)
@@ -47,16 +61,41 @@ def get_user_by_email(
     )
 
 
-def get_user_by_id(
+def list_users(
     db: Session,
-    user_id: int,
-) -> User | None:
-    """
-    Get user by ID.
-    """
+    tenant_id: int | None,
+):
+    query = db.query(User)
 
-    return (
-        db.query(User)
-        .filter(User.id == user_id)
-        .first()
+    if tenant_id is not None:
+        query = query.filter(
+            User.tenant_id == tenant_id
+        )
+
+    return query.all()
+
+
+def update_user(
+    db: Session,
+    user: User,
+    user_data: UserUpdate,
+) -> User:
+    update_data = user_data.model_dump(
+        exclude_unset=True,
     )
+
+    for key, value in update_data.items():
+        setattr(user, key, value)
+
+    db.commit()
+    db.refresh(user)
+
+    return user
+
+
+def delete_user(
+    db: Session,
+    user: User,
+) -> None:
+    db.delete(user)
+    db.commit()

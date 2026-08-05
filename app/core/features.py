@@ -1,28 +1,31 @@
 from app.models.enums import SubscriptionPlan
 from app.models.feature import Feature
 
-
 PLAN_FEATURES = {
     SubscriptionPlan.BASIC: {
         Feature.PATIENTS,
         Feature.APPOINTMENTS,
+        Feature.VISITS,
     },
 
     SubscriptionPlan.STANDARD: {
         Feature.PATIENTS,
         Feature.APPOINTMENTS,
-        Feature.BILLING,
+        Feature.VISITS,
         Feature.PRESCRIPTIONS,
+        Feature.BEFORE_AFTER_PHOTOS,
+        Feature.STAFF,
     },
 
     SubscriptionPlan.PREMIUM: {
         Feature.PATIENTS,
         Feature.APPOINTMENTS,
-        Feature.BILLING,
+        Feature.VISITS,
         Feature.PRESCRIPTIONS,
-        Feature.LABS,
-        Feature.INVENTORY,
-        Feature.REPORTS,
+        Feature.BEFORE_AFTER_PHOTOS,
         Feature.STAFF,
+        Feature.ACCOUNTS,
+        Feature.REPORTS,
+        Feature.PRIORITY_SUPPORT,
     },
 }

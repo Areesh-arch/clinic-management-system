@@ -11,7 +11,8 @@ if TYPE_CHECKING:
     from app.models.subscription import Subscription
     from app.models.user import User
     from app.models.patient import Patient
-
+    from app.models.staff import Staff
+    
 class Tenant(Base, IDMixin, TimestampMixin):
     """
     Represents a dermatology clinic (tenant) in the SaaS platform.
@@ -58,3 +59,10 @@ class Tenant(Base, IDMixin, TimestampMixin):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+    
+    staff: Mapped[list["Staff"]] = relationship(
+    "Staff",
+    back_populates="tenant",
+    cascade="all, delete-orphan",
+    lazy="selectin",
+)

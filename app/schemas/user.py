@@ -1,43 +1,21 @@
-from datetime import datetime
-
 from pydantic import BaseModel, ConfigDict, EmailStr
 
 from app.models.enums import UserRole
 
 
 class UserBase(BaseModel):
-    """
-    Common fields shared by all user schemas.
-    """
-
     full_name: str
     email: EmailStr
-    role: UserRole = UserRole.OWNER
+    role: UserRole
+    is_active: bool = True
 
 
 class UserCreate(UserBase):
-    """
-    Used when creating a new user.
-    """
-
-    tenant_id: int
-    password: str
-
-
-class UserLogin(BaseModel):
-    """
-    Used for login.
-    """
-
-    email: EmailStr
+    tenant_id: int | None = None
     password: str
 
 
 class UserUpdate(BaseModel):
-    """
-    Used when updating a user.
-    """
-
     full_name: str | None = None
     email: EmailStr | None = None
     password: str | None = None
@@ -46,16 +24,8 @@ class UserUpdate(BaseModel):
 
 
 class UserResponse(UserBase):
-    """
-    Returned by the API.
-    """
-
     id: int
-    tenant_id: int
-    is_active: bool
-
-    created_at: datetime
-    updated_at: datetime
+    tenant_id: int | None
 
     model_config = ConfigDict(
         from_attributes=True,

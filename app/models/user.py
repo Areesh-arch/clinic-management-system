@@ -10,6 +10,7 @@ from app.models.mixins import IDMixin, TimestampMixin
 
 if TYPE_CHECKING:
     from app.models.tenant import Tenant
+    from app.models.staff import Staff
 
 class User(Base, IDMixin, TimestampMixin):
     """
@@ -64,4 +65,9 @@ class User(Base, IDMixin, TimestampMixin):
     "Tenant",
     back_populates="users",
     lazy="selectin",
+)
+    staff: Mapped["Staff"] = relationship(
+    "Staff",
+    lazy="selectin",
+    uselist=False,
 )

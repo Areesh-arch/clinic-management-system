@@ -22,7 +22,7 @@ from app.schemas.tenant import (
     TenantUpdate,
 )
 from app.schemas.user import UserCreate
-from app.services.user_service import create_new_user
+from app.services.user_service import create_user_service
 
 
 def create_new_tenant(
@@ -60,17 +60,17 @@ def create_new_tenant(
 
         # Create clinic owner
         owner = UserCreate(
-            tenant_id=db_tenant.id,
             full_name=tenant.owner_name,
             email=tenant.owner_email,
             password=tenant.owner_password,
             role=UserRole.OWNER,
-        )
+)
 
-        create_new_user(
-            db=db,
-            user=owner,
-        )
+        create_user_service(
+    db=db,
+    user_data=owner,
+    tenant_id=db_tenant.id,
+)
 
         # Commit everything together
         db.commit()
