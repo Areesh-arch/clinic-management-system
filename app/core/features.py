@@ -6,6 +6,7 @@ PLAN_FEATURES = {
         Feature.PATIENTS,
         Feature.APPOINTMENTS,
         Feature.VISITS,
+        Feature.STAFF,
     },
 
     SubscriptionPlan.STANDARD: {

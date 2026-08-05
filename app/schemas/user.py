@@ -11,7 +11,6 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    tenant_id: int | None = None
     password: str
 
 

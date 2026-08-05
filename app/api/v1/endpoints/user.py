@@ -37,7 +37,6 @@ def create_user(
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
-            UserRole.SUPER_ADMIN,
             UserRole.OWNER,
         )
     ),
@@ -64,7 +63,6 @@ def list_users(
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
-            UserRole.SUPER_ADMIN,
             UserRole.OWNER,
         )
     ),
@@ -128,7 +126,6 @@ def update_user(
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
-            UserRole.SUPER_ADMIN,
             UserRole.OWNER,
         )
     ),
@@ -169,7 +166,6 @@ def delete_user(
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
-            UserRole.SUPER_ADMIN,
             UserRole.OWNER,
         )
     ),

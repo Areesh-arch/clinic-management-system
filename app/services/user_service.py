@@ -1,6 +1,12 @@
+from datetime import date
+
+from app.schemas.staff import StaffCreate
+from app.services.staff_service import create_staff_service
+
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
+
 from app.crud.user import (
     create_user,
     delete_user,
@@ -18,6 +24,9 @@ from app.schemas.user import (
     UserUpdate,
 )
 
+from app.schemas.staff import StaffCreate
+from app.services.staff_service import create_staff_service
+
 
 def create_user_service(
     db: Session,
@@ -27,8 +36,11 @@ def create_user_service(
     """
     Create a user.
 
-    - Super Admin can create users for any tenant.
-    - Owner can create users only in their own tenant.
+    Owner:
+        - creates users only inside his clinic.
+
+    Super Admin:
+        - does not create staff users.
     """
 
     existing_user = get_user_by_email(
@@ -37,33 +49,84 @@ def create_user_service(
     )
 
     if existing_user:
-        raise ValueError(
-            "Email already exists."
-        )
+        raise ValueError("Email already exists.")
 
     password_hash = hash_password(
-        user_data.password,
+        user_data.password
     )
 
-    # Decide tenant
-    if current_user.role == UserRole.SUPER_ADMIN:
+    # Owner's clinic id
+    tenant_id = current_user.tenant_id
 
-        if user_data.tenant_id is None:
-            raise ValueError(
-                "tenant_id is required for Super Admin."
-            )
-
-        tenant_id = user_data.tenant_id
-
-    else:
-        tenant_id = current_user.tenant_id
-
-    return create_user(
+    # Create User
+    user = create_user(
         db=db,
         user_data=user_data,
         tenant_id=tenant_id,
         password_hash=password_hash,
     )
+
+    # Automatically create Staff Profile
+    if user.role == UserRole.STAFF:
+
+        staff_data = StaffCreate(
+            user_id=user.id,
+            designation="Receptionist",
+            phone="00000000000",
+            salary=None,
+            hire_date=date.today(),
+            is_active=True,
+        )
+
+        create_staff_service(
+            db=db,
+            staff_data=staff_data,
+            tenant_id=tenant_id,
+        )
+
+    return user
+
+    existing_user = get_user_by_email(
+        db,
+        user_data.email,
+    )
+
+    if existing_user:
+        raise ValueError("Email already exists.")
+
+    password_hash = hash_password(
+        user_data.password,
+    )
+
+    # Owner creates users only inside his tenant
+    tenant_id = current_user.tenant_id
+
+    user = create_user(
+        db=db,
+        user_data=user_data,
+        tenant_id=tenant_id,
+        password_hash=password_hash,
+    )
+
+    # Automatically create Staff profile
+    if user.role == UserRole.STAFF:
+
+        staff_data = StaffCreate(
+            user_id=user.id,
+            designation="Receptionist",
+            phone="00000000000",
+            salary=None,
+            hire_date=date.today(),
+            is_active=True,
+        )
+
+        create_staff_service(
+            db=db,
+            staff_data=staff_data,
+            tenant_id=tenant_id,
+        )
+
+    return user
 
 
 def get_user_service(

@@ -17,20 +17,12 @@ def create_user(
     Otherwise use user_data.tenant_id (Super Admin flow).
     """
 
-    resolved_tenant_id = (
-        tenant_id
-        if tenant_id is not None
-        else user_data.tenant_id
-    )
-
     user = User(
-        tenant_id=resolved_tenant_id,
-        full_name=user_data.full_name,
-        email=user_data.email,
-        password_hash=password_hash,
-        role=user_data.role,
-        is_active=user_data.is_active,
-    )
+    db=db,
+    user_data=user_data,
+    tenant_id=tenant_id,
+    password_hash=password_hash,
+)
 
     db.add(user)
     db.commit()
@@ -63,7 +55,7 @@ def get_user_by_email(
 
 def list_users(
     db: Session,
-    tenant_id: int | None,
+    tenant_id: int,
 ):
     query = db.query(User)
 

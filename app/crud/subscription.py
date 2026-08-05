@@ -1,6 +1,8 @@
 from sqlalchemy.orm import Session
 
 from app.models.subscription import Subscription
+from app.models.enums import SubscriptionPlan
+
 from app.schemas.subscription import (
     SubscriptionCreate,
     SubscriptionUpdate,
@@ -52,14 +54,39 @@ def get_subscription_by_tenant(
     )
 
 
+
+
+
+def update_subscription_plan(
+    db: Session,
+    tenant_id: int,
+    plan: SubscriptionPlan,
+):
+    subscription = (
+        db.query(Subscription)
+        .filter(
+            Subscription.tenant_id == tenant_id
+        )
+        .first()
+    )
+
+    if subscription is None:
+        return None
+
+    subscription.plan = plan
+
+    db.commit()
+    db.refresh(subscription)
+
+    return subscription
+
 def update_subscription(
     db: Session,
     subscription: Subscription,
     subscription_data: SubscriptionUpdate,
 ) -> Subscription:
-
     update_data = subscription_data.model_dump(
-        exclude_unset=True
+        exclude_unset=True,
     )
 
     for key, value in update_data.items():
@@ -69,7 +96,6 @@ def update_subscription(
     db.refresh(subscription)
 
     return subscription
-
 
 def delete_subscription(
     db: Session,

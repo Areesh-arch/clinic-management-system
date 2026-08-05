@@ -49,7 +49,11 @@ def create_staff_service(
 
     if user is None:
         raise ValueError("User does not exist.")
-
+    
+    if user.tenant_id != tenant_id:
+        raise ValueError(
+            "This user does not belong to your clinic."
+    )
     existing = (
         db.query(Staff)
         .filter(Staff.user_id == staff_data.user_id)

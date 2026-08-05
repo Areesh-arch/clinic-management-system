@@ -1,11 +1,11 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints.patient import router as patient_router
-from app.api.v1.endpoints.tenant import router as tenant_router
 from app.api.v1.endpoints.auth import router as auth_router
-from app.api.v1.endpoints.subscription import router as subscription_router
+from app.api.v1.endpoints.tenant import router as tenant_router
+from app.api.v1.endpoints.patient import router as patient_router
 from app.api.v1.endpoints.user import router as user_router
 from app.api.v1.endpoints.staff import router as staff_router
+from app.api.v1.endpoints.subscription import router as subscription_router
 
 api_router = APIRouter()
 
@@ -23,10 +23,16 @@ api_router.include_router(
 
 api_router.include_router(
     patient_router,
-    prefix="/patients",
-    tags=["Patients"],
 )
 
-api_router.include_router(subscription_router)
-api_router.include_router(user_router)
-api_router.include_router(staff_router)
+api_router.include_router(
+    user_router,
+)
+
+api_router.include_router(
+    staff_router,
+)
+
+api_router.include_router(
+    subscription_router,
+)

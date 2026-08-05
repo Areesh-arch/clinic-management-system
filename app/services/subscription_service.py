@@ -4,12 +4,12 @@ from app.crud.subscription import (
     create_subscription,
     delete_subscription,
     get_subscription_by_id,
-    get_subscription_by_tenant,
     get_subscriptions,
+    get_subscription_by_tenant,
     update_subscription,
+    update_subscription_plan,
 )
 
-from app.models.subscription import Subscription
 from app.schemas.subscription import (
     SubscriptionCreate,
     SubscriptionUpdate,
@@ -19,20 +19,13 @@ from app.schemas.subscription import (
 def create_subscription_service(
     db: Session,
     subscription_data: SubscriptionCreate,
-) -> Subscription:
-    """
-    Create a subscription for a tenant.
-
-    Prevents creating multiple subscriptions
-    for the same tenant.
-    """
-
-    existing_subscription = get_subscription_by_tenant(
+):
+    existing = get_subscription_by_tenant(
         db,
         subscription_data.tenant_id,
     )
 
-    if existing_subscription:
+    if existing:
         raise ValueError(
             "Tenant already has a subscription."
         )
@@ -46,7 +39,7 @@ def create_subscription_service(
 def get_subscription_service(
     db: Session,
     subscription_id: int,
-) -> Subscription | None:
+):
     return get_subscription_by_id(
         db,
         subscription_id,
@@ -55,16 +48,15 @@ def get_subscription_service(
 
 def list_subscriptions_service(
     db: Session,
-) -> list[Subscription]:
+):
     return get_subscriptions(db)
 
 
 def update_subscription_service(
     db: Session,
-    subscription: Subscription,
+    subscription,
     subscription_data: SubscriptionUpdate,
-) -> Subscription:
-
+):
     return update_subscription(
         db,
         subscription,
@@ -74,10 +66,28 @@ def update_subscription_service(
 
 def delete_subscription_service(
     db: Session,
-    subscription: Subscription,
-) -> None:
-
+    subscription,
+):
     delete_subscription(
         db,
         subscription,
     )
+
+
+def change_subscription_plan_service(
+    db: Session,
+    tenant_id: int,
+    new_plan,
+):
+    subscription = update_subscription_plan(
+        db=db,
+        tenant_id=tenant_id,
+        plan=new_plan,
+    )
+
+    if subscription is None:
+        raise ValueError(
+            "Subscription not found."
+        )
+
+    return subscription

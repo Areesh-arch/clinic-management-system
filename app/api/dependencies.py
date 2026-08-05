@@ -16,9 +16,8 @@ def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ):
-    """
-    Validate JWT token and return the current user.
-    """
+    print("\n========== TOKEN ==========")
+    print(token)
 
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -32,12 +31,20 @@ def get_current_user(
             algorithms=[settings.ALGORITHM],
         )
 
+        print("\n========== PAYLOAD ==========")
+        print(payload)
+
         user_id = payload.get("user_id")
+
+        print("\n========== USER ID ==========")
+        print(user_id)
 
         if user_id is None:
             raise credentials_exception
 
-    except JWTError:
+    except JWTError as e:
+        print("\n========== JWT ERROR ==========")
+        print(repr(e))
         raise credentials_exception
 
     user = (
@@ -45,6 +52,9 @@ def get_current_user(
         .filter(User.id == user_id)
         .first()
     )
+
+    print("\n========== USER ==========")
+    print(user)
 
     if user is None:
         raise credentials_exception
