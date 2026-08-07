@@ -1,27 +1,92 @@
-from sqlalchemy import Float, ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column
+from __future__ import annotations
 
-from app.database.session import Base
-from app.models.mixins import TimestampMixin
+from datetime import date
+from typing import TYPE_CHECKING
+
+from sqlalchemy import (
+    ForeignKey,
+    Numeric,
+    Date,
+    Text,
+    Enum,
+)
+
+from sqlalchemy.orm import (
+    Mapped,
+    mapped_column,
+    relationship,
+)
+
+from app.models.base import Base
+from app.models.mixins import (
+    IDMixin,
+    TimestampMixin,
+)
+
+from app.models.enums import PaymentMethod
+
+if TYPE_CHECKING:
+    from app.models.tenant import Tenant
+    from app.models.patient import Patient
+    from app.models.visit import Visit
 
 
-class Payment(Base, TimestampMixin):
+class Payment(Base, IDMixin, TimestampMixin):
+
     __tablename__ = "payments"
 
-    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    tenant_id: Mapped[int] = mapped_column(
+        ForeignKey("tenants.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    patient_id: Mapped[int] = mapped_column(
+        ForeignKey("patients.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
 
     visit_id: Mapped[int] = mapped_column(
-        ForeignKey("visits.id"),
+        ForeignKey("visits.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    amount: Mapped[float] = mapped_column(
+        Numeric(10, 2),
         nullable=False,
     )
 
-    amount: Mapped[float] = mapped_column(Float)
-
-    payment_method: Mapped[str] = mapped_column(
-        String(50),
+    payment_method: Mapped[PaymentMethod] = mapped_column(
+        Enum(
+            PaymentMethod,
+            native_enum=False,
+        ),
+        nullable=False,
     )
 
-    status: Mapped[str] = mapped_column(
-        String(30),
-        default="pending",
+    payment_date: Mapped[date] = mapped_column(
+        Date,
+        nullable=False,
+    )
+
+    notes: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    tenant: Mapped["Tenant"] = relationship(
+        "Tenant",
+        back_populates="payments",
+    )
+
+    patient: Mapped["Patient"] = relationship(
+        "Patient",
+        back_populates="payments",
+    )
+
+    visit: Mapped["Visit"] = relationship(
+        "Visit",
+        back_populates="payments",
     )

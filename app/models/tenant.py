@@ -12,6 +12,13 @@ if TYPE_CHECKING:
     from app.models.user import User
     from app.models.patient import Patient
     from app.models.staff import Staff
+    from app.models.appointment import Appointment
+    from app.models.visit import Visit
+    from app.models.prescription import Prescription
+    from app.models.treatment_photo import TreatmentPhoto
+    from app.models.inventory_item import InventoryItem
+    from app.models.payment import Payment
+    from app.models.expense import Expense
     
 class Tenant(Base, IDMixin, TimestampMixin):
     """
@@ -65,4 +72,43 @@ class Tenant(Base, IDMixin, TimestampMixin):
     back_populates="tenant",
     cascade="all, delete-orphan",
     lazy="selectin",
+)
+    appointments: Mapped[list["Appointment"]] = relationship(
+    "Appointment",
+    back_populates="tenant",
+    cascade="all, delete-orphan",
+)
+    visits: Mapped[list["Visit"]] = relationship(
+    "Visit",
+    back_populates="tenant",
+    cascade="all, delete-orphan",
+)
+    
+    prescriptions: Mapped[list["Prescription"]] = relationship(
+    "Prescription",
+    back_populates="tenant",
+    cascade="all, delete-orphan",
+)
+    
+    photos: Mapped[list["TreatmentPhoto"]] = relationship(
+    "TreatmentPhoto",
+    back_populates="tenant",
+    cascade="all, delete-orphan",
+)
+    
+    inventory_items: Mapped[list["InventoryItem"]] = relationship(
+    "InventoryItem",
+    back_populates="tenant",
+    cascade="all, delete-orphan",
+)
+    
+    payments: Mapped[list["Payment"]] = relationship(
+    "Payment",
+    back_populates="tenant",
+    cascade="all, delete-orphan",
+)
+    expenses: Mapped[list["Expense"]] = relationship(
+    "Expense",
+    back_populates="tenant",
+    cascade="all, delete-orphan",
 )

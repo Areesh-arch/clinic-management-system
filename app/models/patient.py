@@ -26,7 +26,9 @@ from app.models.mixins import (
 
 if TYPE_CHECKING:
     from app.models.tenant import Tenant
-
+    from app.models.appointment import Appointment
+    from app.models.visit import Visit
+    from app.models.payment import Payment
 
 class Patient(Base, IDMixin, TenantMixin, TimestampMixin):
     """
@@ -132,4 +134,21 @@ class Patient(Base, IDMixin, TenantMixin, TimestampMixin):
     tenant: Mapped["Tenant"] = relationship(
         "Tenant",
         back_populates="patients",
+    )
+    
+    appointments: Mapped[list["Appointment"]] = relationship(
+        "Appointment",
+        back_populates="patient",
+        cascade="all, delete-orphan",
+    )
+    visits: Mapped[list["Visit"]] = relationship(
+        "Visit",
+        back_populates="patient",
+        cascade="all, delete-orphan",
+    )
+    
+    payments: Mapped[list["Payment"]] = relationship(
+        "Payment",
+        back_populates="patient",
+        cascade="all, delete-orphan",
     )

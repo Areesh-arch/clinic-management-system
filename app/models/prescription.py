@@ -1,31 +1,58 @@
-from sqlalchemy import ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column
+from typing import TYPE_CHECKING
+from sqlalchemy import (
+    Column,
+    Integer,
+    ForeignKey,
+    Text,
+)
 
-from app.database.session import Base
-from app.models.mixins import TimestampMixin
+from sqlalchemy.orm import relationship
 
+from app.models.mixins import (
+    IDMixin,
+    TimestampMixin,
+)
 
-class Prescription(Base, TimestampMixin):
+from app.models.base import Base
+
+if TYPE_CHECKING:
+    from app.models.visit import Visit
+    from app.models.tenant import Tenant
+
+class Prescription(Base, IDMixin, TimestampMixin):
     __tablename__ = "prescriptions"
 
-    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    tenant_id = Column(
+        Integer,
+        ForeignKey("tenants.id"),
+        nullable=False,
+        index=True,
+    )
 
-    visit_id: Mapped[int] = mapped_column(
+    visit_id = Column(
+        Integer,
         ForeignKey("visits.id"),
         nullable=False,
+        unique=True,
     )
 
-    medicine: Mapped[str] = mapped_column(
-        String(255),
-        nullable=False,
+    instructions = Column(
+        Text,
+        nullable=True,
     )
 
-    dosage: Mapped[str] = mapped_column(
-        String(255),
-        nullable=False,
+    visit = relationship(
+        "Visit",
+        back_populates="prescription",
     )
 
-    duration: Mapped[str] = mapped_column(
-        String(100),
-        nullable=False,
+    items = relationship(
+        "PrescriptionItem",
+        back_populates="prescription",
+        cascade="all, delete-orphan",
     )
+    
+    tenant = relationship(
+    "Tenant",
+    back_populates="prescriptions",
+)

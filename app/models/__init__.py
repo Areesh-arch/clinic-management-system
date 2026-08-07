@@ -3,3 +3,11 @@ from app.models.user import User
 from app.models.subscription import Subscription
 from app.models.patient import Patient
 from app.models.staff import Staff
+from app.models.appointment import Appointment
+from app.models.visit import Visit
+from app.models.prescription import Prescription
+from app.models.prescription_item import PrescriptionItem
+from app.models.treatment_photo import TreatmentPhoto
+from app.models.inventory_item import InventoryItem
+from app.models.payment import Payment
+from app.models.expense import Expense

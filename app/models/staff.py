@@ -25,7 +25,8 @@ from app.models.mixins import (
 if TYPE_CHECKING:
     from app.models.tenant import Tenant
     from app.models.user import User
-
+    from app.models.appointment import Appointment
+    from app.models.visit import Visit
 
 class Staff(Base, IDMixin, TimestampMixin):
     """
@@ -96,3 +97,14 @@ class Staff(Base, IDMixin, TimestampMixin):
         "User",
         lazy="selectin",
     )
+    
+    appointments: Mapped[list["Appointment"]] = relationship(
+    "Appointment",
+    back_populates="doctor",
+    cascade="all, delete-orphan",
+)
+    visits: Mapped[list["Visit"]] = relationship(
+    "Visit",
+    back_populates="doctor",
+    cascade="all, delete-orphan",
+)

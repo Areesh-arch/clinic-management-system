@@ -20,12 +20,25 @@ class SubscriptionStatus(str, Enum):
     EXPIRED = "expired"
     CANCELLED = "cancelled"
 
+class AppointmentStatus(str, Enum):
+    SCHEDULED = "scheduled"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+    NO_SHOW = "no_show"
 
 class UserRole(str, Enum):
     SUPER_ADMIN = "super_admin"
     OWNER = "owner"
     STAFF = "staff"
 
+class VisitStatus(str, Enum):
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+    
+class PhotoType(str, Enum):
+    BEFORE = "BEFORE"
+    AFTER = "AFTER"
 
 class Gender(str, Enum):
     MALE = "male"
@@ -49,3 +62,9 @@ class MaritalStatus(str, Enum):
     MARRIED = "married"
     DIVORCED = "divorced"
     WIDOWED = "widowed"
+    
+class PaymentMethod(str, Enum):
+    CASH = "cash"
+    CARD = "card"
+    BANK_TRANSFER = "bank_transfer"
+    MOBILE_WALLET = "mobile_wallet"
