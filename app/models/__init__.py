@@ -11,3 +11,4 @@ from app.models.treatment_photo import TreatmentPhoto
 from app.models.inventory_item import InventoryItem
 from app.models.payment import Payment
 from app.models.expense import Expense
+from app.models.outstanding import Outstanding

@@ -13,6 +13,8 @@ from app.api.v1.endpoints.treatment_photo import router as treatment_photo_route
 from app.api.v1.endpoints.inventory import router as inventory_router
 from app.api.v1.endpoints.payment import router as payment_router
 from app.api.v1.endpoints.expense import router as expense_router
+from app.api.v1.endpoints.inventory import router as inventory_router
+from app.api.v1.endpoints.outstanding import router as outstanding_router
 
 
 api_router = APIRouter()
@@ -84,4 +86,8 @@ api_router.include_router(
 
 api_router.include_router(
     expense_router,
+)
+
+api_router.include_router(
+    outstanding_router,
 )

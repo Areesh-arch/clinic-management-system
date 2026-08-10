@@ -1,5 +1,3 @@
-from sqlalchemy.orm import Session
-
 from fastapi import (
     APIRouter,
     Depends,
@@ -7,11 +5,13 @@ from fastapi import (
     status,
 )
 
-from app.database.session import get_db
+from sqlalchemy.orm import Session
 
-from app.api.permissions import require_roles
+from app.database.session import get_db
+from app.api.dependencies import get_current_user
 
 from app.models.user import User
+from app.models.payment import Payment
 
 from app.schemas.payment import (
     PaymentCreate,
@@ -27,11 +27,16 @@ from app.services.payment_service import (
     delete_payment_service,
 )
 
+
 router = APIRouter(
     prefix="/payments",
     tags=["Payments"],
 )
 
+
+# =========================================================
+# CREATE PAYMENT
+# =========================================================
 
 @router.post(
     "/",
@@ -41,14 +46,11 @@ router = APIRouter(
 def create_payment(
     payment_data: PaymentCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(
-        require_roles(
-            "owner",
-            "staff",
-        )
-    ),
+    current_user: User = Depends(get_current_user),
 ):
+
     try:
+
         return create_payment_service(
             db=db,
             payment_data=payment_data,
@@ -56,11 +58,16 @@ def create_payment(
         )
 
     except ValueError as e:
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
 
+
+# =========================================================
+# LIST PAYMENTS
+# =========================================================
 
 @router.get(
     "/",
@@ -68,18 +75,18 @@ def create_payment(
 )
 def list_payments(
     db: Session = Depends(get_db),
-    current_user: User = Depends(
-        require_roles(
-            "owner",
-            "staff",
-        )
-    ),
+    current_user: User = Depends(get_current_user),
 ):
+
     return list_payments_service(
         db=db,
         tenant_id=current_user.tenant_id,
     )
 
+
+# =========================================================
+# GET PAYMENT
+# =========================================================
 
 @router.get(
     "/{payment_id}",
@@ -88,25 +95,28 @@ def list_payments(
 def get_payment(
     payment_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(
-        require_roles(
-            "owner",
-            "staff",
-        )
-    ),
+    current_user: User = Depends(get_current_user),
 ):
+
     try:
+
         return get_payment_service(
             db=db,
             payment_id=payment_id,
+            tenant_id=current_user.tenant_id,
         )
 
     except ValueError as e:
+
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
         )
 
+
+# =========================================================
+# UPDATE PAYMENT
+# =========================================================
 
 @router.put(
     "/{payment_id}",
@@ -116,24 +126,35 @@ def update_payment(
     payment_id: int,
     payment_data: PaymentUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(
-        require_roles(
-            "owner",
-            "staff",
-        )
-    ),
+    current_user: User = Depends(get_current_user),
 ):
-    payment = get_payment_service(
-        db=db,
-        payment_id=payment_id,
-    )
 
-    return update_payment_service(
-        db=db,
-        payment=payment,
-        payment_data=payment_data,
-    )
+    try:
 
+        payment = get_payment_service(
+            db=db,
+            payment_id=payment_id,
+            tenant_id=current_user.tenant_id,
+        )
+
+        return update_payment_service(
+            db=db,
+            payment=payment,
+            payment_data=payment_data,
+            tenant_id=current_user.tenant_id,
+        )
+
+    except ValueError as e:
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+
+# =========================================================
+# DELETE PAYMENT
+# =========================================================
 
 @router.delete(
     "/{payment_id}",
@@ -142,19 +163,28 @@ def update_payment(
 def delete_payment(
     payment_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(
-        require_roles(
-            "owner",
-            "staff",
-        )
-    ),
+    current_user: User = Depends(get_current_user),
 ):
-    payment = get_payment_service(
-        db=db,
-        payment_id=payment_id,
-    )
 
-    delete_payment_service(
-        db=db,
-        payment=payment,
-    )
+    try:
+
+        payment = get_payment_service(
+            db=db,
+            payment_id=payment_id,
+            tenant_id=current_user.tenant_id,
+        )
+
+        delete_payment_service(
+            db=db,
+            payment=payment,
+            tenant_id=current_user.tenant_id,
+        )
+
+        return None
+
+    except ValueError as e:
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )

@@ -68,6 +68,8 @@ class User(Base, IDMixin, TimestampMixin):
 )
     staff: Mapped["Staff"] = relationship(
     "Staff",
-    lazy="selectin",
+    back_populates="user",
     uselist=False,
+    lazy="selectin",
 )
+   

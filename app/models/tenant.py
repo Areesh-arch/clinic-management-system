@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from app.models.inventory_item import InventoryItem
     from app.models.payment import Payment
     from app.models.expense import Expense
+    from app.models.outstanding import Outstanding
     
 class Tenant(Base, IDMixin, TimestampMixin):
     """
@@ -109,6 +110,11 @@ class Tenant(Base, IDMixin, TimestampMixin):
 )
     expenses: Mapped[list["Expense"]] = relationship(
     "Expense",
+    back_populates="tenant",
+    cascade="all, delete-orphan",
+)
+    outstandings: Mapped[list["Outstanding"]] = relationship(
+    "Outstanding",
     back_populates="tenant",
     cascade="all, delete-orphan",
 )

@@ -1,13 +1,18 @@
-export default function RememberMe() {
+import { useNavigate } from "react-router-dom";
+
+export default function RememberMe({ checked, onChange }) {
+  const navigate = useNavigate();
   return (
-    <div className="flex justify-between items-center">
-
-      <label className="flex items-center gap-2 text-[#45524A]">
-
-        <input type="checkbox" />
+    <div className="flex items-center justify-between">
+      <label className="flex items-center gap-2 text-[#45524A] cursor-pointer">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={onChange}
+          className="w-4 h-4"
+        />
 
         Remember Me
-
       </label>
 
       <button
@@ -16,7 +21,6 @@ export default function RememberMe() {
       >
         Forgot Password?
       </button>
-
     </div>
   );
 }

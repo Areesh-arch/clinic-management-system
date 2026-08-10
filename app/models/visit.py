@@ -8,6 +8,7 @@ from sqlalchemy import (
     DateTime,
     Enum,
     Text,
+    Numeric,
 )
 
 from sqlalchemy.orm import (
@@ -24,6 +25,7 @@ from app.models.mixins import (
 
 from app.models.enums import VisitStatus
 
+
 if TYPE_CHECKING:
     from app.models.patient import Patient
     from app.models.staff import Staff
@@ -32,6 +34,7 @@ if TYPE_CHECKING:
     from app.models.prescription import Prescription
     from app.models.treatment_photo import TreatmentPhoto
     from app.models.payment import Payment
+    from app.models.outstanding import Outstanding
 
 class Visit(Base, IDMixin, TimestampMixin):
 
@@ -52,6 +55,7 @@ class Visit(Base, IDMixin, TimestampMixin):
     patient_id: Mapped[int] = mapped_column(
         ForeignKey("patients.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
 
     doctor_id: Mapped[int] = mapped_column(
@@ -71,6 +75,7 @@ class Visit(Base, IDMixin, TimestampMixin):
             native_enum=False,
         ),
         default=VisitStatus.IN_PROGRESS,
+        nullable=False,
     )
 
     chief_complaint: Mapped[str | None] = mapped_column(
@@ -79,14 +84,28 @@ class Visit(Base, IDMixin, TimestampMixin):
     )
 
     diagnosis: Mapped[str | None] = mapped_column(
-    Text,
-    nullable=True,
-)
+        Text,
+        nullable=True,
+    )
 
     notes: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
+
+    # --------------------------------------------------
+    # Financial information
+    # --------------------------------------------------
+
+    charge: Mapped[float] = mapped_column(
+        Numeric(10, 2),
+        nullable=False,
+        default=0,
+    )
+
+    # --------------------------------------------------
+    # Relationships
+    # --------------------------------------------------
 
     tenant: Mapped["Tenant"] = relationship(
         "Tenant",
@@ -107,21 +126,28 @@ class Visit(Base, IDMixin, TimestampMixin):
         "Staff",
         back_populates="visits",
     )
-    
+
     prescription: Mapped["Prescription"] = relationship(
-    "Prescription",
+        "Prescription",
+        back_populates="visit",
+        uselist=False,
+    )
+
+    photos: Mapped[list["TreatmentPhoto"]] = relationship(
+        "TreatmentPhoto",
+        back_populates="visit",
+        cascade="all, delete-orphan",
+    )
+
+    payments: Mapped[list["Payment"]] = relationship(
+        "Payment",
+        back_populates="visit",
+        cascade="all, delete-orphan",
+    )
+    
+    outstanding: Mapped["Outstanding"] = relationship(
+    "Outstanding",
     back_populates="visit",
     uselist=False,
-)
-    
-    photos: Mapped[list["TreatmentPhoto"]] = relationship(
-    "TreatmentPhoto",
-    back_populates="visit",
-    cascade="all, delete-orphan",
-)
-    
-    payments: Mapped[list["Payment"]] = relationship(
-    "Payment",
-    back_populates="visit",
     cascade="all, delete-orphan",
 )

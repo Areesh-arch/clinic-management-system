@@ -1,3 +1,4 @@
+
 from sqlalchemy.orm import Session
 
 from app.models.visit import Visit
@@ -17,9 +18,13 @@ def create_visit(
 
     visit = Visit(
         tenant_id=tenant_id,
+        appointment_id=visit_data.appointment_id,
         patient_id=patient_id,
         doctor_id=doctor_id,
-        **visit_data.model_dump(),
+        chief_complaint=visit_data.chief_complaint,
+        diagnosis=visit_data.diagnosis,
+        notes=visit_data.notes,
+        charge=visit_data.charge,
     )
 
     db.add(visit)
@@ -37,7 +42,7 @@ def get_visit_by_id(
     return (
         db.query(Visit)
         .filter(
-            Visit.id == visit_id
+            Visit.id == visit_id,
         )
         .first()
     )
@@ -51,7 +56,7 @@ def get_visits(
     return (
         db.query(Visit)
         .filter(
-            Visit.tenant_id == tenant_id
+            Visit.tenant_id == tenant_id,
         )
         .all()
     )
@@ -73,7 +78,7 @@ def update_visit(
             key,
             value,
         )
-    diagnosis=visit_data.diagnosis,
+
     db.commit()
     db.refresh(visit)
 
@@ -87,3 +92,4 @@ def delete_visit(
 
     db.delete(visit)
     db.commit()
+

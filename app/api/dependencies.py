@@ -16,8 +16,7 @@ def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ):
-    print("\n========== TOKEN ==========")
-    print(token)
+    
 
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -31,13 +30,10 @@ def get_current_user(
             algorithms=[settings.ALGORITHM],
         )
 
-        print("\n========== PAYLOAD ==========")
-        print(payload)
+    
 
         user_id = payload.get("user_id")
 
-        print("\n========== USER ID ==========")
-        print(user_id)
 
         if user_id is None:
             raise credentials_exception

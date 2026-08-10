@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from app.models.appointment import Appointment
     from app.models.visit import Visit
     from app.models.payment import Payment
+    from app.models.outstanding import Outstanding
 
 class Patient(Base, IDMixin, TenantMixin, TimestampMixin):
     """
@@ -152,3 +153,9 @@ class Patient(Base, IDMixin, TenantMixin, TimestampMixin):
         back_populates="patient",
         cascade="all, delete-orphan",
     )
+    
+    outstandings: Mapped[list["Outstanding"]] = relationship(
+    "Outstanding",
+    back_populates="patient",
+    cascade="all, delete-orphan",
+)
