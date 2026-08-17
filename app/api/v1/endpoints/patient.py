@@ -1,13 +1,13 @@
-from app.api.permissions import require_roles
-from app.api.features import require_feature
-from app.models.enums import UserRole
-from app.models.feature import Feature
-from app.models.user import User
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.api.dependencies import get_current_user
+from app.api.features import require_feature
+from app.api.permissions import require_roles
 from app.database.session import get_db
+from app.models.enums import UserRole
+from app.models.feature import Feature
+from app.models.user import User
 from app.schemas.patient import (
     PatientCreate,
     PatientResponse,
@@ -15,20 +15,16 @@ from app.schemas.patient import (
 )
 from app.services.patient_service import (
     create_patient_service,
+    delete_patient_service,
     get_patient_service,
     list_patients_service,
     update_patient_service,
-    delete_patient_service,
 )
 
 router = APIRouter(
     prefix="/patients",
     tags=["Patients"],
 )
-
-# Temporary tenant_id
-# Later we'll get this from the logged-in user.
-TENANT_ID = 1
 
 
 @router.post(
@@ -40,21 +36,21 @@ def create_patient(
     patient: PatientCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(
-    require_roles(
-        UserRole.OWNER,
-        UserRole.STAFF,
-    )
-),
-    
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+        )
+    ),
     _: User = Depends(
         require_feature(Feature.PATIENTS)
     ),
 ):
     return create_patient_service(
-    db=db,
-    patient_data=patient,
-    tenant_id=current_user.tenant_id,
-)
+        db=db,
+        patient_data=patient,
+        tenant_id=current_user.tenant_id,
+    )
+
 
 @router.get(
     "/",
@@ -66,13 +62,16 @@ def list_patients(
         require_roles(
             UserRole.OWNER,
             UserRole.STAFF,
-)
+        )
     ),
     _: User = Depends(
         require_feature(Feature.PATIENTS)
     ),
 ):
-    return list_patients_service(db)
+    return list_patients_service(
+        db=db,
+        tenant_id=current_user.tenant_id,
+    )
 
 
 @router.get(
@@ -82,12 +81,25 @@ def list_patients(
 def get_patient(
     patient_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+        )
+    ),
+    _: User = Depends(
+        require_feature(Feature.PATIENTS)
+    ),
 ):
-    patient = get_patient_service(db, patient_id)
+    patient = get_patient_service(
+        db=db,
+        patient_id=patient_id,
+        tenant_id=current_user.tenant_id,
+    )
 
     if not patient:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Patient not found",
         )
 
@@ -102,19 +114,32 @@ def update_patient(
     patient_id: int,
     patient_data: PatientUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+        )
+    ),
+    _: User = Depends(
+        require_feature(Feature.PATIENTS)
+    ),
 ):
-    patient = get_patient_service(db, patient_id)
+    patient = get_patient_service(
+        db=db,
+        patient_id=patient_id,
+        tenant_id=current_user.tenant_id,
+    )
 
     if not patient:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Patient not found",
         )
 
     return update_patient_service(
-        db,
-        patient,
-        patient_data,
+        db=db,
+        patient=patient,
+        patient_data=patient_data,
     )
 
 
@@ -125,16 +150,29 @@ def update_patient(
 def delete_patient(
     patient_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+        )
+    ),
+    _: User = Depends(
+        require_feature(Feature.PATIENTS)
+    ),
 ):
-    patient = get_patient_service(db, patient_id)
+    patient = get_patient_service(
+        db=db,
+        patient_id=patient_id,
+        tenant_id=current_user.tenant_id,
+    )
 
     if not patient:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Patient not found",
         )
 
     delete_patient_service(
-        db,
-        patient,
+        db=db,
+        patient=patient,
     )

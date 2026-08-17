@@ -5,3 +5,22 @@ body{
     background:#F8F7F3;
     color:#25312A;
 }
+.input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background: white;
+  color: #1e293b;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.input:focus {
+  border-color: #a3b18a;
+  box-shadow: 0 0 0 2px rgba(163, 177, 138, 0.25);
+}
+
+.input::placeholder {
+  color: #94a3b8;
+}

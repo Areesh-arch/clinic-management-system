@@ -1,75 +1,151 @@
-import treatmentData from "../../utils/treatmentData";
 import TreatmentRow from "./TreatmentRow";
 
+
 function TreatmentTable({
+  treatments,
   search,
   doctor,
   status,
+  onEdit,
+  onDelete,
 }) {
 
-  const filteredTreatments = treatmentData.filter((item) => {
+  const filteredTreatments =
+    treatments.filter((item) => {
 
-    const matchesSearch =
-      item.patient.toLowerCase().includes(search.toLowerCase()) ||
-      item.treatment.toLowerCase().includes(search.toLowerCase());
+      const patientName =
+        item.patient_name || "";
 
-    const matchesDoctor =
-      doctor === "All" || item.doctor === doctor;
+      const doctorName =
+        item.doctor_name || "";
 
-    const matchesStatus =
-      status === "All" || item.status === status;
+      const treatmentName =
+        item.treatment || "";
 
-    return (
-      matchesSearch &&
-      matchesDoctor &&
-      matchesStatus
-    );
-  });
+      const matchesSearch =
+        patientName
+          .toLowerCase()
+          .includes(
+            search.toLowerCase()
+          ) ||
+
+        doctorName
+          .toLowerCase()
+          .includes(
+            search.toLowerCase()
+          ) ||
+
+        treatmentName
+          .toLowerCase()
+          .includes(
+            search.toLowerCase()
+          );
+
+
+      const matchesDoctor =
+        doctor === "All" ||
+        doctorName === doctor;
+
+
+      const matchesStatus =
+        status === "All" ||
+        item.status === status;
+
+
+      return (
+        matchesSearch &&
+        matchesDoctor &&
+        matchesStatus
+      );
+
+    });
+
 
   return (
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-[#E6E1D8]">
 
-      <table className="w-full">
+      <div className="overflow-x-auto">
 
-        <thead className="bg-[#F6F4EF]">
+        <table className="w-full">
 
-          <tr>
+          <thead className="bg-[#F6F4EF]">
 
-            <th className="text-left p-4">Patient</th>
+            <tr>
 
-            <th className="text-left p-4">Doctor</th>
+              <th className="text-left p-4">
+                Patient
+              </th>
 
-            <th className="text-left p-4">Treatment</th>
+              <th className="text-left p-4">
+                Doctor
+              </th>
 
-            <th className="text-left p-4">Date</th>
+              <th className="text-left p-4">
+                Treatment
+              </th>
 
-            <th className="text-left p-4">Cost</th>
+              <th className="text-left p-4">
+                Date
+              </th>
 
-            <th className="text-left p-4">Status</th>
+              <th className="text-left p-4">
+                Cost
+              </th>
 
-            <th className="text-left p-4">Actions</th>
+              <th className="text-left p-4">
+                Status
+              </th>
 
-          </tr>
+              <th className="text-left p-4">
+                Actions
+              </th>
 
-        </thead>
+            </tr>
 
-        <tbody>
+          </thead>
 
-          {filteredTreatments.map((treatment) => (
 
-            <TreatmentRow
-              key={treatment.id}
-              treatment={treatment}
-            />
+          <tbody>
 
-          ))}
+            {filteredTreatments.length === 0 ? (
 
-        </tbody>
+              <tr>
 
-      </table>
+                <td
+                  colSpan="7"
+                  className="text-center p-10 text-gray-500"
+                >
+                  No treatments found.
+                </td>
+
+              </tr>
+
+            ) : (
+
+              filteredTreatments.map(
+                (treatment) => (
+
+                  <TreatmentRow
+                    key={treatment.id}
+                    treatment={treatment}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                  />
+
+                )
+              )
+
+            )}
+
+          </tbody>
+
+        </table>
+
+      </div>
 
     </div>
   );
 }
+
 
 export default TreatmentTable;

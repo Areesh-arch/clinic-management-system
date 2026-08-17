@@ -95,7 +95,7 @@ class Staff(Base, IDMixin, TimestampMixin):
 
     user: Mapped["User"] = relationship(
         "User",
-        lazy="selectin",
+        back_populates="staff",
     )
     
     appointments: Mapped[list["Appointment"]] = relationship(

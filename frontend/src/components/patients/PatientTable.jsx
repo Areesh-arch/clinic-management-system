@@ -1,15 +1,25 @@
 import { useEffect, useState } from "react";
-import PatientRow from "./PatientRow";
-import { getPatients } from "../../services/patientService";
 
-function PatientTable({ search, status, gender }) {
+import PatientRow from "./PatientRow";
+
+import {
+  getPatients,
+  getPatient,
+  deletePatient,
+} from "../../services/patientService";
+
+function PatientTable({
+  search = "",
+  status = "All",
+  gender = "All",
+  refreshKey = 0,
+  onView,
+  onEdit,
+  onDelete,
+}) {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    loadPatients();
-  }, []);
 
   const loadPatients = async () => {
     try {
@@ -18,26 +28,32 @@ function PatientTable({ search, status, gender }) {
 
       const data = await getPatients();
 
-      // FastAPI normally returns a list.
-      // This also handles common wrapped responses.
+      console.log("Patients loaded from database:", data);
+
       if (Array.isArray(data)) {
         setPatients(data);
-      } else if (Array.isArray(data.items)) {
+      } else if (Array.isArray(data?.items)) {
         setPatients(data.items);
-      } else if (Array.isArray(data.results)) {
+      } else if (Array.isArray(data?.results)) {
         setPatients(data.results);
       } else {
         setPatients([]);
       }
-    } catch (error) {
-      console.error("Failed to load patients:", error);
-      setError(error.message || "Failed to load patients");
+    } catch (err) {
+      console.error("Failed to load patients:", err);
+
+      setError(
+        err.message || "Failed to load patients."
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // Calculate age from date_of_birth
+  useEffect(() => {
+    loadPatients();
+  }, [refreshKey]);
+
   const calculateAge = (dateOfBirth) => {
     if (!dateOfBirth) {
       return "-";
@@ -51,99 +67,286 @@ function PatientTable({ search, status, gender }) {
 
     const today = new Date();
 
-    let age = today.getFullYear() - birthDate.getFullYear();
+    let age =
+      today.getFullYear() -
+      birthDate.getFullYear();
 
     const monthDifference =
-      today.getMonth() - birthDate.getMonth();
+      today.getMonth() -
+      birthDate.getMonth();
 
     if (
       monthDifference < 0 ||
-      (monthDifference === 0 &&
-        today.getDate() < birthDate.getDate())
+      (
+        monthDifference === 0 &&
+        today.getDate() < birthDate.getDate()
+      )
     ) {
       age--;
     }
 
-    return age;
+    return age >= 0 ? age : "-";
   };
 
-  // Convert PostgreSQL is_active into the status
-  // expected by the existing frontend filters.
   const getPatientStatus = (patient) => {
-    return patient.is_active ? "Active" : "Inactive";
+    return patient?.is_active === false
+      ? "Inactive"
+      : "Active";
   };
 
-  // Convert backend patient data into the structure
-  // currently expected by PatientRow.
-  const formattedPatients = patients.map((patient) => ({
-    ...patient,
+  const formattedPatients = patients.map(
+    (patient) => {
+      const firstName =
+        patient?.first_name || "";
 
-    // Database:
-    // first_name + last_name
-    //
-    // Frontend:
-    // name
-    name: `${patient.first_name || ""} ${
-      patient.last_name || ""
-    }`.trim(),
+      const lastName =
+        patient?.last_name || "";
 
-    // Database:
-    // date_of_birth
-    //
-    // Frontend:
-    // age
-    age: calculateAge(patient.date_of_birth),
+      return {
+        ...patient,
 
-    // Database:
-    // is_active
-    //
-    // Frontend:
-    // status
-    status: getPatientStatus(patient),
-  }));
+        name:
+          `${firstName} ${lastName}`.trim() ||
+          "Unnamed Patient",
 
-  // Apply search and filters
-  const filteredPatients = formattedPatients.filter((patient) => {
-    const matchesSearch = patient.name
-      .toLowerCase()
-      .includes(search.toLowerCase());
+        age: calculateAge(
+          patient?.date_of_birth
+        ),
 
-    const matchesStatus =
-      status === "All" || patient.status === status;
+        status: getPatientStatus(patient),
+      };
+    }
+  );
 
-    const matchesGender =
-      gender === "All" || patient.gender === gender;
+  const filteredPatients =
+    formattedPatients.filter((patient) => {
+      const searchText =
+        search.trim().toLowerCase();
 
-    return (
-      matchesSearch &&
-      matchesStatus &&
-      matchesGender
+      const patientName =
+        patient.name?.toLowerCase() || "";
+
+      const medicalRecordNumber =
+        patient.medical_record_number
+          ?.toLowerCase() || "";
+
+      const phone =
+        patient.phone?.toLowerCase() || "";
+
+      const matchesSearch =
+        searchText === "" ||
+        patientName.includes(searchText) ||
+        medicalRecordNumber.includes(searchText) ||
+        phone.includes(searchText);
+
+      const matchesStatus =
+        status === "All" ||
+        patient.status === status;
+
+      const matchesGender =
+        gender === "All" ||
+        patient.gender === gender;
+
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesGender
+      );
+    });
+
+  const handleView = async (patient) => {
+    console.log("Viewing patient:", patient);
+
+    const patientId =
+      patient?.id ||
+      patient?.patient_id;
+
+    let patientDetails = patient;
+
+    if (patientId) {
+      try {
+        patientDetails =
+          await getPatient(patientId);
+
+        console.log(
+          "Latest patient details:",
+          patientDetails
+        );
+      } catch (err) {
+        console.warn(
+          "Could not fetch latest patient details. Using table data.",
+          err
+        );
+      }
+    }
+
+    if (typeof onView === "function") {
+      onView(patientDetails);
+    } else {
+      console.warn(
+        "PatientTable: onView was not provided."
+      );
+    }
+  };
+
+  const handleEdit = (patient) => {
+    console.log("Editing patient:", patient);
+
+    if (typeof onEdit === "function") {
+      onEdit(patient);
+    } else {
+      console.warn(
+        "PatientTable: onEdit was not provided."
+      );
+    }
+  };
+
+  const handleDelete = async (patient) => {
+    const patientId =
+      patient?.id ||
+      patient?.patient_id;
+
+    if (!patientId) {
+      console.error(
+        "Cannot delete patient: patient ID is missing.",
+        patient
+      );
+
+      return;
+    }
+
+    const patientName =
+      patient.name ||
+      `${patient.first_name || ""} ${
+        patient.last_name || ""
+      }`.trim();
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${
+        patientName || "this patient"
+      }?`
     );
-  });
 
-  // Loading state
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deletePatient(patientId);
+
+      console.log(
+        "Patient deleted:",
+        patientId
+      );
+
+      setPatients((previousPatients) =>
+        previousPatients.filter(
+          (item) =>
+            (item?.id ||
+              item?.patient_id) !== patientId
+        )
+      );
+
+      if (typeof onDelete === "function") {
+        onDelete(patient);
+      }
+    } catch (err) {
+      console.error(
+        "Failed to delete patient:",
+        err
+      );
+
+      setError(
+        err.message ||
+          "Failed to delete patient."
+      );
+    }
+  };
+
   if (loading) {
     return (
-      <div className="bg-white rounded-2xl border border-slate-200 p-10">
-        <p className="text-center text-slate-500">
-          Loading patients...
-        </p>
+      <div
+        className="
+          bg-white
+          rounded-2xl
+          border
+          border-[#DDE5DF]
+          shadow-[0_4px_20px_rgba(79,104,83,0.08)]
+          p-12
+        "
+      >
+        <div className="flex flex-col items-center justify-center gap-4">
+          <div
+            className="
+              w-10
+              h-10
+              rounded-full
+              border-4
+              border-[#EAF2E7]
+              border-t-[#5F7A63]
+              animate-spin
+            "
+          />
+
+          <p className="text-sm text-[#60738F]">
+            Loading patients...
+          </p>
+        </div>
       </div>
     );
   }
 
-  // Error state
   if (error) {
     return (
-      <div className="bg-white rounded-2xl border border-red-200 p-10">
-        <p className="text-center text-red-500">
-          {error}
-        </p>
+      <div
+        className="
+          bg-white
+          rounded-2xl
+          border
+          border-[#E5CACA]
+          shadow-[0_4px_20px_rgba(79,104,83,0.08)]
+          p-12
+        "
+      >
+        <div className="text-center">
+          <div
+            className="
+              mx-auto
+              w-12
+              h-12
+              rounded-full
+              bg-[#FDECEC]
+              text-[#C94A4A]
+              flex
+              items-center
+              justify-center
+              font-bold
+              text-lg
+              mb-4
+            "
+          >
+            !
+          </div>
 
-        <div className="flex justify-center mt-4">
+          <p className="text-[#C94A4A] font-medium">
+            {error}
+          </p>
+
           <button
+            type="button"
             onClick={loadPatients}
-            className="px-4 py-2 rounded-lg bg-[#5F7A63] text-white hover:bg-[#4F6853]"
+            className="
+              mt-5
+              px-5
+              py-2.5
+              rounded-xl
+              bg-[#5F7A63]
+              text-white
+              font-semibold
+              hover:bg-[#4F6853]
+              transition-colors
+              cursor-pointer
+            "
           >
             Try Again
           </button>
@@ -153,28 +356,163 @@ function PatientTable({ search, status, gender }) {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
-      <div className="p-6 border-b border-slate-200">
-        <h2 className="text-xl font-semibold text-slate-800">
-          Patient Records
-        </h2>
+    <div
+      className="
+        bg-white
+        rounded-2xl
+        border
+        border-[#DDE5DF]
+        shadow-[0_4px_20px_rgba(79,104,83,0.08)]
+        overflow-hidden
+      "
+    >
+      {/* HEADER */}
 
-        <p className="text-sm text-slate-500 mt-1">
-          {filteredPatients.length} patient
-          {filteredPatients.length !== 1 ? "s" : ""} found
-        </p>
+      <div
+        className="
+          px-8
+          py-7
+          border-b
+          border-[#E5EBE4]
+          bg-gradient-to-r
+          from-[#F8FAF7]
+          to-white
+        "
+      >
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2
+              className="
+                text-2xl
+                font-semibold
+                text-[#1E2D45]
+              "
+            >
+              Patient Records
+            </h2>
+
+            <p
+              className="
+                mt-1
+                text-sm
+                text-[#60738F]
+              "
+            >
+              {filteredPatients.length} patient
+              {filteredPatients.length !== 1
+                ? "s"
+                : ""}{" "}
+              found
+            </p>
+          </div>
+
+          <div
+            className="
+              px-4
+              py-2
+              rounded-full
+              bg-[#EAF2E7]
+              text-[#5F7A63]
+              border
+              border-[#D5E4D1]
+              text-sm
+              font-semibold
+            "
+          >
+            {filteredPatients.length} Records
+          </div>
+        </div>
       </div>
 
+      {/* TABLE */}
+
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-[#F8FAF7]">
-            <tr className="text-left text-slate-600">
-              <th className="p-4">Name</th>
-              <th className="p-4">Age</th>
-              <th className="p-4">Gender</th>
-              <th className="p-4">Phone</th>
-              <th className="p-4">Status</th>
-              <th className="p-4">Actions</th>
+        <table className="w-full min-w-[900px]">
+          <thead>
+            <tr
+              className="
+                bg-[#F8FAF7]
+                border-b
+                border-[#E1E8E0]
+              "
+            >
+              <th
+                className="
+                  px-6
+                  py-5
+                  text-left
+                  text-sm
+                  font-semibold
+                  text-[#425D78]
+                "
+              >
+                Name
+              </th>
+
+              <th
+                className="
+                  px-6
+                  py-5
+                  text-left
+                  text-sm
+                  font-semibold
+                  text-[#425D78]
+                "
+              >
+                Age
+              </th>
+
+              <th
+                className="
+                  px-6
+                  py-5
+                  text-left
+                  text-sm
+                  font-semibold
+                  text-[#425D78]
+                "
+              >
+                Gender
+              </th>
+
+              <th
+                className="
+                  px-6
+                  py-5
+                  text-left
+                  text-sm
+                  font-semibold
+                  text-[#425D78]
+                "
+              >
+                Phone
+              </th>
+
+              <th
+                className="
+                  px-6
+                  py-5
+                  text-left
+                  text-sm
+                  font-semibold
+                  text-[#425D78]
+                "
+              >
+                Status
+              </th>
+
+              <th
+                className="
+                  px-6
+                  py-5
+                  text-left
+                  text-sm
+                  font-semibold
+                  text-[#425D78]
+                "
+              >
+                Actions
+              </th>
             </tr>
           </thead>
 
@@ -182,17 +520,61 @@ function PatientTable({ search, status, gender }) {
             {filteredPatients.length > 0 ? (
               filteredPatients.map((patient) => (
                 <PatientRow
-                  key={patient.id}
+                  key={
+                    patient.id ||
+                    patient.patient_id
+                  }
                   patient={patient}
+                  onView={handleView}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
                 />
               ))
             ) : (
               <tr>
                 <td
-                  colSpan="6"
-                  className="text-center py-10 text-slate-500"
+                  colSpan={6}
+                  className="px-6 py-16 text-center"
                 >
-                  No patients found.
+                  <div className="flex flex-col items-center">
+                    <div
+                      className="
+                        w-14
+                        h-14
+                        rounded-full
+                        bg-[#EAF2E7]
+                        text-[#5F7A63]
+                        flex
+                        items-center
+                        justify-center
+                        mb-4
+                      "
+                    >
+                      <span className="text-xl">
+                        👤
+                      </span>
+                    </div>
+
+                    <p
+                      className="
+                        text-[#1E2D45]
+                        font-semibold
+                      "
+                    >
+                      No patients found
+                    </p>
+
+                    <p
+                      className="
+                        text-sm
+                        text-[#60738F]
+                        mt-1
+                      "
+                    >
+                      Try changing your search or
+                      filter.
+                    </p>
+                  </div>
                 </td>
               </tr>
             )}

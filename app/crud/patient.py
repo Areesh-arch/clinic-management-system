@@ -11,10 +11,6 @@ def create_patient(
     tenant_id: int,
     medical_record_number: str,
 ) -> Patient:
-    """
-    Create a new patient.
-    """
-
     patient = Patient(
         tenant_id=tenant_id,
         medical_record_number=medical_record_number,
@@ -31,13 +27,11 @@ def create_patient(
 def get_patient_by_id(
     db: Session,
     patient_id: int,
+    tenant_id: int,
 ) -> Patient | None:
-    """
-    Return a single patient by ID.
-    """
-
     statement = select(Patient).where(
-        Patient.id == patient_id
+        Patient.id == patient_id,
+        Patient.tenant_id == tenant_id,
     )
 
     return db.scalar(statement)
@@ -45,14 +39,14 @@ def get_patient_by_id(
 
 def get_patients(
     db: Session,
+    tenant_id: int,
 ) -> list[Patient]:
-    """
-    Return all active patients.
-    """
-
     statement = (
         select(Patient)
-        .where(Patient.is_active == True)
+        .where(
+            Patient.tenant_id == tenant_id,
+            Patient.is_active == True,
+        )
         .order_by(Patient.first_name)
     )
 
@@ -64,10 +58,6 @@ def update_patient(
     patient: Patient,
     patient_data: PatientUpdate,
 ) -> Patient:
-    """
-    Update patient details.
-    """
-
     updates = patient_data.model_dump(exclude_unset=True)
 
     for key, value in updates.items():
@@ -83,10 +73,5 @@ def delete_patient(
     db: Session,
     patient: Patient,
 ) -> None:
-    """
-    Soft delete a patient.
-    """
-
     patient.is_active = False
-
     db.commit()

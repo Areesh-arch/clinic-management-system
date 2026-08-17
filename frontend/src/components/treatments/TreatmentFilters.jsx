@@ -3,34 +3,66 @@ function TreatmentFilters({
   setDoctor,
   status,
   setStatus,
+  doctors = [],
 }) {
+
   return (
     <div className="flex flex-col md:flex-row gap-4">
 
       <select
         value={doctor}
-        onChange={(e) => setDoctor(e.target.value)}
-        className="border rounded-xl p-3"
+        onChange={(e) =>
+          setDoctor(e.target.value)
+        }
+        className="border border-[#25312A] rounded-xl p-3 bg-white"
       >
-        <option>All</option>
-        <option>Dr Sarah Ahmed</option>
-        <option>Dr John Smith</option>
-        <option>Dr Emily Brown</option>
+
+        <option value="All">
+          All
+        </option>
+
+
+        {doctors.map(
+          (doctorItem) => (
+
+            <option
+              key={doctorItem}
+              value={doctorItem}
+            >
+              {doctorItem}
+            </option>
+
+          )
+        )}
+
       </select>
+
 
       <select
         value={status}
-        onChange={(e) => setStatus(e.target.value)}
-        className="border rounded-xl p-3"
+        onChange={(e) =>
+          setStatus(e.target.value)
+        }
+        className="border border-[#25312A] rounded-xl p-3 bg-white"
       >
-        <option>All</option>
-        <option>Completed</option>
-        <option>Scheduled</option>
-        <option>In Progress</option>
+
+        <option value="All">
+          All
+        </option>
+
+        <option value="COMPLETED">
+          Completed
+        </option>
+
+        <option value="IN_PROGRESS">
+          In Progress
+        </option>
+
       </select>
 
     </div>
   );
 }
+
 
 export default TreatmentFilters;

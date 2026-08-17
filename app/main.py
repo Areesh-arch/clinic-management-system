@@ -2,7 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.routes import api_router
 from app.core.config import settings
-
+from app.api.v1.endpoints import dashboard
+from app.api.v1.endpoints.appointment import router as appointment_router
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
@@ -34,3 +35,10 @@ def health():
 
 
 app.include_router(api_router)
+
+app.include_router(dashboard.router)
+
+app.include_router(
+    appointment_router,
+    prefix="/api/v1",
+)

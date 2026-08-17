@@ -30,6 +30,11 @@ router = APIRouter(
 )
 
 
+# ============================================================
+# CREATE STAFF
+# SUPER_ADMIN ONLY
+# ============================================================
+
 @router.post(
     "/",
     response_model=StaffResponse,
@@ -39,7 +44,7 @@ def create_staff(
     staff: StaffCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        require_roles(UserRole.OWNER)
+        require_roles(UserRole.SUPER_ADMIN)
     ),
     _: User = Depends(
         require_feature(Feature.STAFF)
@@ -51,12 +56,18 @@ def create_staff(
             staff_data=staff,
             tenant_id=current_user.tenant_id,
         )
+
     except ValueError as e:
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
 
+
+# ============================================================
+# LIST STAFF
+# SUPER_ADMIN + OWNER
+# ============================================================
 
 @router.get(
     "/",
@@ -65,7 +76,10 @@ def create_staff(
 def list_staff(
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        require_roles(UserRole.OWNER)
+        require_roles(
+            UserRole.SUPER_ADMIN,
+            UserRole.OWNER,
+        )
     ),
     _: User = Depends(
         require_feature(Feature.STAFF)
@@ -73,6 +87,11 @@ def list_staff(
 ):
     return list_staff_service(db)
 
+
+# ============================================================
+# GET ONE STAFF MEMBER
+# SUPER_ADMIN + OWNER
+# ============================================================
 
 @router.get(
     "/{staff_id}",
@@ -82,7 +101,10 @@ def get_staff(
     staff_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        require_roles(UserRole.OWNER)
+        require_roles(
+            UserRole.SUPER_ADMIN,
+            UserRole.OWNER,
+        )
     ),
     _: User = Depends(
         require_feature(Feature.STAFF)
@@ -95,12 +117,17 @@ def get_staff(
 
     if staff is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Staff not found",
         )
 
     return staff
 
+
+# ============================================================
+# UPDATE STAFF
+# SUPER_ADMIN ONLY
+# ============================================================
 
 @router.put(
     "/{staff_id}",
@@ -111,7 +138,7 @@ def update_staff(
     staff_data: StaffUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        require_roles(UserRole.OWNER)
+        require_roles(UserRole.SUPER_ADMIN)
     ),
     _: User = Depends(
         require_feature(Feature.STAFF)
@@ -124,7 +151,7 @@ def update_staff(
 
     if staff is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Staff not found",
         )
 
@@ -135,6 +162,11 @@ def update_staff(
     )
 
 
+# ============================================================
+# DELETE STAFF
+# SUPER_ADMIN ONLY
+# ============================================================
+
 @router.delete(
     "/{staff_id}",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -143,7 +175,7 @@ def delete_staff(
     staff_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        require_roles(UserRole.OWNER)
+        require_roles(UserRole.SUPER_ADMIN)
     ),
     _: User = Depends(
         require_feature(Feature.STAFF)
@@ -156,7 +188,7 @@ def delete_staff(
 
     if staff is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Staff not found",
         )
 
@@ -164,3 +196,5 @@ def delete_staff(
         db,
         staff,
     )
+
+    return None
