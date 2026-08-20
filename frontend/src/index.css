@@ -1,10 +1,12 @@
 @import "tailwindcss";
-body{
-    margin:0;
-    font-family:Inter,sans-serif;
-    background:#F8F7F3;
-    color:#25312A;
+
+body {
+  margin: 0;
+  font-family: Inter, sans-serif;
+  background: #F7F9F6;
+  color: #25312A;
 }
+
 .input {
   width: 100%;
   padding: 0.75rem 1rem;
@@ -17,7 +19,7 @@ body{
 }
 
 .input:focus {
-  border-color: #a3b18a;
+  border-color: #A3B18A;
   box-shadow: 0 0 0 2px rgba(163, 177, 138, 0.25);
 }
 

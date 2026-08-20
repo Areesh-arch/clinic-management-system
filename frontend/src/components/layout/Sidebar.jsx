@@ -7,6 +7,7 @@ import {
   FiSettings,
   FiClipboard,
   FiUserCheck,
+  FiCreditCard,
 } from "react-icons/fi";
 
 import { NavLink } from "react-router-dom";
@@ -47,6 +48,11 @@ function Sidebar() {
       name: "Inventory",
       icon: <FiPackage />,
       path: "/inventory",
+    },
+    {
+      name: "Billing",
+      icon: <FiCreditCard />,
+      path: "/billing",
     },
     {
       name: "Settings",

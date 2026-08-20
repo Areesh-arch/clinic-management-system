@@ -74,6 +74,11 @@ function AppRouter() {
           />
 
           <Route
+            path="/billing"
+            element={<Billing />}
+          />
+
+          <Route
             path="/settings"
             element={<Settings />}
           />

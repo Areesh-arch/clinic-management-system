@@ -2,6 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.api.permissions import require_roles
+
+from app.models.user import User
+from app.models.enums import UserRole
+
 from app.schemas.tenant import (
     TenantCreate,
     TenantResponse,
@@ -76,6 +81,12 @@ def update_tenant(
     tenant_id: int,
     tenant: TenantUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.SUPER_ADMIN,
+        )
+    ),
 ):
     db_tenant = get_tenant_by_id(
         db,
@@ -86,6 +97,17 @@ def update_tenant(
         raise HTTPException(
             status_code=404,
             detail="Tenant not found",
+        )
+
+    # SUPER_ADMIN can manage any tenant.
+    # OWNER can only manage their own clinic.
+    if (
+        current_user.role != UserRole.SUPER_ADMIN
+        and db_tenant.id != current_user.tenant_id
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to update this clinic.",
         )
 
     return update_existing_tenant(
