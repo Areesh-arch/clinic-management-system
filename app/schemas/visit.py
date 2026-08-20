@@ -5,6 +5,10 @@ from pydantic import BaseModel, ConfigDict
 from app.models.enums import VisitStatus
 
 
+# =========================================================
+# CREATE
+# =========================================================
+
 class VisitCreate(BaseModel):
     appointment_id: int
 
@@ -15,6 +19,10 @@ class VisitCreate(BaseModel):
     charge: float = 0
 
 
+# =========================================================
+# UPDATE
+# =========================================================
+
 class VisitUpdate(BaseModel):
     status: VisitStatus | None = None
 
@@ -24,6 +32,10 @@ class VisitUpdate(BaseModel):
 
     charge: float | None = None
 
+
+# =========================================================
+# RESPONSE
+# =========================================================
 
 class VisitResponse(BaseModel):
     id: int

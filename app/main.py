@@ -1,29 +1,63 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+
 from app.api.v1.routes import api_router
-from app.core.config import settings
-from app.api.v1.endpoints import dashboard
-from app.api.v1.endpoints.appointment import router as appointment_router
+
+
 app = FastAPI(
-    title=settings.APP_NAME,
-    version=settings.APP_VERSION,
+    title="Clinic Management System",
 )
+
+
+# =========================================================
+# CORS
+# =========================================================
 
 app.add_middleware(
     CORSMiddleware,
+
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     ],
+
     allow_credentials=True,
+
     allow_methods=["*"],
+
     allow_headers=["*"],
 )
 
+
+# =========================================================
+# STATIC UPLOADS
+# =========================================================
+
+UPLOADS_DIR = Path("uploads")
+
+UPLOADS_DIR.mkdir(
+    parents=True,
+    exist_ok=True,
+)
+
+app.mount(
+    "/uploads",
+    StaticFiles(directory=UPLOADS_DIR),
+    name="uploads",
+)
+
+
+# =========================================================
+# BASIC ROUTES
+# =========================================================
+
 @app.get("/")
-def home():
+def root():
     return {
-        "message": "Welcome to Clinic Management System"
+        "message": "Clinic Management System API"
     }
 
 
@@ -34,11 +68,8 @@ def health():
     }
 
 
+# =========================================================
+# API V1
+# =========================================================
+
 app.include_router(api_router)
-
-app.include_router(dashboard.router)
-
-app.include_router(
-    appointment_router,
-    prefix="/api/v1",
-)

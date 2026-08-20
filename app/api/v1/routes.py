@@ -16,8 +16,15 @@ from app.api.v1.endpoints.inventory import router as inventory_router
 from app.api.v1.endpoints.outstanding import router as outstanding_router
 from app.api.v1.endpoints.dashboard import router as dashboard_router
 
-api_router = APIRouter()
 
+api_router = APIRouter(
+    prefix="/api/v1"
+)
+
+
+# =========================================================
+# AUTHENTICATION
+# =========================================================
 
 api_router.include_router(
     auth_router,
@@ -26,6 +33,10 @@ api_router.include_router(
 )
 
 
+# =========================================================
+# TENANTS
+# =========================================================
+
 api_router.include_router(
     tenant_router,
     prefix="/tenants",
@@ -33,64 +44,144 @@ api_router.include_router(
 )
 
 
+# =========================================================
+# PATIENTS
+# =========================================================
+
 api_router.include_router(
     patient_router,
+    prefix="/patients",
+    tags=["Patients"],
 )
 
+
+# =========================================================
+# USERS
+# =========================================================
 
 api_router.include_router(
     user_router,
+    prefix="/users",
+    tags=["Users"],
 )
 
+
+# =========================================================
+# STAFF / DOCTORS
+# =========================================================
 
 api_router.include_router(
     staff_router,
+    prefix="/staff",
+    tags=["Staff"],
 )
 
+
+# =========================================================
+# SUBSCRIPTIONS
+# =========================================================
 
 api_router.include_router(
     subscription_router,
+    prefix="/subscriptions",
+    tags=["Subscriptions"],
 )
 
+
+# =========================================================
+# APPOINTMENTS
+# =========================================================
 
 api_router.include_router(
     appointment_router,
+    prefix="/appointments",
+    tags=["Appointments"],
 )
 
+
+# =========================================================
+# VISITS / TREATMENTS
+# =========================================================
 
 api_router.include_router(
     visit_router,
+    prefix="/visits",
+    tags=["Visits / Treatments"],
 )
 
+
+# =========================================================
+# PRESCRIPTIONS
+# =========================================================
 
 api_router.include_router(
     prescription_router,
+    prefix="/prescriptions",
+    tags=["Prescriptions"],
 )
 
+
+# =========================================================
+# TREATMENT PHOTOS
+# =========================================================
 
 api_router.include_router(
     treatment_photo_router,
+    prefix="/treatment-photos",
+    tags=["Treatment Photos"],
 )
 
+
+# =========================================================
+# INVENTORY
+# =========================================================
 
 api_router.include_router(
     inventory_router,
+    prefix="/inventory",
+    tags=["Inventory"],
 )
 
+
+# =========================================================
+# PAYMENTS
+# =========================================================
 
 api_router.include_router(
     payment_router,
+    prefix="/payments",
+    tags=["Payments"],
 )
 
+
+# =========================================================
+# EXPENSES
+# =========================================================
 
 api_router.include_router(
     expense_router,
+    prefix="/expenses",
+    tags=["Expenses"],
 )
+
+
+# =========================================================
+# OUTSTANDING
+# =========================================================
 
 api_router.include_router(
     outstanding_router,
+    prefix="/outstanding",
+    tags=["Outstanding"],
 )
 
+
+# =========================================================
+# DASHBOARD
+# =========================================================
+
 api_router.include_router(
-    dashboard_router
+    dashboard_router,
+    prefix="/dashboard",
+    tags=["Dashboard"],
 )

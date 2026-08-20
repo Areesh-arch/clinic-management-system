@@ -21,8 +21,9 @@ from app.services.appointment_service import (
     delete_appointment_service,
 )
 
+# Set prefix="" because prefix="/appointments" is applied in api_router.py
 router = APIRouter(
-    prefix="/appointments",
+    prefix="",
     tags=["Appointments"],
 )
 
@@ -51,9 +52,11 @@ def create_appointment(
         )
 
 
+@router.get("", response_model=list[AppointmentResponse])
 @router.get(
     "/",
     response_model=list[AppointmentResponse],
+    include_in_schema=False,
 )
 def list_appointments(
     db: Session = Depends(get_db),

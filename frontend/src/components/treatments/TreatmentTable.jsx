@@ -22,24 +22,23 @@ function TreatmentTable({
       const treatmentName =
         item.treatment || "";
 
+
+      const searchValue =
+        search.toLowerCase();
+
+
       const matchesSearch =
         patientName
           .toLowerCase()
-          .includes(
-            search.toLowerCase()
-          ) ||
+          .includes(searchValue) ||
 
         doctorName
           .toLowerCase()
-          .includes(
-            search.toLowerCase()
-          ) ||
+          .includes(searchValue) ||
 
         treatmentName
           .toLowerCase()
-          .includes(
-            search.toLowerCase()
-          );
+          .includes(searchValue);
 
 
       const matchesDoctor =
@@ -57,11 +56,11 @@ function TreatmentTable({
         matchesDoctor &&
         matchesStatus
       );
-
     });
 
 
   return (
+
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-[#E6E1D8]">
 
       <div className="overflow-x-auto">
@@ -126,10 +125,21 @@ function TreatmentTable({
                 (treatment) => (
 
                   <TreatmentRow
-                    key={treatment.id}
-                    treatment={treatment}
-                    onEdit={onEdit}
-                    onDelete={onDelete}
+                    key={
+                      treatment.id
+                    }
+
+                    treatment={
+                      treatment
+                    }
+
+                    onEdit={
+                      onEdit
+                    }
+
+                    onDelete={
+                      onDelete
+                    }
                   />
 
                 )

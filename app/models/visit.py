@@ -131,6 +131,7 @@ class Visit(Base, IDMixin, TimestampMixin):
         "Prescription",
         back_populates="visit",
         uselist=False,
+        cascade="all, delete-orphan",
     )
 
     photos: Mapped[list["TreatmentPhoto"]] = relationship(

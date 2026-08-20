@@ -1,92 +1,72 @@
 import { apiRequest } from "./api";
 
 
-// ==========================================
+// =========================================================
 // GET ALL APPOINTMENTS
-// ==========================================
+// =========================================================
 
-export const getAppointments = async () => {
-
-  return await apiRequest(
-    "/api/v1/appointments/"
-  );
-
-};
+export async function getAppointments() {
+  return apiRequest("/appointments/");
+}
 
 
-// ==========================================
+// =========================================================
 // GET SINGLE APPOINTMENT
-// ==========================================
+// =========================================================
 
-export const getAppointment = async (
-  appointmentId
-) => {
-
-  return await apiRequest(
-    `/api/v1/appointments/${appointmentId}`
+export async function getAppointment(appointmentId) {
+  return apiRequest(
+    `/appointments/${appointmentId}`
   );
+}
 
-};
 
-
-// ==========================================
+// =========================================================
 // CREATE APPOINTMENT
-// ==========================================
+// =========================================================
 
-export const createAppointment = async (
+export async function createAppointment(
   appointmentData
-) => {
-
-  return await apiRequest(
-    "/api/v1/appointments/",
+) {
+  return apiRequest(
+    "/appointments/",
     {
       method: "POST",
-
-      body: JSON.stringify(
-        appointmentData
-      ),
+      body: JSON.stringify(appointmentData),
     }
   );
+}
 
-};
 
-
-// ==========================================
+// =========================================================
 // UPDATE APPOINTMENT
-// ==========================================
+// =========================================================
 
-export const updateAppointment = async (
+export async function updateAppointment(
   appointmentId,
   appointmentData
-) => {
-
-  return await apiRequest(
-    `/api/v1/appointments/${appointmentId}`,
+) {
+  return apiRequest(
+    `/appointments/${appointmentId}`,
     {
       method: "PUT",
-
-      body: JSON.stringify(
-        appointmentData
-      ),
+      body: JSON.stringify(appointmentData),
     }
   );
+}
 
-};
 
-
-// ==========================================
+// =========================================================
 // DELETE APPOINTMENT
-// ==========================================
+// =========================================================
 
-export const deleteAppointment = async (
+export async function deleteAppointment(
   appointmentId
-) => {
-
-  return await apiRequest(
-    `/api/v1/appointments/${appointmentId}`,
+) {
+  return apiRequest(
+    `/appointments/${appointmentId}`,
     {
       method: "DELETE",
     }
   );
-
-};
+}

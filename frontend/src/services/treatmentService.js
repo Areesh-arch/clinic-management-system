@@ -1,102 +1,135 @@
 import { apiRequest } from "./api";
 
-// ==========================================
+
+// =========================================================
 // GET ALL TREATMENTS / VISITS
-// ==========================================
+// =========================================================
 
-export const getTreatments = async () => {
-  return await apiRequest("/api/v1/visits/");
-};
+export async function getTreatments() {
 
-
-// ==========================================
-// GET SINGLE TREATMENT / VISIT
-// ==========================================
-
-export const getTreatment = async (treatmentId) => {
-  return await apiRequest(
-    `/api/v1/visits/${treatmentId}`
+  return apiRequest(
+    "/visits/"
   );
-};
+
+}
 
 
-// ==========================================
+// =========================================================
+// GET SINGLE TREATMENT / VISIT
+// =========================================================
+
+export async function getTreatment(
+  treatmentId
+) {
+
+  return apiRequest(
+    `/visits/${treatmentId}`
+  );
+
+}
+
+
+// =========================================================
 // CREATE TREATMENT / VISIT
-// ==========================================
+// =========================================================
 
-export const createTreatment = async (treatmentData) => {
-  return await apiRequest(
-    "/api/v1/visits/",
+export async function createTreatment(
+  treatmentData
+) {
+
+  return apiRequest(
+    "/visits/",
     {
       method: "POST",
 
       body: JSON.stringify({
-        appointment_id: Number(
-          treatmentData.appointment_id
-        ),
+
+        appointment_id:
+          Number(
+            treatmentData.appointment_id
+          ),
 
         diagnosis:
-          treatmentData.treatment || null,
+          treatmentData.diagnosis ||
+          null,
 
         charge:
-          Number(treatmentData.charge || 0),
+          Number(
+            treatmentData.charge || 0
+          ),
 
         chief_complaint:
-          treatmentData.chief_complaint || null,
+          treatmentData.chief_complaint ||
+          null,
 
         notes:
-          treatmentData.notes || null,
+          treatmentData.notes ||
+          null,
+
       }),
     }
   );
-};
+
+}
 
 
-// ==========================================
+// =========================================================
 // UPDATE TREATMENT / VISIT
-// ==========================================
+// =========================================================
 
-export const updateTreatment = async (
+export async function updateTreatment(
   treatmentId,
   treatmentData
-) => {
-  return await apiRequest(
-    `/api/v1/visits/${treatmentId}`,
+) {
+
+  return apiRequest(
+    `/visits/${treatmentId}`,
     {
       method: "PUT",
 
       body: JSON.stringify({
+
         status:
-          treatmentData.status,
+          treatmentData.status ||
+          null,
 
         diagnosis:
-          treatmentData.treatment,
+          treatmentData.diagnosis ||
+          null,
 
         charge:
-          Number(treatmentData.charge || 0),
+          Number(
+            treatmentData.charge || 0
+          ),
 
         chief_complaint:
-          treatmentData.chief_complaint || null,
+          treatmentData.chief_complaint ||
+          null,
 
         notes:
-          treatmentData.notes || null,
+          treatmentData.notes ||
+          null,
+
       }),
     }
   );
-};
+
+}
 
 
-// ==========================================
+// =========================================================
 // DELETE TREATMENT / VISIT
-// ==========================================
+// =========================================================
 
-export const deleteTreatment = async (
+export async function deleteTreatment(
   treatmentId
-) => {
-  return await apiRequest(
-    `/api/v1/visits/${treatmentId}`,
+) {
+
+  return apiRequest(
+    `/visits/${treatmentId}`,
     {
       method: "DELETE",
     }
   );
-};
+
+}

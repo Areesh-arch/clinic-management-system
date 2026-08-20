@@ -22,7 +22,7 @@ from app.services.patient_service import (
 )
 
 router = APIRouter(
-    prefix="/patients",
+    prefix="",
     tags=["Patients"],
 )
 

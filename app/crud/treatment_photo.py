@@ -32,10 +32,14 @@ def create_treatment_photo(
 def get_treatment_photo_by_id(
     db: Session,
     photo_id: int,
+    tenant_id: int,
 ):
     return (
         db.query(TreatmentPhoto)
-        .filter(TreatmentPhoto.id == photo_id)
+        .filter(
+            TreatmentPhoto.id == photo_id,
+            TreatmentPhoto.tenant_id == tenant_id,
+        )
         .first()
     )
 
@@ -48,6 +52,9 @@ def get_treatment_photos(
         db.query(TreatmentPhoto)
         .filter(
             TreatmentPhoto.tenant_id == tenant_id
+        )
+        .order_by(
+            TreatmentPhoto.created_at.desc()
         )
         .all()
     )

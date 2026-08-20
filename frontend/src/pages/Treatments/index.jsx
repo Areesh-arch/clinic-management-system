@@ -15,7 +15,6 @@ import TreatmentSearch from "../../components/treatments/TreatmentSearch";
 import TreatmentFilters from "../../components/treatments/TreatmentFilters";
 import TreatmentTable from "../../components/treatments/TreatmentTable";
 import TreatmentModal from "../../components/treatments/TreatmentModal";
-import TreatmentForm from "../../components/treatments/TreatmentForm";
 
 import {
   getTreatments,
@@ -51,16 +50,15 @@ function Treatments() {
     setEditingTreatment,
   ] = useState(null);
 
-
   const [
     searchParams,
     setSearchParams,
   ] = useSearchParams();
 
 
-  // ==========================================
+  // =====================================================
   // LOAD TREATMENTS
-  // ==========================================
+  // =====================================================
 
   const loadTreatments = async () => {
 
@@ -77,43 +75,60 @@ function Treatments() {
         data
       );
 
-
       const normalized =
         Array.isArray(data)
-          ? data.map(
-              (visit) => ({
-                id: visit.id,
+          ? data.map((visit) => ({
+              id: visit.id,
 
-                patient_id:
-                  visit.patient_id,
+              tenant_id:
+                visit.tenant_id,
 
-                doctor_id:
-                  visit.doctor_id,
+              appointment_id:
+                visit.appointment_id,
 
-                patient_name:
-                  visit.patient_name ||
-                  `Patient #${visit.patient_id}`,
+              patient_id:
+                visit.patient_id,
 
-                doctor_name:
-                  visit.doctor_name ||
-                  `Doctor #${visit.doctor_id}`,
+              doctor_id:
+                visit.doctor_id,
 
-                treatment:
-                  visit.diagnosis ||
-                  "—",
+              patient_name:
+                visit.patient_name ||
+                `Patient #${visit.patient_id}`,
 
-                date:
-                  visit.visit_time,
+              doctor_name:
+                visit.doctor_name ||
+                `Doctor #${visit.doctor_id}`,
 
-                cost:
-                  visit.charge,
+              treatment:
+                visit.diagnosis ||
+                "—",
 
-                status:
-                  visit.status,
-              })
-            )
+              diagnosis:
+                visit.diagnosis ||
+                "",
+
+              chief_complaint:
+                visit.chief_complaint ||
+                "",
+
+              notes:
+                visit.notes ||
+                "",
+
+              date:
+                visit.visit_time,
+
+              cost:
+                visit.charge ?? 0,
+
+              charge:
+                visit.charge ?? 0,
+
+              status:
+                visit.status,
+            }))
           : [];
-
 
       setTreatments(normalized);
 
@@ -138,9 +153,9 @@ function Treatments() {
   };
 
 
-  // ==========================================
+  // =====================================================
   // INITIAL LOAD
-  // ==========================================
+  // =====================================================
 
   useEffect(() => {
 
@@ -149,9 +164,9 @@ function Treatments() {
   }, []);
 
 
-  // ==========================================
+  // =====================================================
   // OPEN ?new=true
-  // ==========================================
+  // =====================================================
 
   useEffect(() => {
 
@@ -159,6 +174,7 @@ function Treatments() {
       searchParams.get("new") === "true"
     ) {
 
+      setEditingTreatment(null);
       setShowModal(true);
 
       setSearchParams(
@@ -176,33 +192,33 @@ function Treatments() {
   ]);
 
 
-  // ==========================================
-  // DOCTORS FOR FILTER
-  // ==========================================
+  // =====================================================
+  // DOCTORS
+  // =====================================================
 
-  const doctors = useMemo(() => {
+  const doctors =
+    useMemo(() => {
 
-    return [
-      ...new Set(
-        treatments
-          .map(
-            (item) =>
-              item.doctor_name
-          )
-          .filter(Boolean)
-      ),
-    ];
+      return [
+        ...new Set(
+          treatments
+            .map(
+              (item) =>
+                item.doctor_name
+            )
+            .filter(Boolean)
+        ),
+      ];
 
-  }, [treatments]);
+    }, [treatments]);
 
 
-  // ==========================================
-  // STATS
-  // ==========================================
+  // =====================================================
+  // STATISTICS
+  // =====================================================
 
   const total =
     treatments.length;
-
 
   const completed =
     treatments.filter(
@@ -211,14 +227,12 @@ function Treatments() {
         "COMPLETED"
     ).length;
 
-
   const scheduled =
     treatments.filter(
       (item) =>
         item.status ===
         "SCHEDULED"
     ).length;
-
 
   const inProgress =
     treatments.filter(
@@ -232,60 +246,105 @@ function Treatments() {
     "bg-white rounded-2xl shadow-sm p-6 border border-[#E6E1D8]";
 
 
-  // ==========================================
-  // CREATED
-  // ==========================================
+  // =====================================================
+  // OPEN ADD MODAL
+  // =====================================================
 
-  const handleTreatmentCreated =
+  const handleAddTreatment = () => {
+
+    setEditingTreatment(null);
+
+    setError("");
+
+    setShowModal(true);
+
+  };
+
+
+  // =====================================================
+  // OPEN EDIT MODAL
+  // =====================================================
+
+  const handleEdit = (treatment) => {
+
+    console.log(
+      "Editing treatment:",
+      treatment
+    );
+
+    setEditingTreatment(
+      treatment
+    );
+
+    setError("");
+
+    setShowModal(true);
+
+  };
+
+
+  // =====================================================
+  // CREATED / UPDATED
+  // =====================================================
+
+  const handleTreatmentSuccess =
     async () => {
 
       setShowModal(false);
+
+      setEditingTreatment(null);
 
       await loadTreatments();
 
     };
 
 
-  // ==========================================
-  // EDIT
-  // ==========================================
+  // =====================================================
+  // CLOSE MODAL
+  // =====================================================
 
-  const handleEdit =
-    (treatment) => {
+  const closeModal = () => {
 
-      setEditingTreatment(
-        treatment
-      );
+    setShowModal(false);
 
-      setShowModal(true);
+    setEditingTreatment(null);
 
-    };
+  };
 
 
-  // ==========================================
+  // =====================================================
   // DELETE
-  // ==========================================
+  // =====================================================
 
   const handleDelete =
     async (treatment) => {
 
       const confirmed =
         window.confirm(
-          `Are you sure you want to delete this treatment?`
+          "Are you sure you want to delete this treatment?"
         );
-
 
       if (!confirmed) {
         return;
       }
 
-
       try {
+
+        setError("");
+
+        console.log(
+          "Deleting treatment:",
+          treatment.id
+        );
 
         await deleteTreatment(
           treatment.id
         );
 
+        console.log(
+          "Treatment deleted successfully:",
+          treatment.id
+        );
 
         await loadTreatments();
 
@@ -306,44 +365,45 @@ function Treatments() {
     };
 
 
+  // =====================================================
+  // UI
+  // =====================================================
+
   return (
+
     <Layout>
 
       <div className="space-y-8">
 
-        {/* ====================================
+        {/* =================================================
             HEADER
-        ==================================== */}
+            ================================================= */}
 
         <TreatmentHeader
-          onAddTreatment={() => {
-
-            setEditingTreatment(
-              null
-            );
-
-            setShowModal(true);
-
-          }}
+          onAddTreatment={
+            handleAddTreatment
+          }
         />
 
 
-        {/* ====================================
+        {/* =================================================
             ERROR
-        ==================================== */}
+            ================================================= */}
 
         {error && (
 
           <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 px-4 py-3">
+
             {error}
+
           </div>
 
         )}
 
 
-        {/* ====================================
+        {/* =================================================
             STATS
-        ==================================== */}
+            ================================================= */}
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
 
@@ -401,9 +461,9 @@ function Treatments() {
         </div>
 
 
-        {/* ====================================
+        {/* =================================================
             SEARCH
-        ==================================== */}
+            ================================================= */}
 
         <TreatmentSearch
           search={search}
@@ -411,9 +471,9 @@ function Treatments() {
         />
 
 
-        {/* ====================================
+        {/* =================================================
             FILTERS
-        ==================================== */}
+            ================================================= */}
 
         <TreatmentFilters
           doctor={doctor}
@@ -424,9 +484,9 @@ function Treatments() {
         />
 
 
-        {/* ====================================
-            LOADING
-        ==================================== */}
+        {/* =================================================
+            TABLE
+            ================================================= */}
 
         {loading ? (
 
@@ -454,51 +514,21 @@ function Treatments() {
       </div>
 
 
-      {/* ======================================
-          MODAL
-      ====================================== */}
+      {/* =================================================
+          TREATMENT MODAL
+          ================================================= */}
 
-      {showModal && (
-
-        <TreatmentModal
-          open={showModal}
-          onClose={() => {
-
-            setShowModal(false);
-
-            setEditingTreatment(
-              null
-            );
-
-          }}
-        >
-
-          <TreatmentForm
-            treatment={
-              editingTreatment
-            }
-
-            onSuccess={
-              handleTreatmentCreated
-            }
-
-            onClose={() => {
-
-              setShowModal(false);
-
-              setEditingTreatment(
-                null
-              );
-
-            }}
-          />
-
-        </TreatmentModal>
-
-      )}
+      <TreatmentModal
+        isOpen={showModal}
+        onClose={closeModal}
+        onSuccess={handleTreatmentSuccess}
+        treatment={editingTreatment}
+      />
 
     </Layout>
+
   );
+
 }
 
 

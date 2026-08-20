@@ -8,7 +8,7 @@ from app.database.session import get_db
 from app.models.user import User
 
 oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/auth/login",
+    tokenUrl="/api/v1/auth/login"
 )
 
 

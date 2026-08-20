@@ -1,13 +1,20 @@
-export default function SavePhotosButton() {
+import React from "react";
+
+const SavePhotosButton = ({
+  onSave,
+  loading = false,
+  disabled = false,
+}) => {
   return (
-    <div className="flex justify-end">
-
-      <button
-        className="bg-[#7A9E7E] hover:bg-[#688A6B] text-white px-8 py-3 rounded-xl font-semibold transition"
-      >
-        Save Photos
-      </button>
-
-    </div>
+    <button
+      type="button"
+      onClick={onSave}
+      disabled={disabled || loading}
+      className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {loading ? "Saving..." : "Save Photos"}
+    </button>
   );
-}
+};
+
+export default SavePhotosButton;

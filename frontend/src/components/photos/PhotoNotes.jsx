@@ -1,17 +1,26 @@
-export default function PhotoNotes() {
-  return (
-    <div className="bg-white rounded-xl shadow p-6">
+import React from "react";
 
-      <h2 className="text-xl font-semibold mb-4">
-        Doctor Notes
-      </h2>
+const PhotoNotes = ({
+  notes,
+  onChange,
+}) => {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <label className="mb-2 block text-sm font-semibold text-gray-800">
+        Treatment Photo Notes
+      </label>
 
       <textarea
-        rows="6"
-        placeholder="Write treatment observations here..."
-        className="w-full border rounded-xl p-4 resize-none"
+        value={notes || ""}
+        onChange={(event) =>
+          onChange(event.target.value)
+        }
+        rows={4}
+        placeholder="Add notes about the treatment photos..."
+        className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500"
       />
-
     </div>
   );
-}
+};
+
+export default PhotoNotes;

@@ -28,20 +28,24 @@ function TreatmentRow({
 
 
   return (
+
     <tr className="border-b hover:bg-gray-50">
 
       <td className="p-4">
-        {treatment.patient_name || "—"}
+        {treatment.patient_name ||
+          "—"}
       </td>
 
 
       <td className="p-4">
-        {treatment.doctor_name || "—"}
+        {treatment.doctor_name ||
+          "—"}
       </td>
 
 
       <td className="p-4">
-        {treatment.treatment || "—"}
+        {treatment.treatment ||
+          "—"}
       </td>
 
 
@@ -61,7 +65,9 @@ function TreatmentRow({
       <td className="p-4">
 
         <TreatmentStatusBadge
-          status={treatment.status}
+          status={
+            treatment.status
+          }
         />
 
       </td>
@@ -70,6 +76,8 @@ function TreatmentRow({
       <td className="p-4">
 
         <div className="flex gap-3">
+
+          {/* EDIT */}
 
           <button
             type="button"
@@ -80,9 +88,13 @@ function TreatmentRow({
             className="text-blue-600 hover:text-blue-800"
             title="Edit treatment"
           >
+
             <FiEdit2 />
+
           </button>
 
+
+          {/* DELETE */}
 
           <button
             type="button"
@@ -93,7 +105,9 @@ function TreatmentRow({
             className="text-red-600 hover:text-red-800"
             title="Delete treatment"
           >
+
             <FiTrash2 />
+
           </button>
 
         </div>
