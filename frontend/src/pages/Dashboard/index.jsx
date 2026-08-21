@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 
 import Layout from "../../components/layout/Layout";
-
 import StatCard from "../../components/ui/StatCard";
 
 import QuickActions from "../../components/dashboard/QuickActions";
@@ -11,7 +10,6 @@ import AppointmentTable from "../../components/dashboard/AppointmentTable";
 import LowStockCard from "../../components/dashboard/LowStockCard";
 
 import { useAuth } from "../../context/AuthContext";
-
 import { getDashboardData } from "../../services/dashboardService";
 
 import {
@@ -41,8 +39,7 @@ function Dashboard() {
         setDashboardData(data);
       } catch (error) {
         console.error("Failed to load dashboard:", error);
-
-        setError(error.message);
+        setError(error.message || "Failed to load dashboard.");
       } finally {
         setLoading(false);
       }
@@ -53,38 +50,31 @@ function Dashboard() {
     }
   }, [authLoading, user]);
 
-  // Authentication still loading
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-slate-500 text-lg">
-          Loading user...
-        </p>
+      <div className="min-h-screen flex items-center justify-center bg-[#F7F3EA]">
+        <p className="text-[#6E766F]">Loading user...</p>
       </div>
     );
   }
 
-  // Dashboard API loading
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-slate-500 text-lg">
-          Loading dashboard...
-        </p>
+      <div className="min-h-screen flex items-center justify-center bg-[#F7F3EA]">
+        <p className="text-[#6E766F]">Loading dashboard...</p>
       </div>
     );
   }
 
-  // API error
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen flex items-center justify-center bg-[#F7F3EA]">
+        <div className="text-center max-w-md px-6">
           <h2 className="text-xl font-semibold text-red-600">
             Failed to load dashboard
           </h2>
 
-          <p className="text-slate-500 mt-2">
+          <p className="text-[#6E766F] mt-2">
             {error}
           </p>
         </div>
@@ -100,86 +90,119 @@ function Dashboard() {
 
   return (
     <Layout>
+      <div className="w-full max-w-[1600px] mx-auto">
 
-      {/* Header */}
-      <div>
-        <h1 className="text-4xl font-bold tracking-tight text-slate-800">
-          Good Morning 👋
-        </h1>
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#25312A]">
+            Good Morning 👋
+          </h1>
 
-        <p className="text-slate-500 mt-3 text-lg">
-          Welcome back{" "}
-          <span className="font-semibold text-slate-700">
-            {user?.name || user?.full_name || "User"}
-          </span>{" "}
-          to DermaCare Dashboard
-        </p>
+          <p className="text-[#6E766F] mt-2 text-sm sm:text-base">
+            Welcome back{" "}
+            <span className="font-semibold text-[#3E4D42]">
+              {user?.name || user?.full_name || "User"}
+            </span>{" "}
+            to DermaCare Dashboard
+          </p>
 
-        <p className="text-sm text-slate-400 mt-1">
-          Role: {user?.role || "Unknown"}
-        </p>
+          <p className="text-xs text-[#8A918B] mt-1">
+            Role: {user?.role || "Unknown"}
+          </p>
+        </div>
+
+        {/* =====================================================
+            STAT CARDS
+        ===================================================== */}
+
+        <div
+          className="
+            grid
+            grid-cols-1
+            min-[520px]:grid-cols-2
+            lg:grid-cols-4
+            gap-4
+            xl:gap-5
+          "
+        >
+          <StatCard
+            title="Today's Revenue"
+            value={`PKR ${Number(stats.today_revenue || 0).toLocaleString()}`}
+            icon={<FiDollarSign size={22} />}
+          />
+
+          <StatCard
+            title="Patients"
+            value={stats.patients || 0}
+            icon={<FiUsers size={22} />}
+          />
+
+          <StatCard
+            title="Appointments"
+            value={stats.appointments || 0}
+            icon={<FiCalendar size={22} />}
+          />
+
+          <StatCard
+            title="Inventory"
+            value={stats.inventory || 0}
+            icon={<FiPackage size={22} />}
+          />
+        </div>
+
+        {/* =====================================================
+            CHARTS
+        ===================================================== */}
+
+        <div
+          className="
+            mt-5
+            grid
+            grid-cols-1
+            xl:grid-cols-2
+            gap-5
+          "
+        >
+          <RevenueChart
+            data={dashboardData.revenue || []}
+          />
+
+          <PatientChart
+            data={dashboardData.weekly_appointments || []}
+          />
+        </div>
+
+        {/* =====================================================
+            TABLES
+        ===================================================== */}
+
+        <div
+          className="
+            mt-5
+            grid
+            grid-cols-1
+            xl:grid-cols-2
+            gap-5
+          "
+        >
+          <AppointmentTable
+            data={dashboardData.recent_patients || []}
+          />
+
+          <LowStockCard
+            data={dashboardData.low_stock || []}
+          />
+        </div>
+
+        {/* =====================================================
+            QUICK ACTIONS
+        ===================================================== */}
+
+        <div className="mt-5">
+          <QuickActions />
+        </div>
+
       </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mt-8">
-
-        <StatCard
-          title="Today's Revenue"
-          value={`PKR ${stats.today_revenue || 0}`}
-          icon={<FiDollarSign size={26} />}
-        />
-
-        <StatCard
-          title="Patients"
-          value={stats.patients || 0}
-          icon={<FiUsers size={26} />}
-        />
-
-        <StatCard
-          title="Appointments"
-          value={stats.appointments || 0}
-          icon={<FiCalendar size={26} />}
-        />
-
-        <StatCard
-          title="Inventory"
-          value={stats.inventory || 0}
-          icon={<FiPackage size={26} />}
-        />
-
-      </div>
-
-      {/* Charts */}
-      <div className="mt-8 grid grid-cols-1 xl:grid-cols-2 gap-6">
-
-        <RevenueChart
-          data={dashboardData.revenue || []}
-        />
-
-        <PatientChart
-          data={dashboardData.weekly_appointments || []}
-        />
-
-      </div>
-
-      {/* Tables */}
-      <div className="mt-8 grid grid-cols-1 xl:grid-cols-2 gap-6">
-
-        <AppointmentTable
-          data={dashboardData.recent_patients || []}
-        />
-
-        <LowStockCard
-          data={dashboardData.low_stock || []}
-        />
-
-      </div>
-
-      {/* Quick Actions */}
-      <div className="mt-8">
-        <QuickActions />
-      </div>
-
     </Layout>
   );
 }

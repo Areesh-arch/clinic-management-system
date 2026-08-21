@@ -58,7 +58,7 @@ def calculate_visit_outstanding(
         total_charge - total_paid
     )
 
-    # Do not allow negative outstanding.
+    # Never allow outstanding to become negative.
     if outstanding_amount < 0:
         outstanding_amount = Decimal("0.00")
 
@@ -79,7 +79,6 @@ def create_or_update_outstanding_service(
     for a visit.
     """
 
-    # Make sure the visit belongs to this tenant.
     if visit.tenant_id != tenant_id:
         raise ValueError(
             "Visit does not belong to this clinic."
@@ -102,7 +101,6 @@ def create_or_update_outstanding_service(
     )
 
     if existing_outstanding:
-
         return update_outstanding(
             db=db,
             outstanding=existing_outstanding,
@@ -120,6 +118,41 @@ def create_or_update_outstanding_service(
         total_paid=total_paid,
         outstanding_amount=outstanding_amount,
     )
+
+
+def build_outstanding_response(
+    outstanding: Outstanding,
+):
+    """
+    Convert an Outstanding model into the response
+    expected by the frontend.
+
+    Includes both patient_id and patient_name.
+    """
+
+    patient = outstanding.patient
+
+    if patient is None:
+        patient_name = "Unknown Patient"
+    else:
+        patient_name = (
+            f"{patient.first_name} {patient.last_name}"
+        ).strip()
+
+    return {
+        "id": outstanding.id,
+        "tenant_id": outstanding.tenant_id,
+        "patient_id": outstanding.patient_id,
+        "patient_name": patient_name,
+        "visit_id": outstanding.visit_id,
+        "total_charge": float(outstanding.total_charge),
+        "total_paid": float(outstanding.total_paid),
+        "outstanding_amount": float(
+            outstanding.outstanding_amount
+        ),
+        "created_at": outstanding.created_at,
+        "updated_at": outstanding.updated_at,
+    }
 
 
 def get_outstanding_service(
@@ -178,10 +211,15 @@ def list_outstanding_service(
     tenant_id: int,
 ):
 
-    return get_outstandings(
+    outstandings = get_outstandings(
         db=db,
         tenant_id=tenant_id,
     )
+
+    return [
+        build_outstanding_response(outstanding)
+        for outstanding in outstandings
+    ]
 
 
 def list_all_outstanding_service(
@@ -189,10 +227,15 @@ def list_all_outstanding_service(
     tenant_id: int,
 ):
 
-    return get_all_outstandings(
+    outstandings = get_all_outstandings(
         db=db,
         tenant_id=tenant_id,
     )
+
+    return [
+        build_outstanding_response(outstanding)
+        for outstanding in outstandings
+    ]
 
 
 def refresh_outstanding_for_visit(

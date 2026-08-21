@@ -1,52 +1,71 @@
-function LowStockCard({ medicines = [] }) {
+function LowStockCard({ data = [] }) {
   return (
     <div
       className="
+        w-full
+        min-w-0
         bg-white
-        rounded-3xl
-        border border-slate-200
+        rounded-2xl
+        border border-[#E6E0D5]
         shadow-sm
-        p-8
+        p-5
+        sm:p-6
       "
     >
-      <h2 className="text-2xl font-bold text-[#556B55] mb-6">
-        Low Stock Medicines
-      </h2>
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-lg font-semibold text-[#556B55]">
+          Low Stock Medicines
+        </h2>
 
-      {medicines.length === 0 ? (
+        <span className="text-xs text-[#8A918B]">
+          Inventory
+        </span>
+      </div>
+
+      {data.length === 0 ? (
         <div className="py-8 text-center">
-          <p className="text-slate-500">
+          <p className="text-sm text-[#6E766F]">
             No low-stock medicines.
+          </p>
+
+          <p className="text-xs text-[#9AA19B] mt-1">
+            Your inventory is currently healthy.
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {medicines.map((medicine, index) => (
+        <div className="space-y-3">
+          {data.map((medicine, index) => (
             <div
-              key={medicine.id || medicine.name || index}
+              key={
+                medicine.id ||
+                medicine.name ||
+                index
+              }
               className="
                 flex
                 justify-between
                 items-center
+                gap-3
                 border-b
-                border-slate-100
+                border-[#F0ECE4]
                 pb-3
+                last:border-0
               "
             >
-              <div>
-                <p className="font-semibold text-slate-700">
+              <div className="min-w-0">
+                <p className="font-medium text-sm text-[#3E4D42] truncate">
                   {medicine.name}
                 </p>
               </div>
 
               <span
                 className={`
-                  px-3
+                  shrink-0
+                  px-2.5
                   py-1
                   rounded-full
-                  text-sm
+                  text-xs
                   font-medium
-
                   ${
                     medicine.stock <= 3
                       ? "bg-red-100 text-red-600"

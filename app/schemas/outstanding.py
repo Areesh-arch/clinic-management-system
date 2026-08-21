@@ -7,7 +7,10 @@ class OutstandingResponse(BaseModel):
     id: int
 
     tenant_id: int
+
     patient_id: int
+    patient_name: str
+
     visit_id: int
 
     total_charge: float

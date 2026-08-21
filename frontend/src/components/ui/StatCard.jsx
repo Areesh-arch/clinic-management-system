@@ -7,60 +7,71 @@ function StatCard({ title, value, growth, icon }) {
         w-full
         min-w-0
         bg-white
-        rounded-3xl
-        border border-slate-200
-        p-6
+        rounded-2xl
+        border border-[#E6E0D5]
+        px-5
+        py-4
         shadow-sm
         transition-all
         duration-300
-        hover:-translate-y-1
+        hover:-translate-y-0.5
         hover:shadow-md
       "
     >
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-3">
+
+        {/* Text */}
         <div className="min-w-0 flex-1">
-          <p className="text-sm text-[#6E766F]">
+
+          <p className="text-xs sm:text-sm text-[#6E766F] truncate">
             {title}
           </p>
 
           <h2
             className="
-              text-3xl
+              text-xl
+              sm:text-2xl
               font-bold
               text-[#25312A]
-              mt-3
-              break-words
+              mt-1.5
+              truncate
             "
           >
             {value}
           </h2>
 
-          <p
-            className={`mt-5 font-medium {
-              growth.startsWith("+")
-                ? "text-[#7A9E7E]"
-                : "text-[#C65B5B]"
-            }`}
-          >
-            {growth}
-          </p>
+          {growth && (
+            <p
+              className={`mt-1.5 text-xs font-medium ${
+                isPositive
+                  ? "text-[#7A9E7E]"
+                  : "text-[#C65B5B]"
+              }`}
+            >
+              {growth}
+            </p>
+          )}
         </div>
 
+        {/* Icon */}
         <div
           className="
-            w-14
-            h-14
+            w-11
+            h-11
+            sm:w-12
+            sm:h-12
             shrink-0
-            rounded-2xl
+            rounded-xl
             bg-[#EEF4EC]
             flex
             items-center
             justify-center
-            text-3x1
+            text-[#55705A]
           "
         >
           {icon}
         </div>
+
       </div>
     </div>
   );

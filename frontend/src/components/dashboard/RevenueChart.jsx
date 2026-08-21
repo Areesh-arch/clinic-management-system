@@ -12,54 +12,92 @@ function RevenueChart({ data = [] }) {
   return (
     <div
       className="
+        w-full
+        min-w-0
         bg-white
-        rounded-3xl
-        border border-slate-200
+        rounded-2xl
+        border border-[#E6E0D5]
         shadow-sm
-        hover:-translate-y-1
-        transition-transform
-        duration-300
-        p-8
+        p-5
+        sm:p-6
       "
     >
-      <h2 className="text-xl font-semibold text-[#4B5A45] mb-6">
-        Revenue Overview
-      </h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-[#4B5A45]">
+          Revenue Overview
+        </h2>
+
+        <span className="text-xs text-[#8A918B]">
+          Last 7 days
+        </span>
+      </div>
 
       {data.length === 0 ? (
-        <div className="h-[320px] flex items-center justify-center">
-          <p className="text-slate-400">
+        <div className="h-65 flex items-center justify-center">
+          <p className="text-sm text-[#8A918B]">
             No revenue data available.
           </p>
         </div>
       ) : (
-        <ResponsiveContainer width="100%" height={320}>
-          <AreaChart data={data}>
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="#EEE8DD"
-            />
+        <div className="w-full h-65">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart
+              data={data}
+              margin={{
+                top: 10,
+                right: 10,
+                left: -15,
+                bottom: 0,
+              }}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="#EEE8DD"
+              />
 
-            <XAxis
-              dataKey="month"
-              stroke="#7A8B73"
-            />
+              <XAxis
+                dataKey="day"
+                stroke="#7A8B73"
+                tick={{ fontSize: 12 }}
+              />
 
-            <YAxis
-              stroke="#7A8B73"
-            />
+              <YAxis
+                stroke="#7A8B73"
+                tick={{ fontSize: 12 }}
+                tickFormatter={(value) =>
+                  value >= 1000
+                    ? `${value / 1000}k`
+                    : value
+                }
+              />
 
-            <Tooltip />
+              <Tooltip
+                formatter={(value) => [
+                  `PKR ${Number(value).toLocaleString()}`,
+                  "Revenue",
+                ]}
+                labelFormatter={(label) =>
+                  `Day: ${label}`
+                }
+              />
 
-            <Area
-              type="monotone"
-              dataKey="revenue"
-              stroke="#7A8B73"
-              fill="#D9E5D3"
-              strokeWidth={3}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+              <Area
+                type="monotone"
+                dataKey="revenue"
+                stroke="#7A9E7E"
+                fill="#D9E5D3"
+                strokeWidth={2}
+                dot={{
+                  r: 3,
+                  strokeWidth: 2,
+                }}
+                activeDot={{
+                  r: 5,
+                }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
       )}
     </div>
   );

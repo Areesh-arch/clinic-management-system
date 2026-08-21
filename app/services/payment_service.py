@@ -1,3 +1,4 @@
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.crud.payment import (
@@ -32,13 +33,23 @@ def create_payment_service(
 
     1. Patient exists
     2. Visit exists
-    3. Patient belongs to the tenant
-    4. Visit belongs to the tenant
-    5. Visit belongs to the patient
+    3. Patient belongs to tenant
+    4. Visit belongs to tenant
+    5. Visit belongs to patient
+    6. Payment amount is positive
+    7. Payment does not exceed remaining balance
 
-    After creating the payment, the related
-    Outstanding record is automatically updated.
+    After creating the payment, Outstanding is refreshed.
     """
+
+    # ----------------------------------
+    # Validate payment amount
+    # ----------------------------------
+
+    if payment_data.amount <= 0:
+        raise ValueError(
+            "Payment amount must be greater than zero."
+        )
 
     # ----------------------------------
     # Check patient
@@ -83,6 +94,42 @@ def create_payment_service(
     if visit.patient_id != patient.id:
         raise ValueError(
             "Visit does not belong to this patient."
+        )
+
+    # ----------------------------------
+    # Calculate already-paid amount
+    # ----------------------------------
+
+    already_paid = (
+        db.query(func.coalesce(func.sum(Payment.amount), 0))
+        .filter(
+            Payment.visit_id == visit.id,
+            Payment.tenant_id == tenant_id,
+        )
+        .scalar()
+    )
+
+    already_paid = float(already_paid or 0)
+
+    # ----------------------------------
+    # Calculate remaining balance
+    # ----------------------------------
+
+    remaining_balance = float(visit.charge) - already_paid
+
+    # ----------------------------------
+    # Prevent overpayment
+    # ----------------------------------
+
+    if remaining_balance <= 0:
+        raise ValueError(
+            "This visit has already been fully paid."
+        )
+
+    if payment_data.amount > remaining_balance:
+        raise ValueError(
+            f"Payment exceeds the remaining balance "
+            f"of Rs. {remaining_balance:,.2f}."
         )
 
     # ----------------------------------
@@ -156,10 +203,7 @@ def update_payment_service(
     tenant_id: int,
 ):
     """
-    Update a payment and refresh Outstanding.
-
-    If the visit changes, the old visit's Outstanding
-    is also refreshed.
+    Update a payment while preventing overpayment.
     """
 
     # ----------------------------------
@@ -174,6 +218,56 @@ def update_payment_service(
     old_visit_id = payment.visit_id
 
     # ----------------------------------
+    # Determine new amount
+    # ----------------------------------
+
+    new_amount = (
+        payment_data.amount
+        if payment_data.amount is not None
+        else payment.amount
+    )
+
+    if new_amount <= 0:
+        raise ValueError(
+            "Payment amount must be greater than zero."
+        )
+
+    # ----------------------------------
+    # Calculate other payments
+    # excluding the payment being edited
+    # ----------------------------------
+
+    other_payments = (
+        db.query(func.coalesce(func.sum(Payment.amount), 0))
+        .filter(
+            Payment.visit_id == payment.visit_id,
+            Payment.tenant_id == tenant_id,
+            Payment.id != payment.id,
+        )
+        .scalar()
+    )
+
+    other_payments = float(other_payments or 0)
+
+    # ----------------------------------
+    # Calculate remaining balance
+    # ----------------------------------
+
+    remaining_balance = (
+        float(payment.visit.charge) - other_payments
+    )
+
+    # ----------------------------------
+    # Prevent overpayment
+    # ----------------------------------
+
+    if new_amount > remaining_balance:
+        raise ValueError(
+            f"Payment exceeds the remaining balance "
+            f"of Rs. {remaining_balance:,.2f}."
+        )
+
+    # ----------------------------------
     # Update payment
     # ----------------------------------
 
@@ -184,7 +278,7 @@ def update_payment_service(
     )
 
     # ----------------------------------
-    # Refresh old visit
+    # Refresh Outstanding
     # ----------------------------------
 
     refresh_outstanding_for_visit(
@@ -192,19 +286,6 @@ def update_payment_service(
         visit_id=old_visit_id,
         tenant_id=tenant_id,
     )
-
-    # ----------------------------------
-    # If visit_id is ever allowed to change,
-    # refresh the new visit as well.
-    # ----------------------------------
-
-    if updated_payment.visit_id != old_visit_id:
-
-        refresh_outstanding_for_visit(
-            db=db,
-            visit_id=updated_payment.visit_id,
-            tenant_id=tenant_id,
-        )
 
     return updated_payment
 
