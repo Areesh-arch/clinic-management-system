@@ -13,16 +13,31 @@ def create_user(
     """
     Create a new user.
 
-    If tenant_id is provided, use it (Owner flow).
-    Otherwise use user_data.tenant_id (Super Admin flow).
+    If tenant_id is provided, use it.
+    Otherwise use user_data.tenant_id if available.
     """
 
+    # Use the tenant_id explicitly provided by the caller.
+    # For Staff creation, this will be the owner's clinic tenant.
+    final_tenant_id = tenant_id
+
+    # For flows where tenant_id is not provided,
+    # use the value from UserCreate if it exists.
+    if final_tenant_id is None:
+        final_tenant_id = getattr(
+            user_data,
+            "tenant_id",
+            None,
+        )
+
     user = User(
-    db=db,
-    user_data=user_data,
-    tenant_id=tenant_id,
-    password_hash=password_hash,
-)
+        tenant_id=final_tenant_id,
+        full_name=user_data.full_name,
+        email=user_data.email,
+        password_hash=password_hash,
+        role=user_data.role,
+        is_active=user_data.is_active,
+    )
 
     db.add(user)
     db.commit()

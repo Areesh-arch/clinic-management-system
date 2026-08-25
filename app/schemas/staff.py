@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 
 class StaffBase(BaseModel):
@@ -12,11 +12,30 @@ class StaffBase(BaseModel):
     is_active: bool = True
 
 
-class StaffCreate(StaffBase):
-    user_id: int
+class StaffCreate(BaseModel):
+    """
+    Data required to create a Staff member.
+
+    A Staff member has:
+    1. A User account
+    2. A Staff employment profile
+    """
+
+    full_name: str
+    email: EmailStr
+    password: str
+
+    designation: str
+    phone: str
+    salary: Decimal | None = None
+    hire_date: date
+    is_active: bool = True
 
 
 class StaffUpdate(BaseModel):
+    full_name: str | None = None
+    email: EmailStr | None = None
+
     designation: str | None = None
     phone: str | None = None
     salary: Decimal | None = None
@@ -29,6 +48,8 @@ class StaffResponse(StaffBase):
     tenant_id: int
     user_id: int
     employee_code: str
+    name: str
+    email: EmailStr
 
     model_config = ConfigDict(
         from_attributes=True,

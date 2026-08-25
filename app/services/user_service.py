@@ -1,10 +1,3 @@
-from datetime import date
-
-from app.schemas.staff import StaffCreate
-from app.services.staff_service import create_staff_service
-
-from sqlalchemy.orm import Session
-
 from app.core.security import hash_password
 
 from app.crud.user import (
@@ -16,7 +9,6 @@ from app.crud.user import (
     update_user,
 )
 
-from app.models.enums import UserRole
 from app.models.user import User
 
 from app.schemas.user import (
@@ -24,23 +16,18 @@ from app.schemas.user import (
     UserUpdate,
 )
 
-from app.schemas.staff import StaffCreate
-from app.services.staff_service import create_staff_service
-
 
 def create_user_service(
-    db: Session,
+    db,
     user_data: UserCreate,
     current_user: User,
 ) -> User:
     """
-    Create a user.
+    Create a user inside the current user's clinic.
 
-    Owner:
-        - creates users only inside his clinic.
-
-    Super Admin:
-        - does not create staff users.
+    Staff profiles are created separately by the Staff module.
+    This keeps User creation and Staff profile creation cleanly
+    separated.
     """
 
     existing_user = get_user_by_email(
@@ -51,86 +38,27 @@ def create_user_service(
     if existing_user:
         raise ValueError("Email already exists.")
 
-    password_hash = hash_password(
-        user_data.password
-    )
-
-    # Owner's clinic id
-    tenant_id = current_user.tenant_id
-
-    # Create User
-    user = create_user(
-        db=db,
-        user_data=user_data,
-        tenant_id=tenant_id,
-        password_hash=password_hash,
-    )
-
-    # Automatically create Staff Profile
-    if user.role == UserRole.STAFF:
-
-        staff_data = StaffCreate(
-            user_id=user.id,
-            designation="Receptionist",
-            phone="00000000000",
-            salary=None,
-            hire_date=date.today(),
-            is_active=True,
+    if current_user.tenant_id is None:
+        raise ValueError(
+            "Current user is not associated with a clinic."
         )
-
-        create_staff_service(
-            db=db,
-            staff_data=staff_data,
-            tenant_id=tenant_id,
-        )
-
-    return user
-
-    existing_user = get_user_by_email(
-        db,
-        user_data.email,
-    )
-
-    if existing_user:
-        raise ValueError("Email already exists.")
 
     password_hash = hash_password(
         user_data.password,
     )
 
-    # Owner creates users only inside his tenant
-    tenant_id = current_user.tenant_id
-
     user = create_user(
         db=db,
         user_data=user_data,
-        tenant_id=tenant_id,
+        tenant_id=current_user.tenant_id,
         password_hash=password_hash,
     )
-
-    # Automatically create Staff profile
-    if user.role == UserRole.STAFF:
-
-        staff_data = StaffCreate(
-            user_id=user.id,
-            designation="Receptionist",
-            phone="00000000000",
-            salary=None,
-            hire_date=date.today(),
-            is_active=True,
-        )
-
-        create_staff_service(
-            db=db,
-            staff_data=staff_data,
-            tenant_id=tenant_id,
-        )
 
     return user
 
 
 def get_user_service(
-    db: Session,
+    db,
     user_id: int,
 ) -> User | None:
 
@@ -141,7 +69,7 @@ def get_user_service(
 
 
 def list_users_service(
-    db: Session,
+    db,
     tenant_id: int | None,
 ):
 
@@ -152,7 +80,7 @@ def list_users_service(
 
 
 def update_user_service(
-    db: Session,
+    db,
     user: User,
     user_data: UserUpdate,
 ) -> User:
@@ -178,7 +106,7 @@ def update_user_service(
 
 
 def delete_user_service(
-    db: Session,
+    db,
     user: User,
 ) -> None:
 

@@ -30,9 +30,9 @@ function Sidebar() {
       path: "/appointments",
     },
     {
-      name: "Doctors",
+      name: "Staff",
       icon: <FiUserCheck />,
-      path: "/doctors",
+      path: "/staff",
     },
     {
       name: "Treatments",

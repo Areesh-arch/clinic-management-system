@@ -5,7 +5,7 @@ import ForgotPassword from "../pages/ForgotPassword";
 
 import Dashboard from "../pages/Dashboard";
 import Patients from "../pages/Patients";
-import Doctors from "../pages/Doctors";
+import Staff from "../pages/Staff";
 import Treatments from "../pages/Treatments";
 import Appointments from "../pages/Appointments";
 import Billing from "../pages/Billing";
@@ -44,8 +44,8 @@ function AppRouter() {
           />
 
           <Route
-            path="/doctors"
-            element={<Doctors />}
+            path="/staff"
+            element={<Staff />}
           />
 
           <Route

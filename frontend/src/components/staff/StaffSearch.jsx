@@ -1,8 +1,8 @@
-function DoctorSearch({ search, setSearch }) {
+function StaffSearch({ search, setSearch }) {
   return (
     <input
       type="text"
-      placeholder="Search doctor..."
+      placeholder="Search staff..."
       value={search}
       onChange={(e) => setSearch(e.target.value)}
       className="w-full lg:w-96 border rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#A8C5A0]"
@@ -10,4 +10,4 @@ function DoctorSearch({ search, setSearch }) {
   );
 }
 
-export default DoctorSearch;
+export default StaffSearch;
