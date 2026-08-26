@@ -7,14 +7,13 @@ from fastapi import (
 
 from sqlalchemy.orm import Session
 
+from app.api.permissions import require_roles
 from app.database.session import get_db
-from app.api.dependencies import get_current_user
 
+from app.models.enums import UserRole
 from app.models.user import User
 
-from app.schemas.outstanding import (
-    OutstandingResponse,
-)
+from app.schemas.outstanding import OutstandingResponse
 
 from app.services.outstanding_service import (
     get_outstanding_service,
@@ -31,34 +30,6 @@ router = APIRouter(
 
 
 # =========================================================
-# OWNER CHECK
-# =========================================================
-
-def require_owner(
-    current_user: User,
-):
-    """
-    Outstanding is part of the financial/accounts module.
-
-    Staff users must not have access.
-    """
-
-    role = current_user.role
-
-    if hasattr(role, "value"):
-        role = role.value
-
-    if str(role).lower() != "owner":
-
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the clinic owner can access financial information.",
-        )
-
-    return current_user
-
-
-# =========================================================
 # LIST OUTSTANDING
 # =========================================================
 
@@ -68,11 +39,10 @@ def require_owner(
 )
 def list_outstanding(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        require_roles(UserRole.OWNER)
+    ),
 ):
-
-    require_owner(current_user)
-
     return list_outstanding_service(
         db=db,
         tenant_id=current_user.tenant_id,
@@ -89,11 +59,10 @@ def list_outstanding(
 )
 def list_all_outstanding(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        require_roles(UserRole.OWNER)
+    ),
 ):
-
-    require_owner(current_user)
-
     return list_all_outstanding_service(
         db=db,
         tenant_id=current_user.tenant_id,
@@ -111,13 +80,11 @@ def list_all_outstanding(
 def get_outstanding(
     outstanding_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        require_roles(UserRole.OWNER)
+    ),
 ):
-
-    require_owner(current_user)
-
     try:
-
         return get_outstanding_service(
             db=db,
             outstanding_id=outstanding_id,
@@ -125,7 +92,6 @@ def get_outstanding(
         )
 
     except ValueError as e:
-
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
@@ -143,13 +109,11 @@ def get_outstanding(
 def get_visit_outstanding(
     visit_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        require_roles(UserRole.OWNER)
+    ),
 ):
-
-    require_owner(current_user)
-
     try:
-
         return get_outstanding_by_visit_service(
             db=db,
             visit_id=visit_id,
@@ -157,7 +121,6 @@ def get_visit_outstanding(
         )
 
     except ValueError as e:
-
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),

@@ -37,8 +37,8 @@ class VisitStatus(str, Enum):
     CANCELLED = "CANCELLED"
     
 class PhotoType(str, Enum):
-    BEFORE = "BEFORE"
-    AFTER = "AFTER"
+    BEFORE = "before"
+    AFTER = "after"
 
 class Gender(str, Enum):
     MALE = "male"

@@ -55,7 +55,7 @@ def create_new_tenant(
 
         create_subscription(
             db=db,
-            subscription=subscription,
+            subscription_data=subscription,
         )
 
         # Create clinic owner

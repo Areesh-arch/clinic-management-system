@@ -20,14 +20,16 @@ from app.schemas.user import (
 def create_user_service(
     db,
     user_data: UserCreate,
-    current_user: User,
+    current_user: User | None = None,
+    tenant_id: int | None = None,
 ) -> User:
     """
-    Create a user inside the current user's clinic.
+    Create a user inside a clinic.
 
-    Staff profiles are created separately by the Staff module.
-    This keeps User creation and Staff profile creation cleanly
-    separated.
+    Either:
+    - current_user is provided, and its tenant_id is used, or
+    - tenant_id is provided directly, which is used during
+      initial tenant/owner creation.
     """
 
     existing_user = get_user_by_email(
@@ -38,10 +40,13 @@ def create_user_service(
     if existing_user:
         raise ValueError("Email already exists.")
 
-    if current_user.tenant_id is None:
-        raise ValueError(
-            "Current user is not associated with a clinic."
-        )
+    if tenant_id is None:
+        if current_user is None or current_user.tenant_id is None:
+            raise ValueError(
+                "User is not associated with a clinic."
+            )
+
+        tenant_id = current_user.tenant_id
 
     password_hash = hash_password(
         user_data.password,
@@ -50,7 +55,7 @@ def create_user_service(
     user = create_user(
         db=db,
         user_data=user_data,
-        tenant_id=current_user.tenant_id,
+        tenant_id=tenant_id,
         password_hash=password_hash,
     )
 

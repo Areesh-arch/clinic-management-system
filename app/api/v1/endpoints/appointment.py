@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
-from app.api.dependencies import get_current_user
+from app.api.permissions import require_roles
 
+from app.models.enums import UserRole
 from app.models.user import User
-from app.models.appointment import Appointment
 
 from app.schemas.appointment import (
     AppointmentCreate,
@@ -21,12 +21,18 @@ from app.services.appointment_service import (
     delete_appointment_service,
 )
 
-# Set prefix="" because prefix="/appointments" is applied in api_router.py
+
+# Prefix "/appointments" is applied in api_router.py
 router = APIRouter(
     prefix="",
     tags=["Appointments"],
 )
 
+
+# =========================================================
+# CREATE APPOINTMENT
+# SUPER_ADMIN + OWNER + STAFF
+# =========================================================
 
 @router.post(
     "/",
@@ -36,23 +42,38 @@ router = APIRouter(
 def create_appointment(
     appointment: AppointmentCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.SUPER_ADMIN,
+            UserRole.OWNER,
+            UserRole.STAFF,
+        )
+    ),
 ):
     try:
         return create_appointment_service(
             db=db,
             appointment_data=appointment,
-            tenant_id=current_user.tenant_id,
+            current_user=current_user,
         )
 
     except ValueError as e:
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
 
 
-@router.get("", response_model=list[AppointmentResponse])
+# =========================================================
+# LIST APPOINTMENTS
+# SUPER_ADMIN → ALL
+# OWNER/STAFF → THEIR CLINIC
+# =========================================================
+
+@router.get(
+    "",
+    response_model=list[AppointmentResponse],
+)
 @router.get(
     "/",
     response_model=list[AppointmentResponse],
@@ -60,13 +81,25 @@ def create_appointment(
 )
 def list_appointments(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.SUPER_ADMIN,
+            UserRole.OWNER,
+            UserRole.STAFF,
+        )
+    ),
 ):
     return list_appointments_service(
         db=db,
-        tenant_id=current_user.tenant_id,
+        current_user=current_user,
     )
 
+
+# =========================================================
+# GET APPOINTMENT
+# SUPER_ADMIN → ANY CLINIC
+# OWNER/STAFF → THEIR CLINIC
+# =========================================================
 
 @router.get(
     "/{appointment_id}",
@@ -75,20 +108,32 @@ def list_appointments(
 def get_appointment(
     appointment_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.SUPER_ADMIN,
+            UserRole.OWNER,
+            UserRole.STAFF,
+        )
+    ),
 ):
     try:
         return get_appointment_service(
             db=db,
             appointment_id=appointment_id,
+            current_user=current_user,
         )
 
     except ValueError as e:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
         )
 
+
+# =========================================================
+# UPDATE APPOINTMENT
+# SUPER_ADMIN + OWNER + STAFF
+# =========================================================
 
 @router.put(
     "/{appointment_id}",
@@ -98,19 +143,39 @@ def update_appointment(
     appointment_id: int,
     appointment_data: AppointmentUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.SUPER_ADMIN,
+            UserRole.OWNER,
+            UserRole.STAFF,
+        )
+    ),
 ):
-    appointment = get_appointment_service(
-        db=db,
-        appointment_id=appointment_id,
-    )
+    try:
+        appointment = get_appointment_service(
+            db=db,
+            appointment_id=appointment_id,
+            current_user=current_user,
+        )
 
-    return update_appointment_service(
-        db=db,
-        appointment=appointment,
-        appointment_data=appointment_data,
-    )
+        return update_appointment_service(
+            db=db,
+            appointment=appointment,
+            appointment_data=appointment_data,
+            current_user=current_user,
+        )
 
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+
+# =========================================================
+# DELETE APPOINTMENT
+# SUPER_ADMIN + OWNER + STAFF
+# =========================================================
 
 @router.delete(
     "/{appointment_id}",
@@ -119,16 +184,31 @@ def update_appointment(
 def delete_appointment(
     appointment_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.SUPER_ADMIN,
+            UserRole.OWNER,
+            UserRole.STAFF,
+        )
+    ),
 ):
-    appointment = get_appointment_service(
-        db=db,
-        appointment_id=appointment_id,
-    )
+    try:
+        appointment = get_appointment_service(
+            db=db,
+            appointment_id=appointment_id,
+            current_user=current_user,
+        )
 
-    delete_appointment_service(
-        db=db,
-        appointment=appointment,
-    )
+        delete_appointment_service(
+            db=db,
+            appointment=appointment,
+            current_user=current_user,
+        )
 
-    return None
+        return None
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )

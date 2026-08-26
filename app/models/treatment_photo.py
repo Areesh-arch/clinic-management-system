@@ -48,6 +48,9 @@ class TreatmentPhoto(Base, IDMixin, TimestampMixin):
         Enum(
             PhotoType,
             native_enum=False,
+            values_callable=lambda enum_cls: [
+                member.value for member in enum_cls
+            ],
         ),
         nullable=False,
     )

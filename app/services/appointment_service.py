@@ -13,6 +13,8 @@ from app.crud.appointment import (
 from app.models.appointment import Appointment
 from app.models.patient import Patient
 from app.models.staff import Staff
+from app.models.user import User
+from app.models.enums import UserRole
 
 from app.schemas.appointment import (
     AppointmentCreate,
@@ -20,24 +22,40 @@ from app.schemas.appointment import (
 )
 
 
+def is_super_admin(current_user: User) -> bool:
+    return current_user.role == UserRole.SUPER_ADMIN
+
+
+# =========================================================
+# CREATE APPOINTMENT
+# =========================================================
+
 def create_appointment_service(
     db: Session,
     appointment_data: AppointmentCreate,
-    tenant_id: int,
+    current_user: User,
 ):
     """
-    Create a new appointment after validating
-    patient, doctor, date and overlapping schedule.
+    Create appointment.
+
+    SUPER_ADMIN:
+        Can create for any clinic, but the request must
+        contain clinic-specific patient/doctor IDs.
+
+    OWNER/STAFF:
+        Can create only inside their own clinic.
     """
 
-    # ==========================================
-    # Check patient exists
-    # ==========================================
+    tenant_id = current_user.tenant_id
+
+    # -----------------------------------------------------
+    # Determine tenant from patient
+    # -----------------------------------------------------
+
     patient = (
         db.query(Patient)
         .filter(
             Patient.id == appointment_data.patient_id,
-            Patient.tenant_id == tenant_id,
         )
         .first()
     )
@@ -45,9 +63,20 @@ def create_appointment_service(
     if patient is None:
         raise ValueError("Patient not found.")
 
-    # ==========================================
-    # Check doctor exists
-    # ==========================================
+    # Normal users must stay inside their own clinic.
+    if not is_super_admin(current_user):
+        if patient.tenant_id != tenant_id:
+            raise ValueError(
+                "Patient does not belong to your clinic."
+            )
+
+    # For SUPER_ADMIN, use the patient's clinic.
+    tenant_id = patient.tenant_id
+
+    # -----------------------------------------------------
+    # Check doctor
+    # -----------------------------------------------------
+
     doctor = (
         db.query(Staff)
         .filter(
@@ -60,28 +89,34 @@ def create_appointment_service(
     if doctor is None:
         raise ValueError("Doctor not found.")
 
-    # ==========================================
+    # -----------------------------------------------------
     # Prevent past appointments
-    # ==========================================
+    # -----------------------------------------------------
+
     if appointment_data.appointment_date < date.today():
         raise ValueError(
             "Cannot create appointment in the past."
         )
 
-    # ==========================================
+    # -----------------------------------------------------
     # Check overlapping appointments
-    # ==========================================
+    # -----------------------------------------------------
+
     appointments = (
         db.query(Appointment)
         .filter(
-            Appointment.doctor_id == appointment_data.doctor_id,
-            Appointment.appointment_date == appointment_data.appointment_date,
+            Appointment.doctor_id
+            == appointment_data.doctor_id,
+            Appointment.tenant_id == tenant_id,
+            Appointment.appointment_date
+            == appointment_data.appointment_date,
         )
         .all()
     )
 
-    # Make incoming time timezone-naive
-    new_time = appointment_data.appointment_time.replace(tzinfo=None)
+    new_time = appointment_data.appointment_time.replace(
+        tzinfo=None
+    )
 
     new_start = datetime.combine(
         appointment_data.appointment_date,
@@ -94,9 +129,10 @@ def create_appointment_service(
 
     for appointment in appointments:
 
-        # Make database time timezone-naive
-        existing_time = appointment.appointment_time.replace(
-            tzinfo=None
+        existing_time = (
+            appointment.appointment_time.replace(
+                tzinfo=None
+            )
         )
 
         existing_start = datetime.combine(
@@ -116,9 +152,10 @@ def create_appointment_service(
                 "Doctor already has an overlapping appointment."
             )
 
-    # ==========================================
-    # Create appointment
-    # ==========================================
+    # -----------------------------------------------------
+    # Create
+    # -----------------------------------------------------
+
     return create_appointment(
         db=db,
         appointment_data=appointment_data,
@@ -126,9 +163,14 @@ def create_appointment_service(
     )
 
 
+# =========================================================
+# GET APPOINTMENT
+# =========================================================
+
 def get_appointment_service(
     db: Session,
     appointment_id: int,
+    current_user: User,
 ):
     appointment = get_appointment_by_id(
         db=db,
@@ -140,24 +182,54 @@ def get_appointment_service(
             "Appointment not found."
         )
 
+    # SUPER_ADMIN can access every clinic.
+    if is_super_admin(current_user):
+        return appointment
+
+    # OWNER/STAFF can only access their own clinic.
+    if appointment.tenant_id != current_user.tenant_id:
+        raise ValueError(
+            "Appointment not found."
+        )
+
     return appointment
 
 
+# =========================================================
+# LIST APPOINTMENTS
+# =========================================================
+
 def list_appointments_service(
     db: Session,
-    tenant_id: int,
+    current_user: User,
 ):
+    # SUPER_ADMIN → every clinic
+    if is_super_admin(current_user):
+        return (
+            db.query(Appointment)
+            .all()
+        )
+
+    # OWNER/STAFF → own clinic
     return get_appointments(
         db=db,
-        tenant_id=tenant_id,
+        tenant_id=current_user.tenant_id,
     )
 
+
+# =========================================================
+# UPDATE APPOINTMENT
+# =========================================================
 
 def update_appointment_service(
     db: Session,
     appointment: Appointment,
     appointment_data: AppointmentUpdate,
+    current_user: User,
 ):
+    # Endpoint already retrieved the appointment using
+    # the correct authorization rules.
+
     return update_appointment(
         db=db,
         appointment=appointment,
@@ -165,10 +237,18 @@ def update_appointment_service(
     )
 
 
+# =========================================================
+# DELETE APPOINTMENT
+# =========================================================
+
 def delete_appointment_service(
     db: Session,
     appointment: Appointment,
+    current_user: User,
 ):
+    # Endpoint already retrieved the appointment using
+    # the correct authorization rules.
+
     delete_appointment(
         db=db,
         appointment=appointment,

@@ -1,18 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_current_user
 from app.api.features import require_feature
 from app.api.permissions import require_roles
 from app.database.session import get_db
+
 from app.models.enums import UserRole
 from app.models.feature import Feature
 from app.models.user import User
+
 from app.schemas.patient import (
     PatientCreate,
     PatientResponse,
     PatientUpdate,
 )
+
 from app.services.patient_service import (
     create_patient_service,
     delete_patient_service,
@@ -21,11 +23,16 @@ from app.services.patient_service import (
     update_patient_service,
 )
 
+
 router = APIRouter(
     prefix="",
     tags=["Patients"],
 )
 
+
+# =========================================================
+# CREATE PATIENT
+# =========================================================
 
 @router.post(
     "/",
@@ -39,6 +46,7 @@ def create_patient(
         require_roles(
             UserRole.OWNER,
             UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
         )
     ),
     _: User = Depends(
@@ -52,6 +60,10 @@ def create_patient(
     )
 
 
+# =========================================================
+# LIST PATIENTS
+# =========================================================
+
 @router.get(
     "/",
     response_model=list[PatientResponse],
@@ -62,6 +74,7 @@ def list_patients(
         require_roles(
             UserRole.OWNER,
             UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
         )
     ),
     _: User = Depends(
@@ -74,6 +87,10 @@ def list_patients(
     )
 
 
+# =========================================================
+# GET PATIENT
+# =========================================================
+
 @router.get(
     "/{patient_id}",
     response_model=PatientResponse,
@@ -85,6 +102,7 @@ def get_patient(
         require_roles(
             UserRole.OWNER,
             UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
         )
     ),
     _: User = Depends(
@@ -106,6 +124,10 @@ def get_patient(
     return patient
 
 
+# =========================================================
+# UPDATE PATIENT
+# =========================================================
+
 @router.put(
     "/{patient_id}",
     response_model=PatientResponse,
@@ -118,6 +140,7 @@ def update_patient(
         require_roles(
             UserRole.OWNER,
             UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
         )
     ),
     _: User = Depends(
@@ -143,6 +166,10 @@ def update_patient(
     )
 
 
+# =========================================================
+# DELETE PATIENT
+# =========================================================
+
 @router.delete(
     "/{patient_id}",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -154,6 +181,7 @@ def delete_patient(
         require_roles(
             UserRole.OWNER,
             UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
         )
     ),
     _: User = Depends(
@@ -176,3 +204,5 @@ def delete_patient(
         db=db,
         patient=patient,
     )
+
+    return None
