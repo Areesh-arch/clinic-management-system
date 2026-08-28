@@ -31,6 +31,7 @@ router = APIRouter(
 
 # =========================================================
 # LIST OUTSTANDING
+# OWNER + STAFF + SUPER_ADMIN
 # =========================================================
 
 @router.get(
@@ -40,7 +41,11 @@ router = APIRouter(
 def list_outstanding(
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        require_roles(UserRole.OWNER)
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
     ),
 ):
     return list_outstanding_service(
@@ -51,6 +56,7 @@ def list_outstanding(
 
 # =========================================================
 # LIST ALL OUTSTANDING
+# OWNER + STAFF + SUPER_ADMIN
 # =========================================================
 
 @router.get(
@@ -60,7 +66,11 @@ def list_outstanding(
 def list_all_outstanding(
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        require_roles(UserRole.OWNER)
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
     ),
 ):
     return list_all_outstanding_service(
@@ -71,6 +81,7 @@ def list_all_outstanding(
 
 # =========================================================
 # GET OUTSTANDING BY ID
+# OWNER + STAFF + SUPER_ADMIN
 # =========================================================
 
 @router.get(
@@ -81,7 +92,11 @@ def get_outstanding(
     outstanding_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        require_roles(UserRole.OWNER)
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
     ),
 ):
     try:
@@ -100,6 +115,7 @@ def get_outstanding(
 
 # =========================================================
 # GET OUTSTANDING FOR VISIT
+# OWNER + STAFF + SUPER_ADMIN
 # =========================================================
 
 @router.get(
@@ -110,7 +126,11 @@ def get_visit_outstanding(
     visit_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        require_roles(UserRole.OWNER)
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
     ),
 ):
     try:

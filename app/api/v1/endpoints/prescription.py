@@ -1,5 +1,3 @@
-from sqlalchemy.orm import Session
-
 from fastapi import (
     APIRouter,
     Depends,
@@ -7,18 +5,13 @@ from fastapi import (
     status,
 )
 
+from sqlalchemy.orm import Session
+
 from app.database.session import get_db
+from app.api.permissions import require_roles
 
-from app.api.dependencies import (
-    get_current_user,
-)
-
-from app.api.permissions import (
-    require_roles,
-)
-
+from app.models.enums import UserRole
 from app.models.user import User
-from app.models.prescription import Prescription
 
 from app.schemas.prescription import (
     PrescriptionCreate,
@@ -34,11 +27,17 @@ from app.services.prescription_service import (
     delete_prescription_service,
 )
 
+
 router = APIRouter(
     prefix="/prescriptions",
     tags=["Prescriptions"],
 )
 
+
+# =========================================================
+# CREATE PRESCRIPTION
+# OWNER + STAFF + SUPER_ADMIN
+# =========================================================
 
 @router.post(
     "/",
@@ -50,8 +49,9 @@ def create_prescription(
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
-            "owner",
-            "staff",
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
         )
     ),
 ):
@@ -69,6 +69,11 @@ def create_prescription(
         )
 
 
+# =========================================================
+# LIST PRESCRIPTIONS
+# OWNER + STAFF + SUPER_ADMIN
+# =========================================================
+
 @router.get(
     "/",
     response_model=list[PrescriptionResponse],
@@ -77,8 +82,9 @@ def list_prescriptions(
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
-            "owner",
-            "staff",
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
         )
     ),
 ):
@@ -87,6 +93,11 @@ def list_prescriptions(
         tenant_id=current_user.tenant_id,
     )
 
+
+# =========================================================
+# GET SINGLE PRESCRIPTION
+# OWNER + STAFF + SUPER_ADMIN
+# =========================================================
 
 @router.get(
     "/{prescription_id}",
@@ -97,8 +108,9 @@ def get_prescription(
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
-            "owner",
-            "staff",
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
         )
     ),
 ):
@@ -106,6 +118,7 @@ def get_prescription(
         return get_prescription_service(
             db=db,
             prescription_id=prescription_id,
+            tenant_id=current_user.tenant_id,
         )
 
     except ValueError as e:
@@ -114,6 +127,11 @@ def get_prescription(
             detail=str(e),
         )
 
+
+# =========================================================
+# UPDATE PRESCRIPTION
+# OWNER + STAFF + SUPER_ADMIN
+# =========================================================
 
 @router.put(
     "/{prescription_id}",
@@ -125,22 +143,36 @@ def update_prescription(
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
-            "owner",
-            "staff",
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
         )
     ),
 ):
-    prescription = get_prescription_service(
-        db=db,
-        prescription_id=prescription_id,
-    )
+    try:
+        prescription = get_prescription_service(
+            db=db,
+            prescription_id=prescription_id,
+            tenant_id=current_user.tenant_id,
+        )
 
-    return update_prescription_service(
-        db=db,
-        prescription=prescription,
-        prescription_data=prescription_data,
-    )
+        return update_prescription_service(
+            db=db,
+            prescription=prescription,
+            prescription_data=prescription_data,
+        )
 
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+
+
+# =========================================================
+# DELETE PRESCRIPTION
+# OWNER + STAFF + SUPER_ADMIN
+# =========================================================
 
 @router.delete(
     "/{prescription_id}",
@@ -150,13 +182,18 @@ def delete_prescription(
     prescription_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        require_roles("owner", "staff")
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
     ),
 ):
     try:
         prescription = get_prescription_service(
             db=db,
             prescription_id=prescription_id,
+            tenant_id=current_user.tenant_id,
         )
 
         delete_prescription_service(
@@ -169,3 +206,5 @@ def delete_prescription(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
         )
+
+    return None

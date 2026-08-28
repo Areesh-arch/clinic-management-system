@@ -1,4 +1,3 @@
-
 from sqlalchemy.orm import Session
 
 from app.models.visit import Visit
@@ -8,19 +7,21 @@ from app.schemas.visit import (
 )
 
 
+# =========================================================
+# CREATE
+# =========================================================
+
 def create_visit(
     db: Session,
     visit_data: VisitCreate,
     tenant_id: int,
     patient_id: int,
-    doctor_id: int,
 ) -> Visit:
 
     visit = Visit(
         tenant_id=tenant_id,
         appointment_id=visit_data.appointment_id,
         patient_id=patient_id,
-        doctor_id=doctor_id,
         chief_complaint=visit_data.chief_complaint,
         diagnosis=visit_data.diagnosis,
         notes=visit_data.notes,
@@ -33,6 +34,10 @@ def create_visit(
 
     return visit
 
+
+# =========================================================
+# GET ONE
+# =========================================================
 
 def get_visit_by_id(
     db: Session,
@@ -48,6 +53,10 @@ def get_visit_by_id(
     )
 
 
+# =========================================================
+# GET ALL
+# =========================================================
+
 def get_visits(
     db: Session,
     tenant_id: int,
@@ -62,6 +71,10 @@ def get_visits(
     )
 
 
+# =========================================================
+# UPDATE
+# =========================================================
+
 def update_visit(
     db: Session,
     visit: Visit,
@@ -69,7 +82,7 @@ def update_visit(
 ) -> Visit:
 
     update_data = visit_data.model_dump(
-        exclude_unset=True
+        exclude_unset=True,
     )
 
     for key, value in update_data.items():
@@ -85,6 +98,10 @@ def update_visit(
     return visit
 
 
+# =========================================================
+# DELETE
+# =========================================================
+
 def delete_visit(
     db: Session,
     visit: Visit,
@@ -92,4 +109,3 @@ def delete_visit(
 
     db.delete(visit)
     db.commit()
-

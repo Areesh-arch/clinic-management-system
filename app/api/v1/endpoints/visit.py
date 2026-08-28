@@ -1,15 +1,29 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    status,
+)
+
 from sqlalchemy.orm import Session
 
+from app.api.features import require_feature
+from app.models.feature import Feature
+
 from app.api.dependencies import get_current_user
+from app.api.permissions import require_roles
 from app.database.session import get_db
+
+from app.models.enums import UserRole
 from app.models.user import User
 from app.models.visit import Visit
+
 from app.schemas.visit import (
     VisitCreate,
     VisitResponse,
     VisitUpdate,
 )
+
 from app.services.visit_service import (
     create_visit_service,
     delete_visit_service,
@@ -37,7 +51,16 @@ router = APIRouter()
 )
 def list_visits(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
+    ),
+    _: User = Depends(
+        require_feature(Feature.VISITS)
+    ),
 ):
     return list_visits_service(
         db=db,
@@ -56,7 +79,16 @@ def list_visits(
 def get_visit(
     visit_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
+    ),
+    _: User = Depends(
+        require_feature(Feature.VISITS)
+    ),
 ):
     visit = (
         db.query(Visit)
@@ -97,7 +129,16 @@ def get_visit(
 def create_visit(
     visit: VisitCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
+    ),
+    _: User = Depends(
+        require_feature(Feature.VISITS)
+    ),
 ):
     try:
         return create_visit_service(
@@ -125,7 +166,16 @@ def update_visit(
     visit_id: int,
     visit_data: VisitUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
+    ),
+    _: User = Depends(
+        require_feature(Feature.VISITS)
+    ),
 ):
     visit = (
         db.query(Visit)
@@ -160,7 +210,16 @@ def update_visit(
 def delete_visit(
     visit_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
+    ),
+    _: User = Depends(
+        require_feature(Feature.VISITS)
+    ),
 ):
     visit = (
         db.query(Visit)

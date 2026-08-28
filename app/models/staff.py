@@ -142,11 +142,6 @@ class Staff(Base, IDMixin, TimestampMixin):
     # for the current database architecture.
     # ============================================================
 
-    appointments: Mapped[list["Appointment"]] = relationship(
-        "Appointment",
-        back_populates="doctor",
-        cascade="all, delete-orphan",
-    )
 
     # ============================================================
     # EXISTING VISIT RELATIONSHIP
@@ -162,9 +157,3 @@ class Staff(Base, IDMixin, TimestampMixin):
     # Therefore this relationship name must remain "visits"
     # for now.
     # ============================================================
-
-    visits: Mapped[list["Visit"]] = relationship(
-        "Visit",
-        back_populates="doctor",
-        cascade="all, delete-orphan",
-    )

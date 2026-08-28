@@ -1,17 +1,23 @@
 from sqlalchemy.orm import Session
 
 from app.models.appointment import Appointment
+
 from app.schemas.appointment import (
     AppointmentCreate,
     AppointmentUpdate,
 )
 
 
+# =========================================================
+# CREATE
+# =========================================================
+
 def create_appointment(
     db: Session,
     appointment_data: AppointmentCreate,
     tenant_id: int,
 ) -> Appointment:
+
     appointment = Appointment(
         tenant_id=tenant_id,
         **appointment_data.model_dump(),
@@ -24,31 +30,49 @@ def create_appointment(
     return appointment
 
 
+# =========================================================
+# GET ONE
+# =========================================================
+
 def get_appointment_by_id(
     db: Session,
     appointment_id: int,
 ) -> Appointment | None:
+
     return (
         db.query(Appointment)
         .filter(
-            Appointment.id == appointment_id
+            Appointment.id == appointment_id,
         )
         .first()
     )
 
 
+# =========================================================
+# GET ALL FOR TENANT
+# =========================================================
+
 def get_appointments(
     db: Session,
     tenant_id: int,
 ) -> list[Appointment]:
+
     return (
         db.query(Appointment)
         .filter(
-            Appointment.tenant_id == tenant_id
+            Appointment.tenant_id == tenant_id,
+        )
+        .order_by(
+            Appointment.appointment_date,
+            Appointment.appointment_time,
         )
         .all()
     )
 
+
+# =========================================================
+# UPDATE
+# =========================================================
 
 def update_appointment(
     db: Session,
@@ -57,7 +81,7 @@ def update_appointment(
 ) -> Appointment:
 
     update_data = appointment_data.model_dump(
-        exclude_unset=True
+        exclude_unset=True,
     )
 
     for key, value in update_data.items():
@@ -72,6 +96,10 @@ def update_appointment(
 
     return appointment
 
+
+# =========================================================
+# DELETE
+# =========================================================
 
 def delete_appointment(
     db: Session,

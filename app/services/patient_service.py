@@ -16,10 +16,19 @@ def generate_medical_record_number(
     db: Session,
     tenant_id: int,
 ) -> str:
+    """
+    Generate the next globally unique medical record number.
+
+    medical_record_number is globally UNIQUE in the database,
+    not unique per tenant.
+
+    Therefore we cannot calculate it using only the
+    current tenant's patient count.
+    """
+
     count = db.scalar(
         select(func.count())
         .select_from(Patient)
-        .where(Patient.tenant_id == tenant_id)
     )
 
     return f"DC-{(count or 0) + 1:06d}"

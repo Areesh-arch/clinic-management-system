@@ -8,10 +8,10 @@ from fastapi import (
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
-from app.api.dependencies import get_current_user
+from app.api.permissions import require_roles
 
+from app.models.enums import UserRole
 from app.models.user import User
-from app.models.payment import Payment
 
 from app.schemas.payment import (
     PaymentCreate,
@@ -36,6 +36,7 @@ router = APIRouter(
 
 # =========================================================
 # CREATE PAYMENT
+# SUPER_ADMIN + OWNER + STAFF
 # =========================================================
 
 @router.post(
@@ -46,11 +47,15 @@ router = APIRouter(
 def create_payment(
     payment_data: PaymentCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
+    ),
 ):
-
     try:
-
         return create_payment_service(
             db=db,
             payment_data=payment_data,
@@ -58,7 +63,6 @@ def create_payment(
         )
 
     except ValueError as e:
-
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
@@ -67,6 +71,7 @@ def create_payment(
 
 # =========================================================
 # LIST PAYMENTS
+# SUPER_ADMIN + OWNER + STAFF
 # =========================================================
 
 @router.get(
@@ -75,9 +80,14 @@ def create_payment(
 )
 def list_payments(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
+    ),
 ):
-
     return list_payments_service(
         db=db,
         tenant_id=current_user.tenant_id,
@@ -85,7 +95,8 @@ def list_payments(
 
 
 # =========================================================
-# GET PAYMENT
+# GET SINGLE PAYMENT
+# SUPER_ADMIN + OWNER + STAFF
 # =========================================================
 
 @router.get(
@@ -95,11 +106,15 @@ def list_payments(
 def get_payment(
     payment_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
+    ),
 ):
-
     try:
-
         return get_payment_service(
             db=db,
             payment_id=payment_id,
@@ -107,7 +122,6 @@ def get_payment(
         )
 
     except ValueError as e:
-
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
@@ -116,6 +130,7 @@ def get_payment(
 
 # =========================================================
 # UPDATE PAYMENT
+# SUPER_ADMIN + OWNER + STAFF
 # =========================================================
 
 @router.put(
@@ -126,11 +141,15 @@ def update_payment(
     payment_id: int,
     payment_data: PaymentUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
+    ),
 ):
-
     try:
-
         payment = get_payment_service(
             db=db,
             payment_id=payment_id,
@@ -145,7 +164,6 @@ def update_payment(
         )
 
     except ValueError as e:
-
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
@@ -154,6 +172,7 @@ def update_payment(
 
 # =========================================================
 # DELETE PAYMENT
+# SUPER_ADMIN + OWNER + STAFF
 # =========================================================
 
 @router.delete(
@@ -163,11 +182,15 @@ def update_payment(
 def delete_payment(
     payment_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
+    ),
 ):
-
     try:
-
         payment = get_payment_service(
             db=db,
             payment_id=payment_id,
@@ -183,7 +206,6 @@ def delete_payment(
         return None
 
     except ValueError as e:
-
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),

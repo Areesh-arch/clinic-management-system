@@ -1,16 +1,15 @@
-from sqlalchemy.orm import Session
-
 from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
     status,
 )
+from sqlalchemy.orm import Session
 
 from app.database.session import get_db
-
 from app.api.permissions import require_roles
 
+from app.models.enums import UserRole
 from app.models.user import User
 
 from app.schemas.inventory import (
@@ -34,6 +33,11 @@ router = APIRouter(
 )
 
 
+# =========================================================
+# CREATE INVENTORY ITEM
+# SUPER_ADMIN + OWNER + STAFF
+# =========================================================
+
 @router.post(
     "/",
     response_model=InventoryResponse,
@@ -44,8 +48,9 @@ def create_inventory(
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
-            "owner",
-            "staff",
+            UserRole.SUPER_ADMIN,
+            UserRole.OWNER,
+            UserRole.STAFF,
         )
     ),
 ):
@@ -63,6 +68,11 @@ def create_inventory(
         )
 
 
+# =========================================================
+# LIST INVENTORY
+# SUPER_ADMIN + OWNER + STAFF
+# =========================================================
+
 @router.get(
     "/",
     response_model=list[InventoryResponse],
@@ -71,8 +81,9 @@ def list_inventory(
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
-            "owner",
-            "staff",
+            UserRole.SUPER_ADMIN,
+            UserRole.OWNER,
+            UserRole.STAFF,
         )
     ),
 ):
@@ -81,6 +92,11 @@ def list_inventory(
         tenant_id=current_user.tenant_id,
     )
 
+
+# =========================================================
+# GET SINGLE INVENTORY ITEM
+# SUPER_ADMIN + OWNER + STAFF
+# =========================================================
 
 @router.get(
     "/{inventory_item_id}",
@@ -91,8 +107,9 @@ def get_inventory(
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
-            "owner",
-            "staff",
+            UserRole.SUPER_ADMIN,
+            UserRole.OWNER,
+            UserRole.STAFF,
         )
     ),
 ):
@@ -110,6 +127,11 @@ def get_inventory(
         )
 
 
+# =========================================================
+# UPDATE INVENTORY ITEM
+# SUPER_ADMIN + OWNER + STAFF
+# =========================================================
+
 @router.put(
     "/{inventory_item_id}",
     response_model=InventoryResponse,
@@ -120,8 +142,9 @@ def update_inventory(
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
-            "owner",
-            "staff",
+            UserRole.SUPER_ADMIN,
+            UserRole.OWNER,
+            UserRole.STAFF,
         )
     ),
 ):
@@ -145,6 +168,11 @@ def update_inventory(
         )
 
 
+# =========================================================
+# DELETE INVENTORY ITEM
+# SUPER_ADMIN + OWNER + STAFF
+# =========================================================
+
 @router.delete(
     "/{inventory_item_id}",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -154,8 +182,9 @@ def delete_inventory(
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
-            "owner",
-            "staff",
+            UserRole.SUPER_ADMIN,
+            UserRole.OWNER,
+            UserRole.STAFF,
         )
     ),
 ):
@@ -170,6 +199,8 @@ def delete_inventory(
             db=db,
             inventory_item=inventory_item,
         )
+
+        return None
 
     except ValueError as e:
         raise HTTPException(

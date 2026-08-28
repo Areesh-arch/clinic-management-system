@@ -43,7 +43,6 @@ class VisitResponse(BaseModel):
 
     appointment_id: int
     patient_id: int
-    doctor_id: int
 
     visit_time: datetime
     status: VisitStatus

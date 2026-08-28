@@ -9,6 +9,10 @@ from app.schemas.prescription import (
 )
 
 
+# =========================================================
+# CREATE PRESCRIPTION
+# =========================================================
+
 def create_prescription(
     db: Session,
     prescription_data: PrescriptionCreate,
@@ -25,6 +29,7 @@ def create_prescription(
     db.flush()
 
     for item in prescription_data.items:
+
         prescription_item = PrescriptionItem(
             prescription_id=prescription.id,
             medicine_name=item.medicine_name,
@@ -43,16 +48,32 @@ def create_prescription(
     return prescription
 
 
+# =========================================================
+# GET PRESCRIPTION BY ID
+# =========================================================
+
 def get_prescription_by_id(
     db: Session,
     prescription_id: int,
+    tenant_id: int,
 ):
+    """
+    Get prescription only from the current tenant.
+    """
+
     return (
         db.query(Prescription)
-        .filter(Prescription.id == prescription_id)
+        .filter(
+            Prescription.id == prescription_id,
+            Prescription.tenant_id == tenant_id,
+        )
         .first()
     )
 
+
+# =========================================================
+# GET ALL PRESCRIPTIONS FOR TENANT
+# =========================================================
 
 def get_prescriptions(
     db: Session,
@@ -60,10 +81,16 @@ def get_prescriptions(
 ):
     return (
         db.query(Prescription)
-        .filter(Prescription.tenant_id == tenant_id)
+        .filter(
+            Prescription.tenant_id == tenant_id
+        )
         .all()
     )
 
+
+# =========================================================
+# UPDATE PRESCRIPTION
+# =========================================================
 
 def update_prescription(
     db: Session,
@@ -76,13 +103,21 @@ def update_prescription(
     )
 
     for key, value in update_data.items():
-        setattr(prescription, key, value)
+        setattr(
+            prescription,
+            key,
+            value,
+        )
 
     db.commit()
     db.refresh(prescription)
 
     return prescription
 
+
+# =========================================================
+# DELETE PRESCRIPTION
+# =========================================================
 
 def delete_prescription(
     db: Session,

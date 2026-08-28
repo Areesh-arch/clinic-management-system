@@ -9,6 +9,8 @@ from fastapi import (
 
 from app.database.session import get_db
 from app.api.permissions import require_roles
+
+from app.models.enums import UserRole
 from app.models.user import User
 
 from app.schemas.expense import (
@@ -32,6 +34,11 @@ router = APIRouter(
 )
 
 
+# =========================================================
+# CREATE EXPENSE
+# OWNER + SUPER_ADMIN
+# =========================================================
+
 @router.post(
     "/",
     response_model=ExpenseResponse,
@@ -42,8 +49,8 @@ def create_expense(
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
-            "owner",
-            "staff",
+            UserRole.OWNER,
+            UserRole.SUPER_ADMIN,
         )
     ),
 ):
@@ -61,6 +68,11 @@ def create_expense(
         )
 
 
+# =========================================================
+# LIST EXPENSES
+# OWNER + SUPER_ADMIN
+# =========================================================
+
 @router.get(
     "/",
     response_model=list[ExpenseResponse],
@@ -69,8 +81,8 @@ def list_expenses(
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
-            "owner",
-            "staff",
+            UserRole.OWNER,
+            UserRole.SUPER_ADMIN,
         )
     ),
 ):
@@ -79,6 +91,11 @@ def list_expenses(
         tenant_id=current_user.tenant_id,
     )
 
+
+# =========================================================
+# GET SINGLE EXPENSE
+# OWNER + SUPER_ADMIN
+# =========================================================
 
 @router.get(
     "/{expense_id}",
@@ -89,23 +106,30 @@ def get_expense(
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
-            "owner",
-            "staff",
+            UserRole.OWNER,
+            UserRole.SUPER_ADMIN,
         )
     ),
 ):
-    try:
-        return get_expense_service(
-            db=db,
-            expense_id=expense_id,
-        )
+    expense = get_expense_service(
+        db=db,
+        tenant_id=current_user.tenant_id,
+        expense_id=expense_id,
+    )
 
-    except ValueError as e:
+    if expense is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
+            detail="Expense not found.",
         )
 
+    return expense
+
+
+# =========================================================
+# UPDATE EXPENSE
+# OWNER + SUPER_ADMIN
+# =========================================================
 
 @router.put(
     "/{expense_id}",
@@ -117,29 +141,31 @@ def update_expense(
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
-            "owner",
-            "staff",
+            UserRole.OWNER,
+            UserRole.SUPER_ADMIN,
         )
     ),
 ):
-    try:
-        expense = get_expense_service(
-            db=db,
-            expense_id=expense_id,
-        )
+    expense = update_expense_service(
+        db=db,
+        tenant_id=current_user.tenant_id,
+        expense_id=expense_id,
+        expense_data=expense_data,
+    )
 
-        return update_expense_service(
-            db=db,
-            expense=expense,
-            expense_data=expense_data,
-        )
-
-    except ValueError as e:
+    if expense is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
+            detail="Expense not found.",
         )
 
+    return expense
+
+
+# =========================================================
+# DELETE EXPENSE
+# OWNER + SUPER_ADMIN
+# =========================================================
 
 @router.delete(
     "/{expense_id}",
@@ -150,24 +176,21 @@ def delete_expense(
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
-            "owner",
-            "staff",
+            UserRole.OWNER,
+            UserRole.SUPER_ADMIN,
         )
     ),
 ):
-    try:
-        expense = get_expense_service(
-            db=db,
-            expense_id=expense_id,
-        )
+    expense = delete_expense_service(
+        db=db,
+        tenant_id=current_user.tenant_id,
+        expense_id=expense_id,
+    )
 
-        delete_expense_service(
-            db=db,
-            expense=expense,
-        )
-
-    except ValueError as e:
+    if expense is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
+            detail="Expense not found.",
         )
+
+    return None

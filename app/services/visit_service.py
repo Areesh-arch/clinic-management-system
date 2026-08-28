@@ -10,11 +10,9 @@ from app.crud.visit import (
 
 from app.models.visit import Visit
 from app.models.patient import Patient
-from app.models.staff import Staff
 from app.models.appointment import Appointment
-from app.models.enums import (
-    AppointmentStatus,
-)
+
+from app.models.enums import AppointmentStatus
 
 from app.schemas.visit import (
     VisitCreate,
@@ -22,20 +20,34 @@ from app.schemas.visit import (
 )
 
 
+# =========================================================
+# CREATE VISIT
+# =========================================================
+
 def create_visit_service(
     db: Session,
     visit_data: VisitCreate,
     tenant_id: int,
 ):
     """
-    Create a visit after validating
-    appointment, patient, doctor
-    and preventing duplicate visits.
+    Create a visit from an existing appointment.
+
+    Architecture:
+        OWNER = DOCTOR
+
+    Therefore:
+        - no doctor_id is accepted
+        - no Staff record is required
+        - no doctor profile is required
+
+    The appointment already belongs to the current tenant,
+    and the patient is taken directly from that appointment.
     """
 
-    # ----------------------------------
-    # Check appointment exists
-    # ----------------------------------
+    # -----------------------------------------------------
+    # Find appointment
+    # -----------------------------------------------------
+
     appointment = (
         db.query(Appointment)
         .filter(
@@ -46,35 +58,41 @@ def create_visit_service(
     )
 
     if appointment is None:
-        raise ValueError("Appointment not found.")
+        raise ValueError(
+            "Appointment not found."
+        )
 
-    # ----------------------------------
+    # -----------------------------------------------------
     # Appointment must be scheduled
-    # ----------------------------------
+    # -----------------------------------------------------
+
     if appointment.status != AppointmentStatus.SCHEDULED:
         raise ValueError(
             "Visit can only be started from a scheduled appointment."
         )
 
-    # ----------------------------------
+    # -----------------------------------------------------
     # Prevent duplicate visit
-    # ----------------------------------
+    # -----------------------------------------------------
+
     existing_visit = (
         db.query(Visit)
         .filter(
-            Visit.appointment_id == visit_data.appointment_id,
+            Visit.appointment_id == appointment.id,
+            Visit.tenant_id == tenant_id,
         )
         .first()
     )
 
-    if existing_visit:
+    if existing_visit is not None:
         raise ValueError(
             "Visit already exists for this appointment."
         )
 
-    # ----------------------------------
-    # Check patient exists
-    # ----------------------------------
+    # -----------------------------------------------------
+    # Verify patient
+    # -----------------------------------------------------
+
     patient = (
         db.query(Patient)
         .filter(
@@ -85,44 +103,27 @@ def create_visit_service(
     )
 
     if patient is None:
-        raise ValueError("Patient not found.")
-
-    # ----------------------------------
-    # Check doctor exists
-    # ----------------------------------
-    doctor = (
-        db.query(Staff)
-        .filter(
-            Staff.id == appointment.doctor_id,
-            Staff.tenant_id == tenant_id,
+        raise ValueError(
+            "Patient associated with this appointment was not found."
         )
-        .first()
-    )
 
-    if doctor is None:
-        raise ValueError("Doctor not found.")
+    # -----------------------------------------------------
+    # Create visit
+    # -----------------------------------------------------
 
-    # ----------------------------------
-    # Create Visit
-    # ----------------------------------
     visit = create_visit(
         db=db,
         visit_data=visit_data,
         tenant_id=tenant_id,
         patient_id=appointment.patient_id,
-        doctor_id=appointment.doctor_id,
     )
-
-    # ----------------------------------
-    # Mark appointment completed
-    # ----------------------------------
-    appointment.status = AppointmentStatus.COMPLETED
-
-    db.commit()
-    db.refresh(appointment)
 
     return visit
 
+
+# =========================================================
+# GET ONE
+# =========================================================
 
 def get_visit_service(
     db: Session,
@@ -134,10 +135,16 @@ def get_visit_service(
     )
 
     if visit is None:
-        raise ValueError("Visit not found.")
+        raise ValueError(
+            "Visit not found."
+        )
 
     return visit
 
+
+# =========================================================
+# GET ALL
+# =========================================================
 
 def list_visits_service(
     db: Session,
@@ -148,6 +155,10 @@ def list_visits_service(
         tenant_id=tenant_id,
     )
 
+
+# =========================================================
+# UPDATE
+# =========================================================
 
 def update_visit_service(
     db: Session,
@@ -160,6 +171,10 @@ def update_visit_service(
         visit_data=visit_data,
     )
 
+
+# =========================================================
+# DELETE
+# =========================================================
 
 def delete_visit_service(
     db: Session,

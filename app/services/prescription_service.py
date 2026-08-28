@@ -17,6 +17,10 @@ from app.schemas.prescription import (
 )
 
 
+# =========================================================
+# CREATE PRESCRIPTION
+# =========================================================
+
 def create_prescription_service(
     db: Session,
     prescription_data: PrescriptionCreate,
@@ -24,14 +28,12 @@ def create_prescription_service(
 ):
     """
     Create a prescription after validating:
+
     - Visit exists
-    - Visit belongs to tenant
-    - Prescription doesn't already exist
+    - Visit belongs to current tenant
+    - Prescription doesn't already exist for the visit
     """
 
-    # ================================
-    # Check visit exists
-    # ================================
     visit = (
         db.query(Visit)
         .filter(
@@ -42,13 +44,8 @@ def create_prescription_service(
     )
 
     if visit is None:
-        raise ValueError(
-            "Visit not found."
-        )
+        raise ValueError("Visit not found.")
 
-    # ================================
-    # Prevent duplicate prescription
-    # ================================
     if visit.prescription:
         raise ValueError(
             "Prescription already exists for this visit."
@@ -61,13 +58,24 @@ def create_prescription_service(
     )
 
 
+# =========================================================
+# GET SINGLE PRESCRIPTION
+# =========================================================
+
 def get_prescription_service(
     db: Session,
     prescription_id: int,
+    tenant_id: int,
 ):
+    """
+    Get a prescription only if it belongs to
+    the current user's tenant.
+    """
+
     prescription = get_prescription_by_id(
         db=db,
         prescription_id=prescription_id,
+        tenant_id=tenant_id,
     )
 
     if prescription is None:
@@ -78,15 +86,28 @@ def get_prescription_service(
     return prescription
 
 
+# =========================================================
+# LIST PRESCRIPTIONS
+# =========================================================
+
 def list_prescriptions_service(
     db: Session,
     tenant_id: int,
 ):
+    """
+    Return prescriptions belonging only
+    to the current tenant.
+    """
+
     return get_prescriptions(
         db=db,
         tenant_id=tenant_id,
     )
 
+
+# =========================================================
+# UPDATE PRESCRIPTION
+# =========================================================
 
 def update_prescription_service(
     db: Session,
@@ -99,6 +120,10 @@ def update_prescription_service(
         prescription_data=prescription_data,
     )
 
+
+# =========================================================
+# DELETE PRESCRIPTION
+# =========================================================
 
 def delete_prescription_service(
     db: Session,

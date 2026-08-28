@@ -1,6 +1,3 @@
-from pathlib import Path
-from uuid import uuid4
-
 from fastapi import (
     APIRouter,
     Depends,
@@ -10,10 +7,13 @@ from fastapi import (
     Form,
     status,
 )
+
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.api.permissions import require_roles
+
+from app.models.enums import UserRole
 from app.models.user import User
 
 from app.schemas.treatment_photo import (
@@ -39,6 +39,7 @@ router = APIRouter(
 
 # =========================================================
 # CREATE PHOTO FROM IMAGE UPLOAD
+# OWNER + STAFF + SUPER_ADMIN
 # =========================================================
 
 @router.post(
@@ -56,8 +57,9 @@ async def upload_treatment_photo(
 
     current_user: User = Depends(
         require_roles(
-            "owner",
-            "staff",
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
         )
     ),
 ):
@@ -80,8 +82,8 @@ async def upload_treatment_photo(
 
 # =========================================================
 # CREATE PHOTO FROM URL
+# OWNER + STAFF + SUPER_ADMIN
 # =========================================================
-# Keeping this endpoint is useful for future integrations.
 
 @router.post(
     "/",
@@ -95,8 +97,9 @@ def create_treatment_photo(
 
     current_user: User = Depends(
         require_roles(
-            "owner",
-            "staff",
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
         )
     ),
 ):
@@ -116,6 +119,7 @@ def create_treatment_photo(
 
 # =========================================================
 # LIST PHOTOS
+# OWNER + STAFF + SUPER_ADMIN
 # =========================================================
 
 @router.get(
@@ -127,8 +131,9 @@ def list_treatment_photos(
 
     current_user: User = Depends(
         require_roles(
-            "owner",
-            "staff",
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
         )
     ),
 ):
@@ -140,6 +145,7 @@ def list_treatment_photos(
 
 # =========================================================
 # GET PHOTO
+# OWNER + STAFF + SUPER_ADMIN
 # =========================================================
 
 @router.get(
@@ -153,8 +159,9 @@ def get_treatment_photo(
 
     current_user: User = Depends(
         require_roles(
-            "owner",
-            "staff",
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
         )
     ),
 ):
@@ -174,6 +181,7 @@ def get_treatment_photo(
 
 # =========================================================
 # UPDATE PHOTO
+# OWNER + STAFF + SUPER_ADMIN
 # =========================================================
 
 @router.put(
@@ -188,8 +196,9 @@ def update_treatment_photo(
 
     current_user: User = Depends(
         require_roles(
-            "owner",
-            "staff",
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
         )
     ),
 ):
@@ -215,6 +224,7 @@ def update_treatment_photo(
 
 # =========================================================
 # DELETE PHOTO
+# OWNER + STAFF + SUPER_ADMIN
 # =========================================================
 
 @router.delete(
@@ -228,8 +238,9 @@ def delete_treatment_photo(
 
     current_user: User = Depends(
         require_roles(
-            "owner",
-            "staff",
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
         )
     ),
 ):
@@ -250,3 +261,5 @@ def delete_treatment_photo(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
         )
+
+    return None

@@ -8,6 +8,10 @@ from app.schemas.treatment_photo import (
 )
 
 
+# =========================================================
+# CREATE
+# =========================================================
+
 def create_treatment_photo(
     db: Session,
     photo_data: TreatmentPhotoCreate,
@@ -29,6 +33,10 @@ def create_treatment_photo(
     return photo
 
 
+# =========================================================
+# GET BY ID
+# =========================================================
+
 def get_treatment_photo_by_id(
     db: Session,
     photo_id: int,
@@ -43,6 +51,10 @@ def get_treatment_photo_by_id(
         .first()
     )
 
+
+# =========================================================
+# LIST
+# =========================================================
 
 def get_treatment_photos(
     db: Session,
@@ -60,6 +72,10 @@ def get_treatment_photos(
     )
 
 
+# =========================================================
+# UPDATE
+# =========================================================
+
 def update_treatment_photo(
     db: Session,
     photo: TreatmentPhoto,
@@ -71,7 +87,11 @@ def update_treatment_photo(
     )
 
     for key, value in update_data.items():
-        setattr(photo, key, value)
+        setattr(
+            photo,
+            key,
+            value,
+        )
 
     db.commit()
     db.refresh(photo)
@@ -79,10 +99,13 @@ def update_treatment_photo(
     return photo
 
 
+# =========================================================
+# DELETE
+# =========================================================
+
 def delete_treatment_photo(
     db: Session,
     photo: TreatmentPhoto,
 ):
-
     db.delete(photo)
     db.commit()

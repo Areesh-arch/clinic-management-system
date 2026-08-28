@@ -28,7 +28,6 @@ from app.models.enums import VisitStatus
 
 if TYPE_CHECKING:
     from app.models.patient import Patient
-    from app.models.staff import Staff
     from app.models.appointment import Appointment
     from app.models.tenant import Tenant
     from app.models.prescription import Prescription
@@ -36,32 +35,53 @@ if TYPE_CHECKING:
     from app.models.payment import Payment
     from app.models.outstanding import Outstanding
 
+
 class Visit(Base, IDMixin, TimestampMixin):
 
     __tablename__ = "visits"
 
+    # =====================================================
+    # TENANT
+    # =====================================================
+
     tenant_id: Mapped[int] = mapped_column(
-        ForeignKey("tenants.id", ondelete="CASCADE"),
+        ForeignKey(
+            "tenants.id",
+            ondelete="CASCADE",
+        ),
         nullable=False,
         index=True,
     )
 
+    # =====================================================
+    # APPOINTMENT
+    # =====================================================
+
     appointment_id: Mapped[int] = mapped_column(
-        ForeignKey("appointments.id", ondelete="CASCADE"),
+        ForeignKey(
+            "appointments.id",
+            ondelete="CASCADE",
+        ),
         nullable=False,
         unique=True,
     )
 
+    # =====================================================
+    # PATIENT
+    # =====================================================
+
     patient_id: Mapped[int] = mapped_column(
-        ForeignKey("patients.id", ondelete="CASCADE"),
+        ForeignKey(
+            "patients.id",
+            ondelete="CASCADE",
+        ),
         nullable=False,
         index=True,
     )
 
-    doctor_id: Mapped[int] = mapped_column(
-        ForeignKey("staff.id", ondelete="CASCADE"),
-        nullable=False,
-    )
+    # =====================================================
+    # VISIT INFORMATION
+    # =====================================================
 
     visit_time: Mapped[datetime] = mapped_column(
         DateTime,
@@ -93,9 +113,9 @@ class Visit(Base, IDMixin, TimestampMixin):
         nullable=True,
     )
 
-    # --------------------------------------------------
-    # Financial information
-    # --------------------------------------------------
+    # =====================================================
+    # FINANCIAL INFORMATION
+    # =====================================================
 
     charge: Mapped[float] = mapped_column(
         Numeric(10, 2),
@@ -103,9 +123,9 @@ class Visit(Base, IDMixin, TimestampMixin):
         default=0,
     )
 
-    # --------------------------------------------------
-    # Relationships
-    # --------------------------------------------------
+    # =====================================================
+    # RELATIONSHIPS
+    # =====================================================
 
     tenant: Mapped["Tenant"] = relationship(
         "Tenant",
@@ -119,11 +139,6 @@ class Visit(Base, IDMixin, TimestampMixin):
 
     patient: Mapped["Patient"] = relationship(
         "Patient",
-        back_populates="visits",
-    )
-
-    doctor: Mapped["Staff"] = relationship(
-        "Staff",
         back_populates="visits",
     )
 
@@ -145,10 +160,10 @@ class Visit(Base, IDMixin, TimestampMixin):
         back_populates="visit",
         cascade="all, delete-orphan",
     )
-    
+
     outstanding: Mapped["Outstanding"] = relationship(
-    "Outstanding",
-    back_populates="visit",
-    uselist=False,
-    cascade="all, delete-orphan",
-)
+        "Outstanding",
+        back_populates="visit",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )

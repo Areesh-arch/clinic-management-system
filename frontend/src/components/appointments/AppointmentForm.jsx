@@ -4,7 +4,6 @@ import {
   FiCalendar,
   FiClock,
   FiUser,
-  FiBriefcase,
   FiFileText,
   FiX,
   FiSave,
@@ -17,26 +16,43 @@ import {
   updateAppointment,
 } from "../../services/appointmentService";
 
+
 // ======================================================
 // HELPERS
 // ======================================================
 
 const getLocalDateString = (date = new Date()) => {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+
+  const month = String(
+    date.getMonth() + 1
+  ).padStart(2, "0");
+
+  const day = String(
+    date.getDate()
+  ).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
 };
 
+
 const getLocalTimeString = (date = new Date()) => {
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const hours = String(
+    date.getHours()
+  ).padStart(2, "0");
+
+  const minutes = String(
+    date.getMinutes()
+  ).padStart(2, "0");
 
   return `${hours}:${minutes}`;
 };
 
-const roundTimeToNextFiveMinutes = (date = new Date()) => {
+
+const roundTimeToNextFiveMinutes = (
+  date = new Date()
+) => {
+
   const rounded = new Date(date);
 
   rounded.setSeconds(0);
@@ -44,27 +60,42 @@ const roundTimeToNextFiveMinutes = (date = new Date()) => {
 
   const minutes = rounded.getMinutes();
 
-  const nextFive = Math.ceil((minutes + 1) / 5) * 5;
+  const nextFive =
+    Math.ceil((minutes + 1) / 5) * 5;
 
   if (nextFive >= 60) {
-    rounded.setHours(rounded.getHours() + 1);
+
+    rounded.setHours(
+      rounded.getHours() + 1
+    );
+
     rounded.setMinutes(0);
+
   } else {
+
     rounded.setMinutes(nextFive);
   }
 
   return getLocalTimeString(rounded);
 };
 
+
 const getInitialFormData = () => ({
   patient_id: "",
-  doctor_id: "",
-  appointment_date: getLocalDateString(),
-  appointment_time: roundTimeToNextFiveMinutes(),
+
+  appointment_date:
+    getLocalDateString(),
+
+  appointment_time:
+    roundTimeToNextFiveMinutes(),
+
   duration_minutes: 30,
+
   reason: "",
+
   notes: "",
 });
+
 
 // ======================================================
 // COMPONENT
@@ -76,171 +107,265 @@ function AppointmentForm({
   onSuccess,
   onCancel,
 }) {
-  const isEditMode = mode === "edit" || Boolean(appointment);
 
-  const [formData, setFormData] = useState(getInitialFormData);
+  const isEditMode =
+    mode === "edit" ||
+    Boolean(appointment);
 
-  const [loading, setLoading] = useState(false);
 
-  const [error, setError] = useState("");
+  const [formData, setFormData] =
+    useState(getInitialFormData);
 
-  const [success, setSuccess] = useState("");
+
+  const [loading, setLoading] =
+    useState(false);
+
+
+  const [error, setError] =
+    useState("");
+
+
+  const [success, setSuccess] =
+    useState("");
+
 
   // ====================================================
   // POPULATE FORM
   // ====================================================
 
   useEffect(() => {
+
     if (!appointment) {
-      setFormData(getInitialFormData());
+
+      setFormData(
+        getInitialFormData()
+      );
+
       setError("");
       setSuccess("");
 
       return;
     }
 
+
     setFormData({
-      patient_id: appointment.patient_id ?? "",
-      doctor_id: appointment.doctor_id ?? "",
+
+      patient_id:
+        appointment.patient_id ?? "",
 
       appointment_date:
         appointment.appointment_date ?? "",
 
-      appointment_time: appointment.appointment_time
-        ? String(appointment.appointment_time).slice(0, 5)
-        : "",
+      appointment_time:
+        appointment.appointment_time
+          ? String(
+              appointment.appointment_time
+            ).slice(0, 5)
+          : "",
 
       duration_minutes:
         appointment.duration_minutes ?? 30,
 
-      reason: appointment.reason ?? "",
+      reason:
+        appointment.reason ?? "",
 
-      notes: appointment.notes ?? "",
+      notes:
+        appointment.notes ?? "",
     });
+
 
     setError("");
     setSuccess("");
+
   }, [appointment]);
+
 
   // ====================================================
   // MINIMUM DATE
   // ====================================================
 
-  const minimumDate = useMemo(() => {
-    return getLocalDateString();
-  }, []);
+  const minimumDate = useMemo(
+    () => getLocalDateString(),
+    []
+  );
+
 
   // ====================================================
   // MINIMUM TIME
   // ====================================================
 
   const minimumTime = useMemo(() => {
-    if (formData.appointment_date !== minimumDate) {
+
+    if (
+      formData.appointment_date !==
+      minimumDate
+    ) {
       return undefined;
     }
 
     return roundTimeToNextFiveMinutes();
+
   }, [
     formData.appointment_date,
     minimumDate,
   ]);
+
 
   // ====================================================
   // INPUT HANDLER
   // ====================================================
 
   const handleChange = (event) => {
-    const { name, value } = event.target;
 
-    setFormData((previous) => ({
-      ...previous,
-      [name]: value,
-    }));
+    const {
+      name,
+      value,
+    } = event.target;
+
+
+    setFormData(
+      (previous) => ({
+        ...previous,
+        [name]: value,
+      })
+    );
+
 
     setError("");
     setSuccess("");
   };
+
 
   // ====================================================
   // VALIDATION
   // ====================================================
 
   const validateForm = () => {
+
     if (!formData.patient_id) {
       return "Please enter the patient ID.";
     }
 
-    if (!formData.doctor_id) {
-      return "Please enter the doctor ID.";
-    }
 
     if (!formData.appointment_date) {
       return "Please select an appointment date.";
     }
 
+
     if (!formData.appointment_time) {
       return "Please select an appointment time.";
     }
+
 
     if (!formData.reason.trim()) {
       return "Please enter the reason for the appointment.";
     }
 
-    // --------------------------------------------------
-    // Validate date/time
-    // --------------------------------------------------
 
-    const selectedDateTime = new Date(
-      `${formData.appointment_date}T${formData.appointment_time}:00`
-    );
+    const selectedDateTime =
+      new Date(
+        `${formData.appointment_date}T${formData.appointment_time}:00`
+      );
 
-    if (Number.isNaN(selectedDateTime.getTime())) {
-      return "Please enter a valid appointment date and time.";
+
+    if (
+      Number.isNaN(
+        selectedDateTime.getTime()
+      )
+    ) {
+
+      return (
+        "Please enter a valid appointment date and time."
+      );
     }
+
 
     const now = new Date();
 
-    // Give a small 60-second buffer to avoid frontend/backend
-    // clock differences.
-    const minimumAllowed = new Date(
-      now.getTime() + 60 * 1000
-    );
 
-    if (selectedDateTime <= minimumAllowed) {
-      return "Please select a future appointment date and time.";
+    const minimumAllowed =
+      new Date(
+        now.getTime() +
+        60 * 1000
+      );
+
+
+    if (
+      selectedDateTime <=
+      minimumAllowed
+    ) {
+
+      return (
+        "Please select a future appointment date and time."
+      );
     }
+
+
+    const duration =
+      Number(
+        formData.duration_minutes
+      );
+
+
+    if (
+      !Number.isFinite(duration) ||
+      duration <= 0
+    ) {
+
+      return (
+        "Please select a valid appointment duration."
+      );
+    }
+
 
     return null;
   };
+
 
   // ====================================================
   // SUBMIT
   // ====================================================
 
   const handleSubmit = async (event) => {
+
     event.preventDefault();
 
     setError("");
     setSuccess("");
 
-    const validationError = validateForm();
+
+    const validationError =
+      validateForm();
+
 
     if (validationError) {
+
       setError(validationError);
+
       return;
     }
 
+
     setLoading(true);
 
+
     try {
-      // ------------------------------------------------
-      // Prepare API payload
-      // ------------------------------------------------
+
+      // =================================================
+      // IMPORTANT:
+      //
+      // doctor_id is intentionally NOT included.
+      //
+      // Backend determines the doctor from
+      // the authenticated user.
+      // =================================================
 
       const payload = {
-        patient_id: Number(formData.patient_id),
 
-        doctor_id: Number(formData.doctor_id),
+        patient_id:
+          Number(
+            formData.patient_id
+          ),
 
         appointment_date:
           formData.appointment_date,
@@ -249,14 +374,18 @@ function AppointmentForm({
           formData.appointment_time,
 
         duration_minutes:
-          Number(formData.duration_minutes),
+          Number(
+            formData.duration_minutes
+          ),
 
         reason:
           formData.reason.trim(),
 
         notes:
-          formData.notes.trim() || null,
+          formData.notes.trim() ||
+          null,
       };
+
 
       console.log(
         isEditMode
@@ -265,55 +394,66 @@ function AppointmentForm({
         payload
       );
 
+
       let result;
+
 
       // =================================================
       // UPDATE
       // =================================================
 
       if (isEditMode) {
-        result = await updateAppointment(
-          appointment.id,
-          payload
-        );
+
+        result =
+          await updateAppointment(
+            appointment.id,
+            payload
+          );
+
 
         console.log(
-          "UPDATE APPOINTMENT RESPONSE FROM BACKEND:",
+          "UPDATE APPOINTMENT RESPONSE:",
           result
         );
+
 
         setSuccess(
           "Appointment updated successfully."
         );
+
       }
+
 
       // =================================================
       // CREATE
       // =================================================
 
       else {
-        result = await createAppointment(
-          payload
-        );
+
+        result =
+          await createAppointment(
+            payload
+          );
+
 
         console.log(
-          "CREATE APPOINTMENT RESPONSE FROM BACKEND:",
+          "CREATE APPOINTMENT RESPONSE:",
           result
         );
+
 
         setSuccess(
           "Appointment created successfully."
         );
       }
 
-      // =================================================
-      // SEND RESULT TO PARENT
-      // =================================================
 
       if (onSuccess) {
         await onSuccess(result);
       }
+
     } catch (err) {
+
       console.error(
         isEditMode
           ? "Failed to update appointment:"
@@ -321,16 +461,22 @@ function AppointmentForm({
         err
       );
 
+
       setError(
         err?.message ||
-          (isEditMode
+        (
+          isEditMode
             ? "Failed to update appointment."
-            : "Failed to create appointment.")
+            : "Failed to create appointment."
+        )
       );
+
     } finally {
+
       setLoading(false);
     }
   };
+
 
   // ======================================================
   // STYLES
@@ -352,23 +498,25 @@ function AppointmentForm({
     "disabled:bg-slate-50 " +
     "disabled:opacity-70";
 
+
   const labelClass =
     "mb-2 block text-sm font-semibold text-[#294C60]";
+
 
   const sectionClass =
     "rounded-3xl border border-[#E4E9E2] " +
     "bg-[#FBFCFA] p-5 md:p-6";
+
 
   // ======================================================
   // UI
   // ======================================================
 
   return (
+
     <div className="w-full">
 
-      {/* ==================================================
-          HEADER
-      ================================================== */}
+      {/* HEADER */}
 
       <div className="mb-7 flex items-start justify-between">
 
@@ -376,24 +524,16 @@ function AppointmentForm({
 
           <div
             className="
-              mb-3
-              inline-flex
-              items-center
-              gap-2
-              rounded-full
-              bg-[#EEF5EC]
-              px-3
-              py-1.5
-              text-xs
-              font-semibold
+              mb-3 inline-flex items-center gap-2
+              rounded-full bg-[#EEF5EC]
+              px-3 py-1.5 text-xs font-semibold
               text-[#556B55]
             "
           >
+
             <span
               className="
-                h-2
-                w-2
-                rounded-full
+                h-2 w-2 rounded-full
                 bg-[#7FA27F]
               "
             />
@@ -401,51 +541,50 @@ function AppointmentForm({
             {isEditMode
               ? "Appointment Management"
               : "Appointment Scheduling"}
+
           </div>
+
 
           <h2
             className="
-              text-3xl
-              font-bold
-              tracking-tight
+              text-3xl font-bold tracking-tight
               text-[#173B56]
             "
           >
+
             {isEditMode
               ? "Edit Appointment"
               : "New Appointment"}
+
           </h2>
+
 
           <p
             className="
-              mt-2
-              text-sm
-              text-slate-500
+              mt-2 text-sm text-slate-500
             "
           >
+
             {isEditMode
               ? "Update the appointment details below."
               : "Schedule a new appointment for your clinic."}
+
           </p>
 
         </div>
 
+
         {onCancel && (
+
           <button
             type="button"
             onClick={onCancel}
             disabled={loading}
             className="
-              flex
-              h-10
-              w-10
-              shrink-0
-              items-center
-              justify-center
-              rounded-full
-              text-slate-400
-              transition
-              hover:bg-[#EEF5EC]
+              flex h-10 w-10 shrink-0
+              items-center justify-center
+              rounded-full text-slate-400
+              transition hover:bg-[#EEF5EC]
               hover:text-[#556B55]
               disabled:cursor-not-allowed
               disabled:opacity-50
@@ -454,37 +593,32 @@ function AppointmentForm({
           >
             <FiX size={23} />
           </button>
+
         )}
 
       </div>
 
-      {/* ==================================================
-          ERROR
-      ================================================== */}
+
+      {/* ERROR */}
 
       {error && (
+
         <div
           className="
-            mb-6
-            flex
-            items-start
-            gap-3
-            rounded-2xl
-            border
-            border-red-100
-            bg-red-50
-            px-4
-            py-4
-            text-sm
-            text-red-700
+            mb-6 flex items-start gap-3
+            rounded-2xl border border-red-100
+            bg-red-50 px-4 py-4
+            text-sm text-red-700
           "
         >
+
           <FiAlertCircle
             className="mt-0.5 shrink-0"
             size={18}
           />
 
           <div>
+
             <p className="font-semibold">
               Unable to save appointment
             </p>
@@ -492,31 +626,27 @@ function AppointmentForm({
             <p className="mt-1">
               {error}
             </p>
+
           </div>
+
         </div>
+
       )}
 
-      {/* ==================================================
-          SUCCESS
-      ================================================== */}
+
+      {/* SUCCESS */}
 
       {success && (
+
         <div
           className="
-            mb-6
-            flex
-            items-start
-            gap-3
-            rounded-2xl
-            border
-            border-emerald-100
-            bg-emerald-50
-            px-4
-            py-4
-            text-sm
-            text-emerald-700
+            mb-6 flex items-start gap-3
+            rounded-2xl border border-emerald-100
+            bg-emerald-50 px-4 py-4
+            text-sm text-emerald-700
           "
         >
+
           <FiCheckCircle
             className="mt-0.5 shrink-0"
             size={18}
@@ -525,21 +655,20 @@ function AppointmentForm({
           <p className="font-semibold">
             {success}
           </p>
+
         </div>
+
       )}
 
-      {/* ==================================================
-          FORM
-      ================================================== */}
+
+      {/* FORM */}
 
       <form
         onSubmit={handleSubmit}
         className="space-y-6"
       >
 
-        {/* =================================================
-            PATIENT + DOCTOR
-        ================================================= */}
+        {/* PARTICIPANT */}
 
         <div className={sectionClass}>
 
@@ -547,152 +676,80 @@ function AppointmentForm({
 
             <h3
               className="
-                text-base
-                font-bold
+                text-base font-bold
                 text-[#294C60]
               "
             >
-              Appointment Participants
+              Patient
             </h3>
 
             <p
               className="
-                mt-1
-                text-sm
-                text-slate-500
+                mt-1 text-sm text-slate-500
               "
             >
-              Enter the patient and doctor associated
-              with this appointment.
+              Select the patient for this appointment.
             </p>
 
           </div>
 
-          <div
-            className="
-              grid
-              grid-cols-1
-              gap-5
-              md:grid-cols-2
-            "
-          >
 
-            {/* PATIENT */}
+          <div>
 
-            <div>
+            <label
+              htmlFor="patient_id"
+              className={labelClass}
+            >
+              Patient ID
+            </label>
 
-              <label
-                htmlFor="patient_id"
-                className={labelClass}
-              >
-                Patient ID
-              </label>
 
-              <div className="relative">
+            <div className="relative">
 
-                <FiUser
-                  className="
-                    absolute
-                    left-4
-                    top-1/2
-                    -translate-y-1/2
-                    text-[#789078]
-                  "
-                  size={18}
-                />
-
-                <input
-                  id="patient_id"
-                  name="patient_id"
-                  type="number"
-                  min="1"
-                  value={formData.patient_id}
-                  onChange={handleChange}
-                  placeholder="e.g. 3"
-                  disabled={loading}
-                  className={inputClass}
-                />
-
-              </div>
-
-              <p
+              <FiUser
                 className="
-                  mt-1.5
-                  text-xs
-                  text-slate-400
+                  absolute left-4 top-1/2
+                  -translate-y-1/2
+                  text-[#789078]
                 "
-              >
-                Enter the patient's database ID.
-              </p>
+                size={18}
+              />
+
+
+              <input
+                id="patient_id"
+                name="patient_id"
+                type="number"
+                min="1"
+                value={formData.patient_id}
+                onChange={handleChange}
+                placeholder="e.g. 3"
+                disabled={loading}
+                className={inputClass}
+              />
 
             </div>
 
-            {/* DOCTOR */}
 
-            <div>
-
-              <label
-                htmlFor="doctor_id"
-                className={labelClass}
-              >
-                Doctor ID
-              </label>
-
-              <div className="relative">
-
-                <FiBriefcase
-                  className="
-                    absolute
-                    left-4
-                    top-1/2
-                    -translate-y-1/2
-                    text-[#789078]
-                  "
-                  size={18}
-                />
-
-                <input
-                  id="doctor_id"
-                  name="doctor_id"
-                  type="number"
-                  min="1"
-                  value={formData.doctor_id}
-                  onChange={handleChange}
-                  placeholder="e.g. 1"
-                  disabled={loading}
-                  className={inputClass}
-                />
-
-              </div>
-
-              <p
-                className="
-                  mt-1.5
-                  text-xs
-                  text-slate-400
-                "
-              >
-                Enter the doctor's staff ID.
-              </p>
-
-            </div>
+            <p
+              className="
+                mt-1.5 text-xs text-slate-400
+              "
+            >
+              Enter the patient's database ID.
+            </p>
 
           </div>
 
         </div>
 
-        {/* =================================================
-            SCHEDULE
-        ================================================= */}
+
+        {/* SCHEDULE */}
 
         <div
           className="
-            rounded-3xl
-            border
-            border-[#E4E9E2]
-            bg-white
-            p-5
-            md:p-6
+            rounded-3xl border border-[#E4E9E2]
+            bg-white p-5 md:p-6
           "
         >
 
@@ -700,8 +757,7 @@ function AppointmentForm({
 
             <h3
               className="
-                text-base
-                font-bold
+                text-base font-bold
                 text-[#294C60]
               "
             >
@@ -710,9 +766,7 @@ function AppointmentForm({
 
             <p
               className="
-                mt-1
-                text-sm
-                text-slate-500
+                mt-1 text-sm text-slate-500
               "
             >
               Choose a future date and appointment time.
@@ -720,11 +774,10 @@ function AppointmentForm({
 
           </div>
 
+
           <div
             className="
-              grid
-              grid-cols-1
-              gap-5
+              grid grid-cols-1 gap-5
               md:grid-cols-2
             "
           >
@@ -740,19 +793,19 @@ function AppointmentForm({
                 Appointment Date
               </label>
 
+
               <div className="relative">
 
                 <FiCalendar
                   className="
                     pointer-events-none
-                    absolute
-                    left-4
-                    top-1/2
+                    absolute left-4 top-1/2
                     -translate-y-1/2
                     text-[#789078]
                   "
                   size={18}
                 />
+
 
                 <input
                   id="appointment_date"
@@ -769,6 +822,7 @@ function AppointmentForm({
 
             </div>
 
+
             {/* TIME */}
 
             <div>
@@ -780,19 +834,19 @@ function AppointmentForm({
                 Appointment Time
               </label>
 
+
               <div className="relative">
 
                 <FiClock
                   className="
                     pointer-events-none
-                    absolute
-                    left-4
-                    top-1/2
+                    absolute left-4 top-1/2
                     -translate-y-1/2
                     text-[#789078]
                   "
                   size={18}
                 />
+
 
                 <input
                   id="appointment_time"
@@ -807,11 +861,10 @@ function AppointmentForm({
 
               </div>
 
+
               <p
                 className="
-                  mt-1.5
-                  text-xs
-                  text-slate-400
+                  mt-1.5 text-xs text-slate-400
                 "
               >
                 Past appointment times cannot be selected.
@@ -820,6 +873,7 @@ function AppointmentForm({
             </div>
 
           </div>
+
 
           {/* DURATION */}
 
@@ -832,6 +886,7 @@ function AppointmentForm({
               Duration
             </label>
 
+
             <select
               id="duration_minutes"
               name="duration_minutes"
@@ -839,15 +894,10 @@ function AppointmentForm({
               onChange={handleChange}
               disabled={loading}
               className="
-                w-full
-                rounded-2xl
-                border
-                border-slate-200
-                bg-white
-                px-4
-                py-3.5
-                text-slate-700
-                outline-none
+                w-full rounded-2xl
+                border border-slate-200
+                bg-white px-4 py-3.5
+                text-slate-700 outline-none
                 transition
                 focus:border-[#789078]
                 focus:ring-4
@@ -856,6 +906,7 @@ function AppointmentForm({
                 disabled:bg-slate-50
               "
             >
+
               <option value={15}>
                 15 minutes
               </option>
@@ -879,15 +930,15 @@ function AppointmentForm({
               <option value={120}>
                 120 minutes
               </option>
+
             </select>
 
           </div>
 
         </div>
 
-        {/* =================================================
-            REASON + NOTES
-        ================================================= */}
+
+        {/* DETAILS */}
 
         <div className={sectionClass}>
 
@@ -895,8 +946,7 @@ function AppointmentForm({
 
             <h3
               className="
-                text-base
-                font-bold
+                text-base font-bold
                 text-[#294C60]
               "
             >
@@ -905,16 +955,14 @@ function AppointmentForm({
 
             <p
               className="
-                mt-1
-                text-sm
-                text-slate-500
+                mt-1 text-sm text-slate-500
               "
             >
-              Add the reason and any useful notes
-              for the appointment.
+              Add the reason and any useful notes.
             </p>
 
           </div>
+
 
           {/* REASON */}
 
@@ -927,19 +975,19 @@ function AppointmentForm({
               Reason
             </label>
 
+
             <div className="relative">
 
               <FiFileText
                 className="
                   pointer-events-none
-                  absolute
-                  left-4
-                  top-1/2
+                  absolute left-4 top-1/2
                   -translate-y-1/2
                   text-[#789078]
                 "
                 size={18}
               />
+
 
               <input
                 id="reason"
@@ -955,17 +1003,17 @@ function AppointmentForm({
 
             </div>
 
+
             <p
               className="
-                mt-1.5
-                text-xs
-                text-slate-400
+                mt-1.5 text-xs text-slate-400
               "
             >
               Briefly describe the purpose of the visit.
             </p>
 
           </div>
+
 
           {/* NOTES */}
 
@@ -979,14 +1027,14 @@ function AppointmentForm({
 
               <span
                 className="
-                  ml-2
-                  font-normal
-                  text-slate-400
+                  ml-2 font-normal text-slate-400
                 "
               >
                 Optional
               </span>
+
             </label>
+
 
             <textarea
               id="notes"
@@ -997,18 +1045,12 @@ function AppointmentForm({
               rows={4}
               disabled={loading}
               className="
-                w-full
-                resize-none
-                rounded-2xl
-                border
-                border-slate-200
-                bg-white
-                px-4
-                py-3.5
+                w-full resize-none rounded-2xl
+                border border-slate-200
+                bg-white px-4 py-3.5
                 text-slate-700
                 placeholder:text-slate-400
-                outline-none
-                transition
+                outline-none transition
                 focus:border-[#789078]
                 focus:ring-4
                 focus:ring-[#A3B18A]/15
@@ -1021,37 +1063,27 @@ function AppointmentForm({
 
         </div>
 
-        {/* =================================================
-            FOOTER
-        ================================================= */}
+
+        {/* FOOTER */}
 
         <div
           className="
-            flex
-            flex-col-reverse
-            gap-3
-            border-t
-            border-slate-200
-            pt-6
-            sm:flex-row
-            sm:justify-end
+            flex flex-col-reverse gap-3
+            border-t border-slate-200 pt-6
+            sm:flex-row sm:justify-end
           "
         >
 
           {onCancel && (
+
             <button
               type="button"
               onClick={onCancel}
               disabled={loading}
               className="
-                rounded-2xl
-                border
-                border-slate-200
-                bg-white
-                px-6
-                py-3
-                font-semibold
-                text-slate-600
+                rounded-2xl border border-slate-200
+                bg-white px-6 py-3
+                font-semibold text-slate-600
                 transition
                 hover:border-[#D8E2D5]
                 hover:bg-[#F5F8F4]
@@ -1062,25 +1094,19 @@ function AppointmentForm({
             >
               Cancel
             </button>
+
           )}
+
 
           <button
             type="submit"
             disabled={loading}
             className="
-              inline-flex
-              items-center
-              justify-center
-              gap-2
-              rounded-2xl
-              bg-[#556B55]
-              px-7
-              py-3
-              font-semibold
-              text-white
-              shadow-sm
-              transition-all
-              duration-200
+              inline-flex items-center justify-center
+              gap-2 rounded-2xl
+              bg-[#556B55] px-7 py-3
+              font-semibold text-white
+              shadow-sm transition-all duration-200
               hover:bg-[#465946]
               hover:shadow-md
               disabled:cursor-not-allowed
@@ -1089,29 +1115,34 @@ function AppointmentForm({
           >
 
             {loading ? (
+
               <>
+
                 <span
                   className="
-                    h-4
-                    w-4
-                    animate-spin
-                    rounded-full
-                    border-2
+                    h-4 w-4 animate-spin
+                    rounded-full border-2
                     border-white/30
                     border-t-white
                   "
                 />
 
                 Saving...
+
               </>
+
             ) : (
+
               <>
+
                 <FiSave size={17} />
 
                 {isEditMode
                   ? "Update Appointment"
                   : "Save Appointment"}
+
               </>
+
             )}
 
           </button>
@@ -1119,8 +1150,10 @@ function AppointmentForm({
         </div>
 
       </form>
+
     </div>
   );
 }
+
 
 export default AppointmentForm;

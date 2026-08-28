@@ -1,6 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.api.features import require_feature
+from app.models.feature import Feature
+
 from app.database.session import get_db
 from app.api.permissions import require_roles
 
@@ -22,7 +25,6 @@ from app.services.appointment_service import (
 )
 
 
-# Prefix "/appointments" is applied in api_router.py
 router = APIRouter(
     prefix="",
     tags=["Appointments"],
@@ -31,7 +33,9 @@ router = APIRouter(
 
 # =========================================================
 # CREATE APPOINTMENT
-# SUPER_ADMIN + OWNER + STAFF
+# OWNER + STAFF
+#
+# Doctor is automatically determined by backend.
 # =========================================================
 
 @router.post(
@@ -44,13 +48,17 @@ def create_appointment(
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
-            UserRole.SUPER_ADMIN,
             UserRole.OWNER,
             UserRole.STAFF,
         )
     ),
+    _: User = Depends(
+        require_feature(Feature.APPOINTMENTS)
+    ),
 ):
+
     try:
+
         return create_appointment_service(
             db=db,
             appointment_data=appointment,
@@ -58,6 +66,7 @@ def create_appointment(
         )
 
     except ValueError as e:
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
@@ -66,8 +75,6 @@ def create_appointment(
 
 # =========================================================
 # LIST APPOINTMENTS
-# SUPER_ADMIN → ALL
-# OWNER/STAFF → THEIR CLINIC
 # =========================================================
 
 @router.get(
@@ -88,7 +95,11 @@ def list_appointments(
             UserRole.STAFF,
         )
     ),
+    _: User = Depends(
+        require_feature(Feature.APPOINTMENTS)
+    ),
 ):
+
     return list_appointments_service(
         db=db,
         current_user=current_user,
@@ -97,8 +108,6 @@ def list_appointments(
 
 # =========================================================
 # GET APPOINTMENT
-# SUPER_ADMIN → ANY CLINIC
-# OWNER/STAFF → THEIR CLINIC
 # =========================================================
 
 @router.get(
@@ -115,8 +124,13 @@ def get_appointment(
             UserRole.STAFF,
         )
     ),
+    _: User = Depends(
+        require_feature(Feature.APPOINTMENTS)
+    ),
 ):
+
     try:
+
         return get_appointment_service(
             db=db,
             appointment_id=appointment_id,
@@ -124,6 +138,7 @@ def get_appointment(
         )
 
     except ValueError as e:
+
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
@@ -132,7 +147,7 @@ def get_appointment(
 
 # =========================================================
 # UPDATE APPOINTMENT
-# SUPER_ADMIN + OWNER + STAFF
+# OWNER + STAFF
 # =========================================================
 
 @router.put(
@@ -145,13 +160,17 @@ def update_appointment(
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
-            UserRole.SUPER_ADMIN,
             UserRole.OWNER,
             UserRole.STAFF,
         )
     ),
+    _: User = Depends(
+        require_feature(Feature.APPOINTMENTS)
+    ),
 ):
+
     try:
+
         appointment = get_appointment_service(
             db=db,
             appointment_id=appointment_id,
@@ -166,6 +185,7 @@ def update_appointment(
         )
 
     except ValueError as e:
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
@@ -174,7 +194,7 @@ def update_appointment(
 
 # =========================================================
 # DELETE APPOINTMENT
-# SUPER_ADMIN + OWNER + STAFF
+# OWNER + STAFF
 # =========================================================
 
 @router.delete(
@@ -186,13 +206,17 @@ def delete_appointment(
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
-            UserRole.SUPER_ADMIN,
             UserRole.OWNER,
             UserRole.STAFF,
         )
     ),
+    _: User = Depends(
+        require_feature(Feature.APPOINTMENTS)
+    ),
 ):
+
     try:
+
         appointment = get_appointment_service(
             db=db,
             appointment_id=appointment_id,
@@ -208,6 +232,7 @@ def delete_appointment(
         return None
 
     except ValueError as e:
+
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),

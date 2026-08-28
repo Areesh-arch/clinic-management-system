@@ -34,7 +34,7 @@ ALLOWED_IMAGE_TYPES = {
     "image/webp": ".webp",
 }
 
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+MAX_FILE_SIZE = 10 * 1024 * 1024
 
 
 # =========================================================
@@ -77,7 +77,6 @@ async def create_uploaded_treatment_photo_service(
     image: UploadFile,
     tenant_id: int,
 ):
-
     # -----------------------------------------------------
     # Validate visit
     # -----------------------------------------------------
@@ -98,9 +97,12 @@ async def create_uploaded_treatment_photo_service(
     # Normalize photo type
     # -----------------------------------------------------
 
-    normalized_photo_type = photo_type.strip().upper()
+    normalized_photo_type = photo_type.strip().lower()
 
-    if normalized_photo_type not in {"BEFORE", "AFTER"}:
+    if normalized_photo_type not in {
+        "before",
+        "after",
+    }:
         raise ValueError(
             "Photo type must be 'before' or 'after'."
         )
@@ -194,7 +196,6 @@ async def create_uploaded_treatment_photo_service(
     except Exception:
         db.rollback()
 
-        # Remove uploaded file if database insertion fails
         if file_path.exists():
             file_path.unlink()
 
@@ -212,14 +213,10 @@ def get_treatment_photo_service(
     photo_id: int,
     tenant_id: int,
 ):
-
-    photo = (
-        db.query(TreatmentPhoto)
-        .filter(
-            TreatmentPhoto.id == photo_id,
-            TreatmentPhoto.tenant_id == tenant_id,
-        )
-        .first()
+    photo = get_treatment_photo_by_id(
+        db=db,
+        photo_id=photo_id,
+        tenant_id=tenant_id,
     )
 
     if photo is None:
@@ -238,7 +235,6 @@ def list_treatment_photos_service(
     db: Session,
     tenant_id: int,
 ):
-
     return get_treatment_photos(
         db=db,
         tenant_id=tenant_id,
@@ -254,7 +250,6 @@ def update_treatment_photo_service(
     photo: TreatmentPhoto,
     photo_data: TreatmentPhotoUpdate,
 ):
-
     return update_treatment_photo(
         db=db,
         photo=photo,
@@ -270,13 +265,10 @@ def delete_treatment_photo_service(
     db: Session,
     photo: TreatmentPhoto,
 ):
-
     # Delete physical image if it is a local upload.
-
     if photo.image_url.startswith(
         "/uploads/treatment_photos/"
     ):
-
         file_path = Path(
             "." + photo.image_url
         )
