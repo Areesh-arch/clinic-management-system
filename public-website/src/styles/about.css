@@ -1,0 +1,322 @@
+/* =========================================================
+   ABOUT SECTION
+   Premium dermatology / aesthetic clinic style
+   ========================================================= */
+
+.about-section {
+  position: relative;
+  padding: 110px 6%;
+  background: #f7f3e9;
+  overflow: hidden;
+}
+
+/* Very subtle background detail */
+
+.about-section::before {
+  content: "";
+  position: absolute;
+  width: 360px;
+  height: 360px;
+  top: -180px;
+  right: -120px;
+  border: 1px solid rgba(47, 79, 62, 0.08);
+  border-radius: 50%;
+}
+
+.about-section::after {
+  content: "";
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  bottom: -150px;
+  left: -100px;
+  border: 1px solid rgba(184, 150, 84, 0.1);
+  border-radius: 50%;
+}
+
+/* =========================================================
+   CONTAINER
+   ========================================================= */
+
+.about-container {
+  position: relative;
+  z-index: 1;
+
+  max-width: 1180px;
+  margin: 0 auto;
+
+  display: grid;
+  grid-template-columns: 1fr 0.9fr;
+  align-items: center;
+  gap: 90px;
+}
+
+/* =========================================================
+   CONTENT
+   ========================================================= */
+
+.about-content {
+  max-width: 570px;
+}
+
+.about-eyebrow {
+  margin: 0 0 18px;
+
+  color: #b89450;
+
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+}
+
+.about-content h2 {
+  margin: 0 0 26px;
+
+  color: #234333;
+
+  font-family: Georgia, "Times New Roman", serif;
+
+  font-size: clamp(38px, 4vw, 56px);
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: -1px;
+}
+
+.about-content h2 span {
+  color: #6d8b75;
+}
+
+.about-description {
+  margin: 0 0 17px;
+
+  color: #59665d;
+
+  font-size: 16px;
+  line-height: 1.85;
+}
+
+.about-description.secondary {
+  color: #707970;
+}
+
+/* =========================================================
+   BUTTON
+   ========================================================= */
+
+.about-button {
+  margin-top: 18px;
+
+  padding: 13px 25px;
+
+  border: 1px solid #234333;
+  border-radius: 999px;
+
+  background: transparent;
+  color: #234333;
+
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+
+  cursor: pointer;
+
+  transition:
+    background 0.25s ease,
+    color 0.25s ease,
+    transform 0.25s ease;
+}
+
+.about-button:hover {
+  background: #234333;
+  color: #f7f3e9;
+  transform: translateY(-2px);
+}
+
+/* =========================================================
+   VISUAL
+   ========================================================= */
+
+.about-visual {
+  position: relative;
+
+  min-height: 480px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.about-image-frame {
+  position: relative;
+
+  width: min(390px, 100%);
+  height: 480px;
+
+  padding: 10px;
+
+  border-radius: 180px 180px 18px 18px;
+
+  background: #e8e4d8;
+}
+
+.about-image-placeholder {
+  width: 100%;
+  height: 100%;
+
+  border-radius: 170px 170px 12px 12px;
+
+  background:
+    radial-gradient(
+      circle at 50% 30%,
+      rgba(126, 153, 132, 0.28),
+      transparent 42%
+    ),
+    linear-gradient(
+      145deg,
+      #dfe5da,
+      #cbd6ca 55%,
+      #b7c6b8
+    );
+
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+
+  padding: 38px;
+
+  color: #234333;
+
+  box-sizing: border-box;
+}
+
+.about-image-placeholder span {
+  margin-bottom: 6px;
+
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 3px;
+}
+
+.about-image-placeholder strong {
+  font-family: Georgia, "Times New Roman", serif;
+
+  font-size: 28px;
+  font-weight: 400;
+  letter-spacing: 1px;
+}
+
+/* =========================================================
+   SMALL FLOATING DETAIL
+   ========================================================= */
+
+.about-accent-card {
+  position: absolute;
+
+  right: 0;
+  bottom: 28px;
+
+  width: 175px;
+
+  padding: 19px 20px;
+
+  border-radius: 14px;
+
+  background: #234333;
+
+  box-shadow: 0 18px 40px rgba(35, 67, 51, 0.14);
+
+  box-sizing: border-box;
+}
+
+.about-accent-card p {
+  margin: 0;
+
+  color: #f7f3e9;
+
+  font-family: Georgia, "Times New Roman", serif;
+
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.accent-line {
+  display: block;
+
+  width: 28px;
+  height: 2px;
+
+  margin-bottom: 14px;
+
+  background: #c7a866;
+}
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .about-section {
+    padding: 85px 6%;
+  }
+
+  .about-container {
+    grid-template-columns: 1fr;
+    gap: 55px;
+  }
+
+  .about-content {
+    max-width: 680px;
+  }
+
+  .about-visual {
+    min-height: 440px;
+  }
+
+  .about-image-frame {
+    height: 440px;
+  }
+
+  .about-accent-card {
+    right: 8%;
+  }
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 600px) {
+  .about-section {
+    padding: 70px 20px;
+  }
+
+  .about-content h2 {
+    font-size: 38px;
+  }
+
+  .about-description {
+    font-size: 15px;
+    line-height: 1.75;
+  }
+
+  .about-visual {
+    min-height: 390px;
+  }
+
+  .about-image-frame {
+    width: 82%;
+    height: 390px;
+  }
+
+  .about-accent-card {
+    right: 0;
+    bottom: 15px;
+    width: 150px;
+    padding: 16px;
+  }
+
+  .about-accent-card p {
+    font-size: 14px;
+  }
+}
