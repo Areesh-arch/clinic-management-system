@@ -12,6 +12,8 @@ import Billing from "../pages/Billing";
 import Inventory from "../pages/Inventory";
 import Settings from "../pages/Settings";
 import Photos from "../pages/Photos";
+import CRM from "../pages/CRM";
+import CMS from "../pages/CMS";
 
 import ProtectedRoute from "../components/auth/ProtectedRoute";
 
@@ -77,6 +79,16 @@ function AppRouter() {
             path="/billing"
             element={<Billing />}
           />
+
+          <Route
+  path="/crm"
+  element={<CRM />}
+/>
+
+<Route
+  path="/cms"
+  element={<CMS />}
+/>
 
           <Route
             path="/settings"

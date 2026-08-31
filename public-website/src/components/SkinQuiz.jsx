@@ -164,7 +164,7 @@ export default function SkinQuiz() {
             <p>{recommendation.text}</p>
 
             <div className="quiz-result-actions">
-              <a href="#appointment" className="quiz-primary-button">
+              <a href="#contact" className="quiz-primary-button">
                 Book Consultation
               </a>
 

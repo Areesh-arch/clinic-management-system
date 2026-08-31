@@ -22,7 +22,7 @@ export default function Navbar() {
           <a href="#contact">Contact</a>
         </nav>
 
-        <a href="#appointment" className="navbar-button">
+        <a href="#contact" className="navbar-button">
           Book Consultation
         </a>
       </div>
