@@ -15,7 +15,12 @@ from app.api.v1.endpoints.expense import router as expense_router
 from app.api.v1.endpoints.inventory import router as inventory_router
 from app.api.v1.endpoints.outstanding import router as outstanding_router
 from app.api.v1.endpoints.dashboard import router as dashboard_router
-
+from app.api.v1.endpoints.lead import router as lead_router
+from app.api.v1.endpoints.cms_service import router as cms_service_router
+from app.api.v1.endpoints.cms_result import router as cms_result_router
+from app.api.v1.endpoints.cms_blog import router as cms_blog_router
+from app.api.v1.endpoints.cms_quiz import router as cms_quiz_router
+from app.api.v1.endpoints.site_settings import router as site_settings_router
 
 api_router = APIRouter(
     prefix="/api/v1"
@@ -175,6 +180,68 @@ api_router.include_router(
     tags=["Outstanding"],
 )
 
+# =========================================================
+# CRM / LEADS
+# =========================================================
+
+api_router.include_router(
+    lead_router,
+    prefix="/crm/leads",
+    tags=["CRM / Leads"],
+)
+
+# =========================================================
+# CMS / SERVICES
+# =========================================================
+
+api_router.include_router(
+    cms_service_router,
+    prefix="/cms/services",
+    tags=["CMS / Services"],
+)
+
+# =========================================================
+# CMS / RESULTS
+# =========================================================
+
+api_router.include_router(
+    cms_result_router,
+    prefix="/cms/results",
+    tags=["CMS / Results"],
+)
+
+
+# =========================================================
+# CMS / NEWS & BLOGS
+# =========================================================
+
+api_router.include_router(
+    cms_blog_router,
+    prefix="/cms/blogs",
+    tags=["CMS / News & Blogs"],
+)
+
+
+# =========================================================
+# CMS / SKIN QUIZ
+# =========================================================
+
+api_router.include_router(
+    cms_quiz_router,
+    prefix="/cms/quiz",
+    tags=["CMS / Skin Quiz"],
+)
+
+
+# =========================================================
+# SETTINGS / WEBSITE
+# =========================================================
+
+api_router.include_router(
+    site_settings_router,
+    prefix="/settings/site",
+    tags=["Settings / Website"],
+)
 
 # =========================================================
 # DASHBOARD

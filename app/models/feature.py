@@ -10,6 +10,17 @@ class Feature(str, Enum):
     BEFORE_AFTER_PHOTOS = "before_after_photos"
     STAFF = "staff"
 
+    # =====================================================
+    # CRM / CMS
+    # =====================================================
+
+    CRM = "crm"
+    CMS = "cms"
+
+    # =====================================================
+    # OTHER FEATURES
+    # =====================================================
+
     ACCOUNTS = "accounts"
     REPORTS = "reports"
     PRIORITY_SUPPORT = "priority_support"

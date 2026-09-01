@@ -12,3 +12,9 @@ from app.models.inventory_item import InventoryItem
 from app.models.payment import Payment
 from app.models.expense import Expense
 from app.models.outstanding import Outstanding
+from app.models.lead import Lead
+from app.models.cms_service import CMSService
+from app.models.cms_result import CMSResult
+from app.models.cms_blog import CMSBlog
+from app.models.cms_quiz import CMSQuiz
+from app.models.site_settings import SiteSettings

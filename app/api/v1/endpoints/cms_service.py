@@ -1,47 +1,43 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.api.permissions import require_roles
 from app.database.session import get_db
-
+from app.models.enums import UserRole
 from app.models.user import User
 
-from app.schemas.lead import (
-    LeadCreate,
-    LeadResponse,
-    LeadStatsResponse,
-    LeadUpdate,
+from app.schemas.cms_service import (
+    CMSServiceCreate,
+    CMSServiceResponse,
+    CMSServiceUpdate,
 )
 
-from app.services.lead_service import (
-    create_lead_service,
-    delete_lead_service,
-    get_lead_service,
-    get_lead_stats_service,
-    list_leads_service,
-    update_lead_service,
+from app.services.cms_service_service import (
+    create_cms_service_service,
+    delete_cms_service_service,
+    get_cms_service_service,
+    get_cms_services_service,
+    update_cms_service_service,
 )
-
-from app.api.permissions import require_roles
-from app.models.enums import UserRole
 
 
 router = APIRouter(
     prefix="",
-    tags=["CRM / Leads"],
+    tags=["CMS / Services"],
 )
 
 
 # =========================================================
-# CREATE LEAD
+# CREATE SERVICE
 # =========================================================
 
 @router.post(
     "/",
-    response_model=LeadResponse,
+    response_model=CMSServiceResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def create_lead(
-    lead: LeadCreate,
+def create_service(
+    service_data: CMSServiceCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
@@ -51,22 +47,23 @@ def create_lead(
         )
     ),
 ):
-    return create_lead_service(
+
+    return create_cms_service_service(
         db=db,
-        lead_data=lead,
+        service_data=service_data,
         tenant_id=current_user.tenant_id,
     )
 
 
 # =========================================================
-# LIST LEADS
+# LIST SERVICES
 # =========================================================
 
 @router.get(
     "/",
-    response_model=list[LeadResponse],
+    response_model=list[CMSServiceResponse],
 )
-def list_leads(
+def list_services(
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
@@ -76,21 +73,23 @@ def list_leads(
         )
     ),
 ):
-    return list_leads_service(
+
+    return get_cms_services_service(
         db=db,
         tenant_id=current_user.tenant_id,
     )
 
 
 # =========================================================
-# LEAD STATISTICS
+# GET SINGLE SERVICE
 # =========================================================
 
 @router.get(
-    "/stats",
-    response_model=LeadStatsResponse,
+    "/{service_id}",
+    response_model=CMSServiceResponse,
 )
-def lead_stats(
+def get_service(
+    service_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
@@ -100,57 +99,33 @@ def lead_stats(
         )
     ),
 ):
-    return get_lead_stats_service(
+
+    service = get_cms_service_service(
         db=db,
+        service_id=service_id,
         tenant_id=current_user.tenant_id,
     )
 
-
-# =========================================================
-# GET LEAD
-# =========================================================
-
-@router.get(
-    "/{lead_id}",
-    response_model=LeadResponse,
-)
-def get_lead(
-    lead_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(
-        require_roles(
-            UserRole.OWNER,
-            UserRole.STAFF,
-            UserRole.SUPER_ADMIN,
-        )
-    ),
-):
-    lead = get_lead_service(
-        db=db,
-        lead_id=lead_id,
-        tenant_id=current_user.tenant_id,
-    )
-
-    if not lead:
+    if not service:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Lead not found",
+            detail="CMS service not found",
         )
 
-    return lead
+    return service
 
 
 # =========================================================
-# UPDATE LEAD
+# UPDATE SERVICE
 # =========================================================
 
 @router.put(
-    "/{lead_id}",
-    response_model=LeadResponse,
+    "/{service_id}",
+    response_model=CMSServiceResponse,
 )
-def update_lead(
-    lead_id: int,
-    lead_data: LeadUpdate,
+def update_service(
+    service_id: int,
+    service_data: CMSServiceUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
@@ -160,35 +135,36 @@ def update_lead(
         )
     ),
 ):
-    lead = get_lead_service(
+
+    service = get_cms_service_service(
         db=db,
-        lead_id=lead_id,
+        service_id=service_id,
         tenant_id=current_user.tenant_id,
     )
 
-    if not lead:
+    if not service:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Lead not found",
+            detail="CMS service not found",
         )
 
-    return update_lead_service(
+    return update_cms_service_service(
         db=db,
-        lead=lead,
-        lead_data=lead_data,
+        db_service=service,
+        service_data=service_data,
     )
 
 
 # =========================================================
-# DELETE LEAD
+# DELETE SERVICE
 # =========================================================
 
 @router.delete(
-    "/{lead_id}",
+    "/{service_id}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-def delete_lead(
-    lead_id: int,
+def delete_service(
+    service_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
@@ -198,21 +174,22 @@ def delete_lead(
         )
     ),
 ):
-    lead = get_lead_service(
+
+    service = get_cms_service_service(
         db=db,
-        lead_id=lead_id,
+        service_id=service_id,
         tenant_id=current_user.tenant_id,
     )
 
-    if not lead:
+    if not service:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Lead not found",
+            detail="CMS service not found",
         )
 
-    delete_lead_service(
+    delete_cms_service_service(
         db=db,
-        lead=lead,
+        db_service=service,
     )
 
     return None
