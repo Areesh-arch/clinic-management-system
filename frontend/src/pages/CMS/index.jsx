@@ -1,383 +1,129 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
+import Layout from "../../components/layout/Layout";
 
-import {
-  FiEdit3,
-  FiImage,
-  FiHome,
-  FiGrid,
-  FiBookOpen,
-  FiHelpCircle,
-  FiPhone,
-  FiPlus,
-  FiTrash2,
-  FiUpload,
-  FiEye,
-} from "react-icons/fi";
+import CMSHeader from "../../components/cms/CMSHeader";
+import CMSSummary from "../../components/cms/CMSSummary";
+import CMSNavigation from "../../components/cms/CMSNavigation";
+
+import HomepageEditor from "../../components/cms/homepage/HomepageEditor";
+import TreatmentsEditor from "../../components/cms/treatments/TreatmentsEditor";
+import ResultsEditor from "../../components/cms/results/ResultsEditor";
+import BlogsEditor from "../../components/cms/blogs/BlogsEditor";
+import QuizEditor from "../../components/cms/quiz/QuizEditor";
+import ContactEditor from "../../components/cms/contact/ContactEditor";
 
 import "../../styles/cms.css";
-import Layout from "../../components/layout/Layout";
 
 const CMS_SECTIONS = [
   {
     id: "homepage",
     title: "Homepage",
     description: "Manage the main message visitors see.",
-    icon: <FiHome />,
   },
   {
     id: "treatments",
     title: "Treatments",
     description: "Manage treatments shown on the website.",
-    icon: <FiGrid />,
   },
   {
     id: "results",
     title: "Results",
     description: "Manage before & after results.",
-    icon: <FiImage />,
   },
   {
-    id: "news",
+    id: "blogs",
     title: "News & Blogs",
     description: "Create educational articles and updates.",
-    icon: <FiBookOpen />,
   },
   {
     id: "quiz",
     title: "Skin Quiz",
     description: "Manage your website skin quiz.",
-    icon: <FiHelpCircle />,
   },
   {
     id: "contact",
     title: "Contact Information",
     description: "Manage contact and consultation details.",
-    icon: <FiPhone />,
   },
 ];
 
 function CMS() {
   const [activeSection, setActiveSection] = useState("homepage");
 
-  const [homepage, setHomepage] = useState({
-    eyebrow: "AESTHETIC & DERMATOLOGY",
-    heading: "Your Skin. Your Confidence.",
-    description:
-      "Personalised dermatology and aesthetic care designed around your individual skin goals.",
+  const [stats, setStats] = useState({
+    results: 0,
+    publishedResults: 0,
+    treatments: 0,
+    blogs: 0,
   });
-
-  const [results, setResults] = useState([]);
-
-  const [showResultForm, setShowResultForm] = useState(false);
-
-  const [resultForm, setResultForm] = useState({
-    title: "",
-    description: "",
-    beforeImage: null,
-    afterImage: null,
-    published: true,
-  });
-
-  const beforeInputRef = useRef(null);
-  const afterInputRef = useRef(null);
 
   const activeSectionData = CMS_SECTIONS.find(
     (section) => section.id === activeSection
   );
 
-  // ============================================================
-  // IMAGE HANDLING
-  // ============================================================
-
-  const handleImageChange = (event, type) => {
-    const file = event.target.files?.[0];
-
-    if (!file) {
-      return;
-    }
-
-    if (!file.type.startsWith("image/")) {
-      alert("Please select an image file.");
-      event.target.value = "";
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      alert("Image size must not exceed 10 MB.");
-      event.target.value = "";
-      return;
-    }
-
-    const previewUrl = URL.createObjectURL(file);
-
-    // Revoke previous preview if replacing an existing image
-    const previousImage = resultForm[type];
-
-    if (previousImage?.preview) {
-      URL.revokeObjectURL(previousImage.preview);
-    }
-
-    setResultForm((previous) => ({
+  const updateStats = (newStats) => {
+    setStats((previous) => ({
       ...previous,
-      [type]: {
-        file,
-        preview: previewUrl,
-      },
-    }));
-
-    // Allow selecting the same file again later
-    event.target.value = "";
-  };
-
-  const removeSelectedImage = (type) => {
-    const selectedImage = resultForm[type];
-
-    if (selectedImage?.preview) {
-      URL.revokeObjectURL(selectedImage.preview);
-    }
-
-    setResultForm((previous) => ({
-      ...previous,
-      [type]: null,
+      ...newStats,
     }));
   };
 
-  // ============================================================
-  // RESULT FORM
-  // ============================================================
+  const renderEditor = () => {
+    switch (activeSection) {
+      case "homepage":
+        return <HomepageEditor />;
 
-  const resetResultForm = () => {
-    if (resultForm.beforeImage?.preview) {
-      URL.revokeObjectURL(resultForm.beforeImage.preview);
+      case "treatments":
+        return (
+          <TreatmentsEditor
+            onStatsChange={updateStats}
+          />
+        );
+
+      case "results":
+        return (
+          <ResultsEditor
+            onStatsChange={updateStats}
+          />
+        );
+
+      case "blogs":
+        return (
+          <BlogsEditor
+            onStatsChange={updateStats}
+          />
+        );
+
+      case "quiz":
+        return <QuizEditor />;
+
+      case "contact":
+        return <ContactEditor />;
+
+      default:
+        return null;
     }
-
-    if (resultForm.afterImage?.preview) {
-      URL.revokeObjectURL(resultForm.afterImage.preview);
-    }
-
-    setResultForm({
-      title: "",
-      description: "",
-      beforeImage: null,
-      afterImage: null,
-      published: true,
-    });
-
-    setShowResultForm(false);
   };
-
-  const saveResult = () => {
-    const title = resultForm.title.trim();
-    const description = resultForm.description.trim();
-
-    if (!title) {
-      alert("Please enter a treatment name.");
-      return;
-    }
-
-    if (!resultForm.beforeImage) {
-      alert("Please upload the before image.");
-      return;
-    }
-
-    if (!resultForm.afterImage) {
-      alert("Please upload the after image.");
-      return;
-    }
-
-    const newResult = {
-      id: Date.now(),
-      title,
-      description,
-      beforeImage: resultForm.beforeImage.preview,
-      afterImage: resultForm.afterImage.preview,
-      published: resultForm.published,
-    };
-
-    setResults((previous) => [newResult, ...previous]);
-
-    setResultForm({
-      title: "",
-      description: "",
-      beforeImage: null,
-      afterImage: null,
-      published: true,
-    });
-
-    setShowResultForm(false);
-  };
-
-  const deleteResult = (id) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to remove this result?"
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    const resultToDelete = results.find((result) => result.id === id);
-
-    if (resultToDelete?.beforeImage) {
-      URL.revokeObjectURL(resultToDelete.beforeImage);
-    }
-
-    if (resultToDelete?.afterImage) {
-      URL.revokeObjectURL(resultToDelete.afterImage);
-    }
-
-    setResults((previous) =>
-      previous.filter((result) => result.id !== id)
-    );
-  };
-
-  // ============================================================
-  // HOMEPAGE
-  // ============================================================
-
-  const resetHomepage = () => {
-    setHomepage({
-      eyebrow: "AESTHETIC & DERMATOLOGY",
-      heading: "Your Skin. Your Confidence.",
-      description:
-        "Personalised dermatology and aesthetic care designed around your individual skin goals.",
-    });
-  };
-
-  const saveHomepage = () => {
-    alert("Homepage content saved successfully.");
-  };
-
-  // ============================================================
-  // SUMMARY
-  // ============================================================
-
-  const publishedResults = results.filter(
-    (result) => result.published
-  ).length;
-
-  // ============================================================
-  // RENDER
-  // ============================================================
 
   return (
     <Layout>
       <div className="cms-page">
-        {/* =====================================================
-            PAGE HEADER
-        ===================================================== */}
+        <CMSHeader />
 
-        <header className="cms-header">
-          <div className="cms-header-content">
-            <span className="cms-eyebrow">
-              WEBSITE MANAGEMENT
-            </span>
-
-            <h1>CMS</h1>
-
-            <p>
-              Manage the content and visual information displayed
-              on your public clinic website.
-            </p>
-          </div>
-
-          <div className="cms-header-status">
-            <span className="cms-status-dot"></span>
-            Website Content
-          </div>
-        </header>
-
-        {/* =====================================================
-            SUMMARY
-        ===================================================== */}
-
-        <section className="cms-summary">
-          <div className="cms-summary-card">
-            <span>Website Sections</span>
-
-            <strong>{CMS_SECTIONS.length}</strong>
-
-            <small>Managed sections</small>
-          </div>
-
-          <div className="cms-summary-card">
-            <span>Results</span>
-
-            <strong>{results.length}</strong>
-
-            <small>Before & after cases</small>
-          </div>
-
-          <div className="cms-summary-card">
-            <span>Published Results</span>
-
-            <strong>{publishedResults}</strong>
-
-            <small>Visible on website</small>
-          </div>
-
-          <div className="cms-summary-card">
-            <span>Content Status</span>
-
-            <strong className="cms-status-text">
-              Active
-            </strong>
-
-            <small>CMS ready</small>
-          </div>
-        </section>
-
-        {/* =====================================================
-            CMS WORKSPACE
-        ===================================================== */}
+        <CMSSummary
+          sectionCount={CMS_SECTIONS.length}
+          results={stats.results}
+          publishedResults={stats.publishedResults}
+          treatments={stats.treatments}
+          blogs={stats.blogs}
+        />
 
         <section className="cms-workspace">
-          {/* ===================================================
-              CONTENT NAVIGATION
-          =================================================== */}
-
-          <aside className="cms-navigation">
-            <div className="cms-navigation-header">
-              <span>CONTENT</span>
-
-              <p>Select a section to manage.</p>
-            </div>
-
-            <nav className="cms-navigation-list">
-              {CMS_SECTIONS.map((section) => (
-                <button
-                  key={section.id}
-                  type="button"
-                  className={
-                    activeSection === section.id
-                      ? "cms-navigation-item active"
-                      : "cms-navigation-item"
-                  }
-                  onClick={() =>
-                    setActiveSection(section.id)
-                  }
-                >
-                  <span className="cms-navigation-icon">
-                    {section.icon}
-                  </span>
-
-                  <span className="cms-navigation-text">
-                    <strong>{section.title}</strong>
-
-                    <small>{section.description}</small>
-                  </span>
-
-                  <span className="cms-navigation-arrow">
-                    →
-                  </span>
-                </button>
-              ))}
-            </nav>
-          </aside>
-
-          {/* ===================================================
-              EDITOR
-          =================================================== */}
+          <CMSNavigation
+            sections={CMS_SECTIONS}
+            activeSection={activeSection}
+            onSectionChange={setActiveSection}
+          />
 
           <main className="cms-editor">
             <div className="cms-editor-header">
@@ -396,562 +142,7 @@ function CMS() {
               </span>
             </div>
 
-            {/* =================================================
-                HOMEPAGE
-            ================================================= */}
-
-            {activeSection === "homepage" && (
-              <div className="cms-editor-body">
-                <div className="cms-information-box">
-                  <div className="cms-information-icon">
-                    i
-                  </div>
-
-                  <div>
-                    <strong>Homepage content</strong>
-
-                    <p>
-                      These fields control the main introduction
-                      displayed on your public clinic website.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="cms-form">
-                  <div className="cms-field">
-                    <label htmlFor="cms-eyebrow">
-                      Eyebrow
-                    </label>
-
-                    <input
-                      id="cms-eyebrow"
-                      type="text"
-                      value={homepage.eyebrow}
-                      onChange={(event) =>
-                        setHomepage((previous) => ({
-                          ...previous,
-                          eyebrow: event.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-
-                  <div className="cms-field">
-                    <label htmlFor="cms-heading">
-                      Main Heading
-                    </label>
-
-                    <input
-                      id="cms-heading"
-                      type="text"
-                      value={homepage.heading}
-                      onChange={(event) =>
-                        setHomepage((previous) => ({
-                          ...previous,
-                          heading: event.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-
-                  <div className="cms-field">
-                    <label htmlFor="cms-description">
-                      Introduction
-                    </label>
-
-                    <textarea
-                      id="cms-description"
-                      value={homepage.description}
-                      onChange={(event) =>
-                        setHomepage((previous) => ({
-                          ...previous,
-                          description: event.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-
-                  <div className="cms-form-actions">
-                    <button
-                      type="button"
-                      className="cms-secondary-button"
-                      onClick={resetHomepage}
-                    >
-                      Reset
-                    </button>
-
-                    <button
-                      type="button"
-                      className="cms-primary-button"
-                      onClick={saveHomepage}
-                    >
-                      Save Changes
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* =================================================
-                RESULTS
-            ================================================= */}
-
-            {activeSection === "results" && (
-              <div className="cms-editor-body">
-                <div className="cms-section-toolbar">
-                  <div>
-                    <h3>Before & After Results</h3>
-
-                    <p>
-                      Add treatment results that you want
-                      visitors to see on your website.
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    className="cms-primary-button"
-                    onClick={() => setShowResultForm(true)}
-                  >
-                    <FiPlus />
-                    Add Result
-                  </button>
-                </div>
-
-                {/* =============================================
-                    ADD RESULT FORM
-                ============================================= */}
-
-                {showResultForm && (
-                  <div className="cms-result-form">
-                    <div className="cms-result-form-header">
-                      <div>
-                        <span className="cms-editor-eyebrow">
-                          NEW RESULT
-                        </span>
-
-                        <h3>
-                          Add Before & After Result
-                        </h3>
-                      </div>
-
-                      <button
-                        type="button"
-                        className="cms-close-button"
-                        onClick={resetResultForm}
-                        aria-label="Close result form"
-                      >
-                        ×
-                      </button>
-                    </div>
-
-                    <div className="cms-field">
-                      <label htmlFor="result-title">
-                        Treatment Name
-                      </label>
-
-                      <input
-                        id="result-title"
-                        type="text"
-                        placeholder="e.g. Acne Treatment"
-                        value={resultForm.title}
-                        onChange={(event) =>
-                          setResultForm((previous) => ({
-                            ...previous,
-                            title: event.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-
-                    <div className="cms-field">
-                      <label htmlFor="result-description">
-                        Description
-                      </label>
-
-                      <textarea
-                        id="result-description"
-                        placeholder="Describe the treatment result..."
-                        value={resultForm.description}
-                        onChange={(event) =>
-                          setResultForm((previous) => ({
-                            ...previous,
-                            description: event.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-
-                    {/* =========================================
-                        IMAGE UPLOADS
-                    ========================================= */}
-
-                    <div className="cms-image-grid">
-                      {/* BEFORE */}
-
-                      <div className="cms-image-upload">
-                        <div className="cms-image-upload-header">
-                          <div>
-                            <strong>Before Image</strong>
-
-                            <span>
-                              Patient condition before treatment
-                            </span>
-                          </div>
-                        </div>
-
-                        {resultForm.beforeImage ? (
-                          <div className="cms-image-preview">
-                            <img
-                              src={
-                                resultForm.beforeImage.preview
-                              }
-                              alt="Before treatment"
-                            />
-
-                            <button
-                              type="button"
-                              className="cms-image-remove"
-                              onClick={() =>
-                                removeSelectedImage(
-                                  "beforeImage"
-                                )
-                              }
-                            >
-                              <FiTrash2 />
-                              Remove
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            className="cms-upload-box"
-                            onClick={() =>
-                              beforeInputRef.current?.click()
-                            }
-                          >
-                            <FiUpload />
-
-                            <strong>
-                              Upload Before Image
-                            </strong>
-
-                            <span>
-                              JPG, PNG or WEBP · Max 10 MB
-                            </span>
-                          </button>
-                        )}
-
-                        <input
-                          ref={beforeInputRef}
-                          type="file"
-                          accept="image/jpeg,image/png,image/webp"
-                          hidden
-                          onChange={(event) =>
-                            handleImageChange(
-                              event,
-                              "beforeImage"
-                            )
-                          }
-                        />
-                      </div>
-
-                      {/* AFTER */}
-
-                      <div className="cms-image-upload">
-                        <div className="cms-image-upload-header">
-                          <div>
-                            <strong>After Image</strong>
-
-                            <span>
-                              Patient result after treatment
-                            </span>
-                          </div>
-                        </div>
-
-                        {resultForm.afterImage ? (
-                          <div className="cms-image-preview">
-                            <img
-                              src={
-                                resultForm.afterImage.preview
-                              }
-                              alt="After treatment"
-                            />
-
-                            <button
-                              type="button"
-                              className="cms-image-remove"
-                              onClick={() =>
-                                removeSelectedImage(
-                                  "afterImage"
-                                )
-                              }
-                            >
-                              <FiTrash2 />
-                              Remove
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            className="cms-upload-box"
-                            onClick={() =>
-                              afterInputRef.current?.click()
-                            }
-                          >
-                            <FiUpload />
-
-                            <strong>
-                              Upload After Image
-                            </strong>
-
-                            <span>
-                              JPG, PNG or WEBP · Max 10 MB
-                            </span>
-                          </button>
-                        )}
-
-                        <input
-                          ref={afterInputRef}
-                          type="file"
-                          accept="image/jpeg,image/png,image/webp"
-                          hidden
-                          onChange={(event) =>
-                            handleImageChange(
-                              event,
-                              "afterImage"
-                            )
-                          }
-                        />
-                      </div>
-                    </div>
-
-                    {/* =========================================
-                        PUBLISH TOGGLE
-                    ========================================= */}
-
-                    <label className="cms-publish-toggle">
-                      <input
-                        type="checkbox"
-                        checked={resultForm.published}
-                        onChange={(event) =>
-                          setResultForm((previous) => ({
-                            ...previous,
-                            published: event.target.checked,
-                          }))
-                        }
-                      />
-
-                      <span>
-                        <strong>
-                          Publish on website
-                        </strong>
-
-                        <small>
-                          When enabled, this result will be
-                          visible on the public website.
-                        </small>
-                      </span>
-                    </label>
-
-                    {/* =========================================
-                        FORM ACTIONS
-                    ========================================= */}
-
-                    <div className="cms-form-actions">
-                      <button
-                        type="button"
-                        className="cms-secondary-button"
-                        onClick={resetResultForm}
-                      >
-                        Cancel
-                      </button>
-
-                      <button
-                        type="button"
-                        className="cms-primary-button"
-                        onClick={saveResult}
-                      >
-                        Save Result
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* =============================================
-                    RESULT LIST
-                ============================================= */}
-
-                <div className="cms-results-list">
-                  {results.length === 0 ? (
-                    <div className="cms-empty-state">
-                      <div className="cms-empty-icon">
-                        <FiImage />
-                      </div>
-
-                      <h3>No website results yet</h3>
-
-                      <p>
-                        Add your first before & after treatment
-                        result to display it on the public
-                        website.
-                      </p>
-
-                      <button
-                        type="button"
-                        className="cms-primary-button"
-                        onClick={() =>
-                          setShowResultForm(true)
-                        }
-                      >
-                        <FiPlus />
-                        Add Result
-                      </button>
-                    </div>
-                  ) : (
-                    results.map((result) => (
-                      <article
-                        className="cms-result-card"
-                        key={result.id}
-                      >
-                        <div className="cms-result-images">
-                          <div className="cms-result-image">
-                            {result.beforeImage ? (
-                              <img
-                                src={result.beforeImage}
-                                alt={`${result.title} before`}
-                              />
-                            ) : (
-                              <div className="cms-result-placeholder">
-                                <FiImage />
-                              </div>
-                            )}
-
-                            <span>BEFORE</span>
-                          </div>
-
-                          <div className="cms-result-image">
-                            {result.afterImage ? (
-                              <img
-                                src={result.afterImage}
-                                alt={`${result.title} after`}
-                              />
-                            ) : (
-                              <div className="cms-result-placeholder">
-                                <FiImage />
-                              </div>
-                            )}
-
-                            <span>AFTER</span>
-                          </div>
-                        </div>
-
-                        <div className="cms-result-content">
-                          <div>
-                            <span className="cms-result-label">
-                              TREATMENT RESULT
-                            </span>
-
-                            <h3>{result.title}</h3>
-
-                            <p>
-                              {result.description ||
-                                "No description added."}
-                            </p>
-                          </div>
-
-                          <div className="cms-result-actions">
-                            <span
-                              className={
-                                result.published
-                                  ? "cms-published"
-                                  : "cms-unpublished"
-                              }
-                            >
-                              {result.published
-                                ? "Published"
-                                : "Draft"}
-                            </span>
-
-                            <button
-                              type="button"
-                              className="cms-icon-button"
-                              title="Preview"
-                              aria-label={`Preview ${result.title}`}
-                              onClick={() =>
-                                alert(
-                                  `Preview: ${result.title}`
-                                )
-                              }
-                            >
-                              <FiEye />
-                            </button>
-
-                            <button
-                              type="button"
-                              className="cms-icon-button danger"
-                              title="Delete"
-                              aria-label={`Delete ${result.title}`}
-                              onClick={() =>
-                                deleteResult(result.id)
-                              }
-                            >
-                              <FiTrash2 />
-                            </button>
-                          </div>
-                        </div>
-                      </article>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* =================================================
-                OTHER SECTIONS
-            ================================================= */}
-
-            {[
-              "treatments",
-              "news",
-              "quiz",
-              "contact",
-            ].includes(activeSection) && (
-              <div className="cms-editor-body">
-                <div className="cms-information-box">
-                  <div className="cms-information-icon">
-                    i
-                  </div>
-
-                  <div>
-                    <strong>
-                      {activeSectionData?.title}
-                    </strong>
-
-                    <p>
-                      This section is now part of the CMS
-                      workspace. Its actual website data will
-                      be connected in the next integration step.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="cms-placeholder-editor">
-                  <div className="cms-placeholder-icon">
-                    {activeSectionData?.icon}
-                  </div>
-
-                  <h3>{activeSectionData?.title}</h3>
-
-                  <p>
-                    Manage this section from the CMS.
-                    We will connect its saved content to the
-                    public website after the CMS structure is
-                    finalized.
-                  </p>
-                </div>
-              </div>
-            )}
+            {renderEditor()}
           </main>
         </section>
       </div>
