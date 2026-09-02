@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
+
 import Layout from "../../components/layout/Layout";
 
 import CMSHeader from "../../components/cms/CMSHeader";
@@ -61,12 +62,14 @@ function CMS() {
     (section) => section.id === activeSection
   );
 
-  const updateStats = (newStats) => {
+  // Keep this callback reference stable.
+  // Child editors use this callback inside useEffect.
+  const updateStats = useCallback((newStats) => {
     setStats((previous) => ({
       ...previous,
       ...newStats,
     }));
-  };
+  }, []);
 
   const renderEditor = () => {
     switch (activeSection) {
@@ -134,7 +137,9 @@ function CMS() {
 
                 <h2>{activeSectionData?.title}</h2>
 
-                <p>{activeSectionData?.description}</p>
+                <p>
+                  {activeSectionData?.description}
+                </p>
               </div>
 
               <span className="cms-editor-state">
@@ -151,3 +156,4 @@ function CMS() {
 }
 
 export default CMS;
+

@@ -1,200 +1,152 @@
-import api from "./api";
+import { apiRequest } from "./api";
 
-const CMS_BASE = "/cms";
+// =====================================================
+// CMS API SERVICE
+// =====================================================
 
 const cmsService = {
   // =====================================================
-  // HOMEPAGE
+  // SERVICES
+  // Backend:
+  // /api/v1/cms/services/
   // =====================================================
 
-  getHomepage: async () => {
-    const response = await api.get(
-      `${CMS_BASE}/homepage`
-    );
-
-    return response.data;
+  getServices: async () => {
+    return apiRequest("/cms/services/");
   },
 
-  updateHomepage: async (data) => {
-    const response = await api.put(
-      `${CMS_BASE}/homepage`,
-      data
-    );
-
-    return response.data;
+  createService: async (data) => {
+    return apiRequest("/cms/services/", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   },
 
-  // =====================================================
-  // TREATMENTS
-  // =====================================================
-
-  getTreatments: async () => {
-    const response = await api.get(
-      `${CMS_BASE}/treatments`
-    );
-
-    return response.data;
+  updateService: async (id, data) => {
+    return apiRequest(`/cms/services/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
   },
 
-  createTreatment: async (data) => {
-    const response = await api.post(
-      `${CMS_BASE}/treatments`,
-      data
-    );
-
-    return response.data;
-  },
-
-  updateTreatment: async (id, data) => {
-    const response = await api.put(
-      `${CMS_BASE}/treatments/${id}`,
-      data
-    );
-
-    return response.data;
-  },
-
-  deleteTreatment: async (id) => {
-    const response = await api.delete(
-      `${CMS_BASE}/treatments/${id}`
-    );
-
-    return response.data;
+  deleteService: async (id) => {
+    return apiRequest(`/cms/services/${id}`, {
+      method: "DELETE",
+    });
   },
 
   // =====================================================
   // RESULTS
+  // Backend:
+  // /api/v1/cms/results/
   // =====================================================
 
   getResults: async () => {
-    const response = await api.get(
-      `${CMS_BASE}/results`
-    );
-
-    return response.data;
+    return apiRequest("/cms/results/");
   },
 
   createResult: async (formData) => {
-    const response = await api.post(
-      `${CMS_BASE}/results`,
-      formData
-    );
-
-    return response.data;
+    return apiRequest("/cms/results/", {
+      method: "POST",
+      body: formData,
+    });
   },
 
   updateResult: async (id, formData) => {
-    const response = await api.put(
-      `${CMS_BASE}/results/${id}`,
-      formData
-    );
-
-    return response.data;
+    return apiRequest(`/cms/results/${id}`, {
+      method: "PUT",
+      body: formData,
+    });
   },
 
   deleteResult: async (id) => {
-    const response = await api.delete(
-      `${CMS_BASE}/results/${id}`
-    );
-
-    return response.data;
+    return apiRequest(`/cms/results/${id}`, {
+      method: "DELETE",
+    });
   },
 
   // =====================================================
   // BLOGS
+  // Backend:
+  // /api/v1/cms/blogs/
   // =====================================================
 
   getBlogs: async () => {
-    const response = await api.get(
-      `${CMS_BASE}/blogs`
-    );
-
-    return response.data;
+    return apiRequest("/cms/blogs/");
   },
 
   createBlog: async (data) => {
-    const response = await api.post(
-      `${CMS_BASE}/blogs`,
-      data
-    );
-
-    return response.data;
+    return apiRequest("/cms/blogs/", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   },
 
   updateBlog: async (id, data) => {
-    const response = await api.put(
-      `${CMS_BASE}/blogs/${id}`,
-      data
-    );
-
-    return response.data;
+    return apiRequest(`/cms/blogs/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
   },
 
   deleteBlog: async (id) => {
-    const response = await api.delete(
-      `${CMS_BASE}/blogs/${id}`
-    );
-
-    return response.data;
+    return apiRequest(`/cms/blogs/${id}`, {
+      method: "DELETE",
+    });
   },
 
   // =====================================================
   // QUIZ
+  // Backend:
+  // /api/v1/cms/quiz/
   // =====================================================
 
   getQuizQuestions: async () => {
-    const response = await api.get(
-      `${CMS_BASE}/quiz`
-    );
-
-    return response.data;
+    return apiRequest("/cms/quiz/");
   },
 
   createQuizQuestion: async (data) => {
-    const response = await api.post(
-      `${CMS_BASE}/quiz`,
-      data
-    );
-
-    return response.data;
+    return apiRequest("/cms/quiz/", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   },
 
   updateQuizQuestion: async (id, data) => {
-    const response = await api.put(
-      `${CMS_BASE}/quiz/${id}`,
-      data
-    );
-
-    return response.data;
+    return apiRequest(`/cms/quiz/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
   },
 
   deleteQuizQuestion: async (id) => {
-    const response = await api.delete(
-      `${CMS_BASE}/quiz/${id}`
-    );
-
-    return response.data;
+    return apiRequest(`/cms/quiz/${id}`, {
+      method: "DELETE",
+    });
   },
 
   // =====================================================
-  // CONTACT
+  // SITE SETTINGS
+  // Backend:
+  // /api/v1/settings/site/
   // =====================================================
 
-  getContact: async () => {
-    const response = await api.get(
-      `${CMS_BASE}/contact`
-    );
-
-    return response.data;
+  getSiteSettings: async () => {
+    return apiRequest("/settings/site/");
   },
 
-  updateContact: async (data) => {
-    const response = await api.put(
-      `${CMS_BASE}/contact`,
-      data
-    );
+  createSiteSettings: async (data) => {
+    return apiRequest("/settings/site/", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
 
-    return response.data;
+  updateSiteSettings: async (data) => {
+    return apiRequest("/settings/site/", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
   },
 };
 

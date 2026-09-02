@@ -16,6 +16,12 @@ function ResultForm({ onSave, onCancel }) {
     published: true,
   });
 
+  const [saving, setSaving] = useState(false);
+
+  // =====================================================
+  // IMAGE SELECTION
+  // =====================================================
+
   const handleImageChange = (event, type) => {
     const file = event.target.files?.[0];
 
@@ -46,6 +52,10 @@ function ResultForm({ onSave, onCancel }) {
     event.target.value = "";
   };
 
+  // =====================================================
+  // REMOVE IMAGE
+  // =====================================================
+
   const removeImage = (type) => {
     const image = form[type];
 
@@ -59,7 +69,11 @@ function ResultForm({ onSave, onCancel }) {
     }));
   };
 
-  const handleSubmit = () => {
+  // =====================================================
+  // SUBMIT
+  // =====================================================
+
+  const handleSubmit = async () => {
     if (!form.title.trim()) {
       alert("Please enter a treatment name.");
       return;
@@ -75,19 +89,92 @@ function ResultForm({ onSave, onCancel }) {
       return;
     }
 
-    onSave({
-      title: form.title.trim(),
-      description: form.description.trim(),
-      beforeImage: form.beforeImage.preview,
-      afterImage: form.afterImage.preview,
-      beforeFile: form.beforeImage.file,
-      afterFile: form.afterImage.file,
-      published: form.published,
-    });
+    try {
+      setSaving(true);
+
+      // =================================================
+      // CREATE MULTIPART FORM DATA
+      // =================================================
+
+      const formData = new FormData();
+
+      // Required by FastAPI
+      formData.append(
+        "title",
+        form.title.trim()
+      );
+
+      // Backend requires slug.
+      // Generate it automatically from the title.
+      const slug = form.title
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+
+      formData.append("slug", slug);
+
+      // Optional fields
+      if (form.description.trim()) {
+        formData.append(
+          "description",
+          form.description.trim()
+        );
+      }
+
+      // Backend field name is treatment_name.
+      formData.append(
+        "treatment_name",
+        form.title.trim()
+      );
+
+      // Backend expects integer.
+      formData.append(
+        "display_order",
+        "0"
+      );
+
+      // Backend expects is_active, not published.
+      formData.append(
+        "is_active",
+        String(form.published)
+      );
+
+      // =================================================
+      // IMAGE FILES
+      // =================================================
+
+      formData.append(
+        "before_image",
+        form.beforeImage.file
+      );
+
+      formData.append(
+        "after_image",
+        form.afterImage.file
+      );
+
+      // =================================================
+      // SEND TO RESULTS EDITOR
+      // =================================================
+
+      await onSave(formData);
+    } catch (error) {
+      console.error(
+        "Failed to submit result form:",
+        error
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <div className="cms-result-form">
+      {/* =================================================
+          HEADER
+          ================================================= */}
+
       <div className="cms-result-form-header">
         <div>
           <span className="cms-editor-eyebrow">
@@ -101,10 +188,15 @@ function ResultForm({ onSave, onCancel }) {
           type="button"
           className="cms-close-button"
           onClick={onCancel}
+          disabled={saving}
         >
           ×
         </button>
       </div>
+
+      {/* =================================================
+          TREATMENT NAME
+          ================================================= */}
 
       <div className="cms-field">
         <label>Treatment Name</label>
@@ -119,8 +211,13 @@ function ResultForm({ onSave, onCancel }) {
             }))
           }
           placeholder="e.g. Acne Treatment"
+          disabled={saving}
         />
       </div>
+
+      {/* =================================================
+          DESCRIPTION
+          ================================================= */}
 
       <div className="cms-field">
         <label>Description</label>
@@ -135,8 +232,13 @@ function ResultForm({ onSave, onCancel }) {
           }
           placeholder="Describe the treatment result..."
           rows={5}
+          disabled={saving}
         />
       </div>
+
+      {/* =================================================
+          IMAGES
+          ================================================= */}
 
       <div className="cms-image-grid">
         <ImageUploader
@@ -145,11 +247,15 @@ function ResultForm({ onSave, onCancel }) {
           value={form.beforeImage}
           inputRef={beforeInputRef}
           onUpload={(event) =>
-            handleImageChange(event, "beforeImage")
+            handleImageChange(
+              event,
+              "beforeImage"
+            )
           }
           onRemove={() =>
             removeImage("beforeImage")
           }
+          disabled={saving}
         />
 
         <ImageUploader
@@ -158,13 +264,21 @@ function ResultForm({ onSave, onCancel }) {
           value={form.afterImage}
           inputRef={afterInputRef}
           onUpload={(event) =>
-            handleImageChange(event, "afterImage")
+            handleImageChange(
+              event,
+              "afterImage"
+            )
           }
           onRemove={() =>
             removeImage("afterImage")
           }
+          disabled={saving}
         />
       </div>
+
+      {/* =================================================
+          PUBLISH TOGGLE
+          ================================================= */}
 
       <label className="cms-publish-toggle">
         <input
@@ -173,26 +287,35 @@ function ResultForm({ onSave, onCancel }) {
           onChange={(event) =>
             setForm((previous) => ({
               ...previous,
-              published: event.target.checked,
+              published:
+                event.target.checked,
             }))
           }
+          disabled={saving}
         />
 
         <span>
-          <strong>Publish on website</strong>
+          <strong>
+            Publish on website
+          </strong>
 
           <small>
-            When enabled, this result will be visible on the
-            public website.
+            When enabled, this result will be
+            visible on the public website.
           </small>
         </span>
       </label>
+
+      {/* =================================================
+          ACTIONS
+          ================================================= */}
 
       <div className="cms-form-actions">
         <button
           type="button"
           className="cms-secondary-button"
           onClick={onCancel}
+          disabled={saving}
         >
           Cancel
         </button>
@@ -201,13 +324,20 @@ function ResultForm({ onSave, onCancel }) {
           type="button"
           className="cms-primary-button"
           onClick={handleSubmit}
+          disabled={saving}
         >
-          Save Result
+          {saving
+            ? "Saving..."
+            : "Save Result"}
         </button>
       </div>
     </div>
   );
 }
+
+// =======================================================
+// IMAGE UPLOADER
+// =======================================================
 
 function ImageUploader({
   label,
@@ -216,6 +346,7 @@ function ImageUploader({
   inputRef,
   onUpload,
   onRemove,
+  disabled,
 }) {
   return (
     <div className="cms-image-upload">
@@ -238,6 +369,7 @@ function ImageUploader({
             type="button"
             className="cms-image-remove"
             onClick={onRemove}
+            disabled={disabled}
           >
             <FiTrash2 />
             Remove
@@ -247,11 +379,16 @@ function ImageUploader({
         <button
           type="button"
           className="cms-upload-box"
-          onClick={() => inputRef.current?.click()}
+          onClick={() =>
+            inputRef.current?.click()
+          }
+          disabled={disabled}
         >
           <FiUpload />
 
-          <strong>Upload {label}</strong>
+          <strong>
+            Upload {label}
+          </strong>
 
           <span>
             JPG, PNG or WEBP · Max 10 MB
@@ -265,6 +402,7 @@ function ImageUploader({
         accept="image/jpeg,image/png,image/webp"
         hidden
         onChange={onUpload}
+        disabled={disabled}
       />
     </div>
   );

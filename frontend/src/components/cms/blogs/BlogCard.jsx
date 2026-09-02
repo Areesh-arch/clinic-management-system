@@ -5,6 +5,10 @@ import {
 } from "react-icons/fi";
 
 function BlogCard({ blog, onDelete }) {
+  const published = Boolean(
+    blog.is_published
+  );
+
   return (
     <article className="cms-content-card">
       <div className="cms-content-card-icon">
@@ -27,12 +31,12 @@ function BlogCard({ blog, onDelete }) {
       <div className="cms-content-card-actions">
         <span
           className={
-            blog.published
+            published
               ? "cms-published"
               : "cms-unpublished"
           }
         >
-          {blog.published
+          {published
             ? "Published"
             : "Draft"}
         </span>
@@ -49,7 +53,9 @@ function BlogCard({ blog, onDelete }) {
           type="button"
           className="cms-icon-button danger"
           title="Delete"
-          onClick={() => onDelete(blog.id)}
+          onClick={() =>
+            onDelete(blog.id)
+          }
         >
           <FiTrash2 />
         </button>
