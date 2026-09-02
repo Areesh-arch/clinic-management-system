@@ -4,9 +4,7 @@ import {
   FiCalendar,
   FiPackage,
   FiCamera,
-  FiSettings,
   FiClipboard,
-  FiUserCheck,
   FiCreditCard,
   FiUserPlus,
   FiEdit3,
@@ -32,20 +30,15 @@ function Sidebar() {
       path: "/appointments",
     },
     {
-      name: "Staff",
-      icon: <FiUserCheck />,
-      path: "/staff",
-    },
-    {
       name: "Treatments",
       icon: <FiClipboard />,
       path: "/treatments",
     },
     {
-  name: "Photos",
-  icon: <FiCamera />,
-  path: "/photos",
-},
+      name: "Photos",
+      icon: <FiCamera />,
+      path: "/photos",
+    },
     {
       name: "Inventory",
       icon: <FiPackage />,
@@ -57,27 +50,25 @@ function Sidebar() {
       path: "/billing",
     },
     {
-  name: "CRM",
-  icon: <FiUserPlus />,
-  path: "/crm",
-},
-{
-  name: "CMS",
-  icon: <FiEdit3 />,
-  path: "/cms",
-},
+      name: "CRM",
+      icon: <FiUserPlus />,
+      path: "/crm",
+    },
     {
-      name: "Settings",
-      icon: <FiSettings />,
-      path: "/settings",
+      name: "CMS",
+      icon: <FiEdit3 />,
+      path: "/cms",
     },
   ];
 
   return (
-    <aside className="hidden lg:flex flex-col w-72 bg-[#FCFBF8] border-r border-[#E6E1D8]">
+    <aside className="hidden lg:flex flex-col w-72 shrink-0 bg-[#FCFBF8] border-r border-[#E6E1D8]">
 
-      {/* Logo */}
-      <div className="px-8 py-8">
+      {/* =====================================================
+          BRAND
+      ===================================================== */}
+      <div className="px-8 py-8 border-b border-[#E6E1D8]">
+
         <h1 className="text-4xl font-bold text-[#7A9E7E]">
           DermaCare
         </h1>
@@ -85,21 +76,23 @@ function Sidebar() {
         <p className="text-[#7E867F] mt-2">
           Dermatology Clinic
         </p>
+
       </div>
 
-      {/* Menu */}
-      <nav className="flex-1 px-5 space-y-3">
+      {/* =====================================================
+          MENU
+      ===================================================== */}
+      <nav className="flex-1 overflow-y-auto px-5 py-6 space-y-2">
 
         {menus.map((item) => (
           <NavLink
             key={item.name}
             to={item.path}
             className={({ isActive }) =>
-              `flex items-center gap-4 rounded-2xl px-5 py-4 transition-all duration-300
-              ${
+              `flex items-center gap-4 rounded-2xl px-5 py-4 transition-all duration-200 ${
                 isActive
                   ? "bg-[#A8C5A0] text-white shadow-md"
-                  : "text-[#45524A] hover:scale-105"
+                  : "text-[#45524A] hover:bg-[#EEF3EB] hover:text-[#315D4B]"
               }`
             }
           >
@@ -115,11 +108,15 @@ function Sidebar() {
 
       </nav>
 
-      {/* Footer */}
+      {/* =====================================================
+          FOOTER
+      ===================================================== */}
       <div className="p-6 border-t border-[#E6E1D8]">
+
         <p className="text-sm text-[#8C938D]">
           Version 1.0.0
         </p>
+
       </div>
 
     </aside>

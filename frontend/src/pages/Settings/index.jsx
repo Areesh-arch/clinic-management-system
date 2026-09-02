@@ -4,6 +4,7 @@ import Layout from "../../components/layout/Layout";
 
 import SettingsHeader from "../../components/settings/SettingsHeader";
 import ProfileSettings from "../../components/settings/ProfileSettings";
+import WebsiteSettings from "../../components/settings/WebsiteSettings";
 import SecuritySettings from "../../components/settings/SecuritySettings";
 import NotificationSettings from "../../components/settings/NotificationSettings";
 import SaveButton from "../../components/settings/SaveButton";
@@ -44,19 +45,31 @@ export default function Settings() {
 
       setUser(currentUser);
 
-      const tenant = await getTenant(currentUser.tenant_id);
+      const tenant = await getTenant(
+        currentUser.tenant_id
+      );
 
       setProfile({
-        clinicName: tenant.business_name || "",
-        administrator: currentUser.name || "",
-        email: currentUser.email || "",
+        clinicName:
+          tenant.business_name || "",
+
+        administrator:
+          currentUser.name || "",
+
+        email:
+          currentUser.email || "",
+
         phone: "",
       });
     } catch (err) {
-      console.error("Failed to load settings:", err);
+      console.error(
+        "Failed to load settings:",
+        err
+      );
 
       setError(
-        err?.message || "Failed to load settings."
+        err?.message ||
+          "Failed to load settings."
       );
     } finally {
       setLoading(false);
@@ -71,23 +84,39 @@ export default function Settings() {
       setError("");
       setMessage("");
 
-      await updateTenant(user.tenant_id, {
-        business_name: profile.clinicName,
-      });
+      await updateTenant(
+        user.tenant_id,
+        {
+          business_name:
+            profile.clinicName,
+        }
+      );
 
-      await updateUser(user.id, {
-        full_name: profile.administrator,
-        email: profile.email,
-      });
+      await updateUser(
+        user.id,
+        {
+          full_name:
+            profile.administrator,
 
-      setMessage("Settings saved successfully.");
+          email:
+            profile.email,
+        }
+      );
+
+      setMessage(
+        "Clinic settings saved successfully."
+      );
 
       await loadSettings();
     } catch (err) {
-      console.error("Failed to save settings:", err);
+      console.error(
+        "Failed to save settings:",
+        err
+      );
 
       setError(
-        err?.message || "Failed to save settings."
+        err?.message ||
+          "Failed to save settings."
       );
     } finally {
       setSaving(false);
@@ -97,7 +126,6 @@ export default function Settings() {
   return (
     <Layout>
       <div className="space-y-8">
-
         <SettingsHeader />
 
         {loading && (
@@ -120,22 +148,39 @@ export default function Settings() {
 
         {!loading && (
           <>
+            {/* =================================================
+                CLINIC PROFILE
+            ================================================= */}
+
             <ProfileSettings
               profile={profile}
               setProfile={setProfile}
             />
 
-            <SecuritySettings />
-
-            <NotificationSettings />
-
             <SaveButton
               onSave={handleSave}
               saving={saving}
             />
+
+            {/* =================================================
+                WEBSITE
+            ================================================= */}
+
+            <WebsiteSettings />
+
+            {/* =================================================
+                SECURITY
+            ================================================= */}
+
+            <SecuritySettings />
+
+            {/* =================================================
+                NOTIFICATIONS
+            ================================================= */}
+
+            <NotificationSettings />
           </>
         )}
-
       </div>
     </Layout>
   );

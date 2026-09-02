@@ -1,72 +1,68 @@
 import { useState } from "react";
-import { FiPlus, FiTrash2 } from "react-icons/fi";
 
-function QuestionForm({ onSave, onCancel }) {
-  const [question, setQuestion] = useState("");
+function QuestionForm({ onSave, onCancel, saving = false }) {
+  const [form, setForm] = useState({
+    question: "",
+    option_a: "",
+    option_b: "",
+    option_c: "",
+    option_d: "",
+    correct_option: "A",
+    explanation: "",
+    display_order: 0,
+    is_active: true,
+  });
 
-  const [options, setOptions] = useState([
-    "",
-    "",
-    "",
-    "",
-  ]);
+  const handleChange = (event) => {
+    const { name, value } = event.target;
 
-  const [correctAnswer, setCorrectAnswer] = useState(0);
-
-  const handleOptionChange = (index, value) => {
-    setOptions((previous) =>
-      previous.map((option, optionIndex) =>
-        optionIndex === index ? value : option
-      )
-    );
-  };
-
-  const addOption = () => {
-    if (options.length >= 6) {
-      return;
-    }
-
-    setOptions((previous) => [
+    setForm((previous) => ({
       ...previous,
-      "",
-    ]);
-  };
-
-  const removeOption = (index) => {
-    if (options.length <= 2) {
-      return;
-    }
-
-    setOptions((previous) =>
-      previous.filter(
-        (_, optionIndex) => optionIndex !== index
-      )
-    );
-
-    if (correctAnswer >= index) {
-      setCorrectAnswer(
-        Math.max(0, correctAnswer - 1)
-      );
-    }
+      [name]: value,
+    }));
   };
 
   const handleSubmit = () => {
-    if (!question.trim()) {
+    if (!form.question.trim()) {
       alert("Please enter a question.");
       return;
     }
 
-    if (options.some((option) => !option.trim())) {
-      alert("Please complete every answer option.");
+    if (form.question.trim().length < 5) {
+      alert("Question must be at least 5 characters long.");
+      return;
+    }
+
+    if (!form.option_a.trim()) {
+      alert("Please enter option A.");
+      return;
+    }
+
+    if (!form.option_b.trim()) {
+      alert("Please enter option B.");
+      return;
+    }
+
+    if (!form.option_c.trim()) {
+      alert("Please enter option C.");
+      return;
+    }
+
+    if (!form.option_d.trim()) {
+      alert("Please enter option D.");
       return;
     }
 
     onSave({
-      question: question.trim(),
-      options: options.map((option) =>
-        option.trim()
-      ),
-      correctAnswer,
+      question: form.question.trim(),
+      option_a: form.option_a.trim(),
+      option_b: form.option_b.trim(),
+      option_c: form.option_c.trim(),
+      option_d: form.option_d.trim(),
+      correct_option: form.correct_option,
+      explanation: form.explanation.trim() || null,
+      display_order: Number(form.display_order) || 0,
+      is_active: form.is_active,
     });
   };
 
@@ -85,23 +81,28 @@ function QuestionForm({ onSave, onCancel }) {
           type="button"
           className="cms-close-button"
           onClick={onCancel}
+          disabled={saving}
         >
           ×
         </button>
       </div>
 
+      {/* QUESTION */}
+
       <div className="cms-field">
         <label>Question</label>
 
         <textarea
-          value={question}
-          onChange={(event) =>
-            setQuestion(event.target.value)
-          }
+          name="question"
+          value={form.question}
+          onChange={handleChange}
           placeholder="e.g. How often does your skin feel dry?"
           rows={4}
+          disabled={saving}
         />
       </div>
+
+      {/* ANSWER OPTIONS */}
 
       <div className="cms-quiz-options">
         <div className="cms-quiz-options-header">
@@ -112,63 +113,113 @@ function QuestionForm({ onSave, onCancel }) {
               Select the correct answer.
             </span>
           </div>
-
-          <button
-            type="button"
-            className="cms-secondary-button"
-            onClick={addOption}
-          >
-            <FiPlus />
-            Add Option
-          </button>
         </div>
 
-        {options.map((option, index) => (
+        {[
+          ["A", "option_a"],
+          ["B", "option_b"],
+          ["C", "option_c"],
+          ["D", "option_d"],
+        ].map(([letter, fieldName]) => (
           <div
             className="cms-quiz-option"
-            key={index}
+            key={fieldName}
           >
             <input
               type="radio"
-              name="correctAnswer"
-              checked={correctAnswer === index}
-              onChange={() =>
-                setCorrectAnswer(index)
+              name="correct_option"
+              value={letter}
+              checked={
+                form.correct_option === letter
               }
+              onChange={handleChange}
+              disabled={saving}
             />
+
+            <span
+              style={{
+                minWidth: "24px",
+                fontWeight: 600,
+              }}
+            >
+              {letter}
+            </span>
 
             <input
               type="text"
-              value={option}
-              onChange={(event) =>
-                handleOptionChange(
-                  index,
-                  event.target.value
-                )
-              }
-              placeholder={`Option ${index + 1}`}
+              name={fieldName}
+              value={form[fieldName]}
+              onChange={handleChange}
+              placeholder={`Option ${letter}`}
+              disabled={saving}
             />
-
-            {options.length > 2 && (
-              <button
-                type="button"
-                className="cms-icon-button danger"
-                onClick={() =>
-                  removeOption(index)
-                }
-              >
-                <FiTrash2 />
-              </button>
-            )}
           </div>
         ))}
       </div>
+
+      {/* EXPLANATION */}
+
+      <div className="cms-field">
+        <label>Explanation</label>
+
+        <textarea
+          name="explanation"
+          value={form.explanation}
+          onChange={handleChange}
+          placeholder="Optional explanation for the correct answer..."
+          rows={4}
+          disabled={saving}
+        />
+      </div>
+
+      {/* DISPLAY ORDER */}
+
+      <div className="cms-field">
+        <label>Display Order</label>
+
+        <input
+          name="display_order"
+          type="number"
+          min="0"
+          value={form.display_order}
+          onChange={handleChange}
+          disabled={saving}
+        />
+      </div>
+
+      {/* ACTIVE */}
+
+      <label className="cms-publish-toggle">
+        <input
+          type="checkbox"
+          checked={form.is_active}
+          onChange={(event) =>
+            setForm((previous) => ({
+              ...previous,
+              is_active: event.target.checked,
+            }))
+          }
+          disabled={saving}
+        />
+
+        <span>
+          <strong>Active question</strong>
+
+          <small>
+            Active questions will be available on the
+            public website skin quiz.
+          </small>
+        </span>
+      </label>
+
+      {/* ACTIONS */}
 
       <div className="cms-form-actions">
         <button
           type="button"
           className="cms-secondary-button"
           onClick={onCancel}
+          disabled={saving}
         >
           Cancel
         </button>
@@ -177,8 +228,9 @@ function QuestionForm({ onSave, onCancel }) {
           type="button"
           className="cms-primary-button"
           onClick={handleSubmit}
+          disabled={saving}
         >
-          Save Question
+          {saving ? "Saving..." : "Save Question"}
         </button>
       </div>
     </div>

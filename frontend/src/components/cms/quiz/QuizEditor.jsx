@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   FiHelpCircle,
   FiPlus,
@@ -6,25 +6,107 @@ import {
 } from "react-icons/fi";
 
 import QuestionForm from "./QuestionForm";
+import cmsService from "../../../services/cmsService";
 
 function QuizEditor() {
   const [questions, setQuestions] = useState([]);
-
   const [showForm, setShowForm] = useState(false);
 
-  const addQuestion = (question) => {
-    setQuestions((previous) => [
-      {
-        id: Date.now(),
-        ...question,
-      },
-      ...previous,
-    ]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
-    setShowForm(false);
+  // =====================================================
+  // LOAD QUESTIONS FROM DATABASE
+  // =====================================================
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadQuestions = async () => {
+      try {
+        setLoading(true);
+
+        const data = await cmsService.getQuizQuestions();
+
+        if (mounted) {
+          setQuestions(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        console.error(
+          "Failed to load quiz questions:",
+          error
+        );
+
+        if (mounted) {
+          alert(
+            error.message ||
+              "Failed to load quiz questions."
+          );
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadQuestions();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // =====================================================
+  // CREATE QUESTION
+  // =====================================================
+
+  const addQuestion = async (question) => {
+    try {
+      setSaving(true);
+
+      const createdQuestion =
+        await cmsService.createQuizQuestion({
+          question: question.question,
+          option_a: question.option_a,
+          option_b: question.option_b,
+          option_c: question.option_c,
+          option_d: question.option_d,
+          correct_option: question.correct_option,
+          explanation: question.explanation || null,
+          display_order:
+            question.display_order ?? questions.length,
+          is_active:
+            question.is_active ?? true,
+        });
+
+      setQuestions((previous) => [
+        createdQuestion,
+        ...previous,
+      ]);
+
+      setShowForm(false);
+    } catch (error) {
+      console.error(
+        "Failed to create quiz question:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "Failed to save quiz question."
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const deleteQuestion = (id) => {
+  // =====================================================
+  // DELETE QUESTION
+  // =====================================================
+
+  const deleteQuestion = async (id) => {
     const confirmed = window.confirm(
       "Are you sure you want to delete this question?"
     );
@@ -33,12 +115,34 @@ function QuizEditor() {
       return;
     }
 
-    setQuestions((previous) =>
-      previous.filter(
-        (question) => question.id !== id
-      )
-    );
+    try {
+      setDeletingId(id);
+
+      await cmsService.deleteQuizQuestion(id);
+
+      setQuestions((previous) =>
+        previous.filter(
+          (question) => question.id !== id
+        )
+      );
+    } catch (error) {
+      console.error(
+        "Failed to delete quiz question:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "Failed to delete quiz question."
+      );
+    } finally {
+      setDeletingId(null);
+    }
   };
+
+  // =====================================================
+  // RENDER
+  // =====================================================
 
   return (
     <div className="cms-editor-body">
@@ -47,8 +151,8 @@ function QuizEditor() {
           <h3>Skin Quiz</h3>
 
           <p>
-            Manage questions used by your public website skin
-            quiz.
+            Manage questions used by your public website
+            skin quiz.
           </p>
         </div>
 
@@ -56,6 +160,7 @@ function QuizEditor() {
           type="button"
           className="cms-primary-button"
           onClick={() => setShowForm(true)}
+          disabled={saving}
         >
           <FiPlus />
           Add Question
@@ -66,11 +171,16 @@ function QuizEditor() {
         <QuestionForm
           onSave={addQuestion}
           onCancel={() => setShowForm(false)}
+          saving={saving}
         />
       )}
 
       <div className="cms-results-list">
-        {questions.length === 0 ? (
+        {loading ? (
+          <div className="cms-loading-state">
+            Loading quiz questions...
+          </div>
+        ) : questions.length === 0 ? (
           <div className="cms-empty-state">
             <div className="cms-empty-icon">
               <FiHelpCircle />
@@ -79,8 +189,8 @@ function QuizEditor() {
             <h3>No quiz questions yet</h3>
 
             <p>
-              Add questions that visitors can answer through
-              your skin quiz.
+              Add questions that visitors can answer
+              through your skin quiz.
             </p>
 
             <button
@@ -110,15 +220,30 @@ function QuizEditor() {
                 <h3>{question.question}</h3>
 
                 <p>
-                  {question.options.length} answer options
+                  4 answer options
                 </p>
               </div>
 
               <div className="cms-content-card-actions">
+                <span
+                  className={
+                    question.is_active
+                      ? "cms-published"
+                      : "cms-unpublished"
+                  }
+                >
+                  {question.is_active
+                    ? "Active"
+                    : "Inactive"}
+                </span>
+
                 <button
                   type="button"
                   className="cms-icon-button danger"
                   title="Delete"
+                  disabled={
+                    deletingId === question.id
+                  }
                   onClick={() =>
                     deleteQuestion(question.id)
                   }

@@ -1,9 +1,15 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+} from "react-router-dom";
 
 import Login from "../pages/Login";
 import ForgotPassword from "../pages/ForgotPassword";
 
 import Dashboard from "../pages/Dashboard";
+import PlatformOverview from "../pages/PlatformOverview/index.jsx";
+
 import Patients from "../pages/Patients";
 import Staff from "../pages/Staff";
 import Treatments from "../pages/Treatments";
@@ -20,25 +26,58 @@ import ProtectedRoute from "../components/auth/ProtectedRoute";
 function AppRouter() {
   return (
     <BrowserRouter>
+
       <Routes>
 
-        {/* Public routes */}
-        <Route path="/" element={<Login />} />
+        {/* =====================================================
+            PUBLIC ROUTES
+        ===================================================== */}
 
-        <Route path="/login" element={<Login />} />
+        <Route
+          path="/"
+          element={<Login />}
+        />
+
+        <Route
+          path="/login"
+          element={<Login />}
+        />
 
         <Route
           path="/forgot-password"
           element={<ForgotPassword />}
         />
 
-        {/* Protected routes */}
+
+        {/* =====================================================
+            PROTECTED ROUTES
+        ===================================================== */}
+
         <Route element={<ProtectedRoute />}>
+
+          {/* ===================================================
+              OWNER DASHBOARD
+          =================================================== */}
 
           <Route
             path="/dashboard"
             element={<Dashboard />}
           />
+
+
+          {/* ===================================================
+              SUPER ADMIN DASHBOARD
+          =================================================== */}
+
+          <Route
+            path="/platform"
+            element={<PlatformOverview />}
+          />
+
+
+          {/* ===================================================
+              CLINIC MODULES
+          =================================================== */}
 
           <Route
             path="/patients"
@@ -61,8 +100,8 @@ function AppRouter() {
           />
 
           <Route
-            path="/billing"
-            element={<Billing />}
+            path="/photos"
+            element={<Photos />}
           />
 
           <Route
@@ -71,24 +110,24 @@ function AppRouter() {
           />
 
           <Route
-            path="/photos"
-            element={<Photos />}
-          />
-
-          <Route
             path="/billing"
             element={<Billing />}
           />
 
           <Route
-  path="/crm"
-  element={<CRM />}
-/>
+            path="/crm"
+            element={<CRM />}
+          />
 
-<Route
-  path="/cms"
-  element={<CMS />}
-/>
+          <Route
+            path="/cms"
+            element={<CMS />}
+          />
+
+
+          {/* ===================================================
+              SUPER ADMIN SYSTEM SETTINGS
+          =================================================== */}
 
           <Route
             path="/settings"
@@ -98,6 +137,7 @@ function AppRouter() {
         </Route>
 
       </Routes>
+
     </BrowserRouter>
   );
 }

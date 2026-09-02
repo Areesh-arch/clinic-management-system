@@ -6,21 +6,14 @@ import CMSHeader from "../../components/cms/CMSHeader";
 import CMSSummary from "../../components/cms/CMSSummary";
 import CMSNavigation from "../../components/cms/CMSNavigation";
 
-import HomepageEditor from "../../components/cms/homepage/HomepageEditor";
 import TreatmentsEditor from "../../components/cms/treatments/TreatmentsEditor";
 import ResultsEditor from "../../components/cms/results/ResultsEditor";
 import BlogsEditor from "../../components/cms/blogs/BlogsEditor";
 import QuizEditor from "../../components/cms/quiz/QuizEditor";
-import ContactEditor from "../../components/cms/contact/ContactEditor";
 
 import "../../styles/cms.css";
 
 const CMS_SECTIONS = [
-  {
-    id: "homepage",
-    title: "Homepage",
-    description: "Manage the main message visitors see.",
-  },
   {
     id: "treatments",
     title: "Treatments",
@@ -41,15 +34,11 @@ const CMS_SECTIONS = [
     title: "Skin Quiz",
     description: "Manage your website skin quiz.",
   },
-  {
-    id: "contact",
-    title: "Contact Information",
-    description: "Manage contact and consultation details.",
-  },
 ];
 
 function CMS() {
-  const [activeSection, setActiveSection] = useState("homepage");
+  const [activeSection, setActiveSection] =
+    useState("treatments");
 
   const [stats, setStats] = useState({
     results: 0,
@@ -73,9 +62,6 @@ function CMS() {
 
   const renderEditor = () => {
     switch (activeSection) {
-      case "homepage":
-        return <HomepageEditor />;
-
       case "treatments":
         return (
           <TreatmentsEditor
@@ -99,9 +85,6 @@ function CMS() {
 
       case "quiz":
         return <QuizEditor />;
-
-      case "contact":
-        return <ContactEditor />;
 
       default:
         return null;
@@ -135,7 +118,9 @@ function CMS() {
                   EDIT CONTENT
                 </span>
 
-                <h2>{activeSectionData?.title}</h2>
+                <h2>
+                  {activeSectionData?.title}
+                </h2>
 
                 <p>
                   {activeSectionData?.description}
@@ -156,4 +141,3 @@ function CMS() {
 }
 
 export default CMS;
-
