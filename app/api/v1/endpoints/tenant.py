@@ -4,14 +4,15 @@ from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.api.permissions import require_roles
 
-from app.models.user import User
 from app.models.enums import UserRole
+from app.models.user import User
 
 from app.schemas.tenant import (
     TenantCreate,
     TenantResponse,
     TenantUpdate,
 )
+
 from app.services.tenant_service import (
     create_new_tenant,
     get_tenant_by_id,
@@ -20,11 +21,17 @@ from app.services.tenant_service import (
     update_existing_tenant,
 )
 
+
 router = APIRouter(
-    prefix="/tenants",
+    prefix="",
     tags=["Tenants"],
 )
 
+
+# ============================================================
+# CREATE TENANT
+# SUPER_ADMIN ONLY
+# ============================================================
 
 @router.post(
     "/",
@@ -34,6 +41,9 @@ router = APIRouter(
 def create_tenant(
     tenant: TenantCreate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(UserRole.SUPER_ADMIN)
+    ),
 ):
     return create_new_tenant(
         db=db,
@@ -41,15 +51,28 @@ def create_tenant(
     )
 
 
+# ============================================================
+# LIST TENANTS
+# SUPER_ADMIN ONLY
+# ============================================================
+
 @router.get(
     "/",
     response_model=list[TenantResponse],
 )
 def list_tenants(
     db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(UserRole.SUPER_ADMIN)
+    ),
 ):
     return get_tenants(db)
 
+
+# ============================================================
+# GET SINGLE TENANT
+# SUPER_ADMIN ONLY
+# ============================================================
 
 @router.get(
     "/{tenant_id}",
@@ -58,20 +81,28 @@ def list_tenants(
 def get_tenant(
     tenant_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(UserRole.SUPER_ADMIN)
+    ),
 ):
     tenant = get_tenant_by_id(
-        db,
-        tenant_id,
+        db=db,
+        tenant_id=tenant_id,
     )
 
     if tenant is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Tenant not found",
         )
 
     return tenant
 
+
+# ============================================================
+# UPDATE TENANT
+# SUPER_ADMIN ONLY
+# ============================================================
 
 @router.put(
     "/{tenant_id}",
@@ -82,32 +113,18 @@ def update_tenant(
     tenant: TenantUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        require_roles(
-            UserRole.OWNER,
-            UserRole.SUPER_ADMIN,
-        )
+        require_roles(UserRole.SUPER_ADMIN)
     ),
 ):
     db_tenant = get_tenant_by_id(
-        db,
-        tenant_id,
+        db=db,
+        tenant_id=tenant_id,
     )
 
     if db_tenant is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Tenant not found",
-        )
-
-    # SUPER_ADMIN can manage any tenant.
-    # OWNER can only manage their own clinic.
-    if (
-        current_user.role != UserRole.SUPER_ADMIN
-        and db_tenant.id != current_user.tenant_id
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You do not have permission to update this clinic.",
         )
 
     return update_existing_tenant(
@@ -117,6 +134,11 @@ def update_tenant(
     )
 
 
+# ============================================================
+# DELETE TENANT
+# SUPER_ADMIN ONLY
+# ============================================================
+
 @router.delete(
     "/{tenant_id}",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -124,15 +146,18 @@ def update_tenant(
 def delete_tenant(
     tenant_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(UserRole.SUPER_ADMIN)
+    ),
 ):
     db_tenant = get_tenant_by_id(
-        db,
-        tenant_id,
+        db=db,
+        tenant_id=tenant_id,
     )
 
     if db_tenant is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Tenant not found",
         )
 
@@ -140,3 +165,5 @@ def delete_tenant(
         db=db,
         db_tenant=db_tenant,
     )
+
+    return None
