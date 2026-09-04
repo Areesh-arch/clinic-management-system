@@ -1,8 +1,10 @@
+
 import "../styles/news.css";
 
 const newsPosts = [
   {
     id: 1,
+    slug: "understanding-your-skin",
     title: "Understanding Your Skin: A Guide to Healthy Skin",
     category: "Skin Health",
     date: "August 20, 2026",
@@ -13,6 +15,7 @@ const newsPosts = [
   },
   {
     id: 2,
+    slug: "science-behind-modern-aesthetic-treatments",
     title: "The Science Behind Modern Aesthetic Treatments",
     category: "Aesthetic Care",
     date: "August 12, 2026",
@@ -23,6 +26,7 @@ const newsPosts = [
   },
   {
     id: 3,
+    slug: "why-professional-skin-consultation-matters",
     title: "Why Professional Skin Consultation Matters",
     category: "Expert Advice",
     date: "August 05, 2026",
@@ -32,6 +36,8 @@ const newsPosts = [
       "https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?auto=format&fit=crop&w=900&q=80",
   },
 ];
+
+export { newsPosts };
 
 export default function News() {
   return (
@@ -75,7 +81,7 @@ export default function News() {
                 <p>{post.excerpt}</p>
 
                 <a
-                  href={`/news/${post.id}`}
+                  href={`/news/${post.slug}`}
                   className="news-read-more"
                 >
                   Read Article
@@ -85,12 +91,6 @@ export default function News() {
               </div>
             </article>
           ))}
-        </div>
-
-        <div className="news-footer">
-          <a href="/news" className="news-view-all">
-            View All Articles
-          </a>
         </div>
 
       </div>

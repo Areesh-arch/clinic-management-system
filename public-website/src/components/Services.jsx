@@ -31,7 +31,6 @@ export default function Services() {
   return (
     <section className="services" id="treatments">
       <div className="services-container">
-
         <div className="services-heading">
           <div>
             <p className="section-eyebrow">
@@ -66,18 +65,9 @@ export default function Services() {
 
                 <p>{service.description}</p>
               </div>
-
-              <a
-                href="#appointment"
-                className="service-link"
-              >
-                Discover treatment
-                <span>→</span>
-              </a>
             </article>
           ))}
         </div>
-
       </div>
     </section>
   );

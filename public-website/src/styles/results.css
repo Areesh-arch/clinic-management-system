@@ -1,3 +1,4 @@
+
 /* =====================================================
    RESULTS SECTION
    ===================================================== */
@@ -100,46 +101,52 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
 
-  height: 225px;
+  width: 100%;
+  height: 300px;
 }
 
 
-/* Individual image side */
+/* =====================================================
+   INDIVIDUAL IMAGE SIDE
+   ===================================================== */
 
 .result-side {
   position: relative;
 
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 100%;
+  height: 100%;
 
   overflow: hidden;
+
+  background: #e8e4db;
+}
+
+.result-side img {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+  object-position: center;
+
+  transition: transform 0.5s ease;
 }
 
 
-/*
-   Temporary visual treatment.
+/* Slight zoom on card hover */
 
-   When real before/after images are available,
-   we will replace these backgrounds with images.
-*/
-
-.result-before {
-  background:
-    linear-gradient(
-      135deg,
-      #d9d7d3,
-      #b9b8b7
-    );
+.result-card:hover .result-side img {
+  transform: scale(1.03);
 }
+
+
+/* =====================================================
+   IMAGE DIVIDER
+   ===================================================== */
 
 .result-after {
-  background:
-    linear-gradient(
-      135deg,
-      #7fa69a,
-      #17594f
-    );
+  border-left: 1px solid rgba(255, 255, 255, 0.75);
 }
 
 
@@ -148,27 +155,48 @@
    ===================================================== */
 
 .result-side span {
-  position: relative;
-  z-index: 2;
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
 
-  font-size: 13px;
+  z-index: 3;
+
+  padding: 6px 9px;
+
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.14em;
 
   color: #ffffff;
+
+  background: rgba(23, 63, 53, 0.78);
+
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+
+  backdrop-filter: blur(5px);
 }
 
 
-/* subtle image overlay */
+/* =====================================================
+   SUBTLE IMAGE OVERLAY
+   ===================================================== */
 
-.result-before::after,
-.result-after::after {
+.result-side::after {
   content: "";
 
   position: absolute;
   inset: 0;
 
-  background: rgba(0, 0, 0, 0.03);
+  z-index: 2;
+
+  pointer-events: none;
+
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.16),
+    rgba(0, 0, 0, 0) 45%
+  );
 }
 
 
@@ -214,7 +242,12 @@
   .results-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .result-images {
+    height: 280px;
+  }
 }
+
 
 @media (max-width: 620px) {
   .results-section {
@@ -235,6 +268,22 @@
   }
 
   .result-images {
-    height: 220px;
+    height: 260px;
   }
 }
+
+
+/* =====================================================
+   VERY SMALL SCREENS
+   ===================================================== */
+
+@media (max-width: 400px) {
+  .result-images {
+    height: 230px;
+  }
+
+  .result-content {
+    padding: 22px;
+  }
+}
+
