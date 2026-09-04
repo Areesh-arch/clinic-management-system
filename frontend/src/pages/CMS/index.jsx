@@ -10,6 +10,7 @@ import TreatmentsEditor from "../../components/cms/treatments/TreatmentsEditor";
 import ResultsEditor from "../../components/cms/results/ResultsEditor";
 import BlogsEditor from "../../components/cms/blogs/BlogsEditor";
 import QuizEditor from "../../components/cms/quiz/QuizEditor";
+import TestimonialsEditor from "../../components/cms/testimonials/TestimonialsEditor";
 
 import "../../styles/cms.css";
 
@@ -23,6 +24,11 @@ const CMS_SECTIONS = [
     id: "results",
     title: "Results",
     description: "Manage before & after results.",
+  },
+  {
+    id: "testimonials",
+    title: "Patient Feedback",
+    description: "Manage patient testimonials and reviews.",
   },
   {
     id: "blogs",
@@ -51,8 +57,6 @@ function CMS() {
     (section) => section.id === activeSection
   );
 
-  // Keep this callback reference stable.
-  // Child editors use this callback inside useEffect.
   const updateStats = useCallback((newStats) => {
     setStats((previous) => ({
       ...previous,
@@ -75,6 +79,9 @@ function CMS() {
             onStatsChange={updateStats}
           />
         );
+
+      case "testimonials":
+        return <TestimonialsEditor />;
 
       case "blogs":
         return (

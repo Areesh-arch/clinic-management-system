@@ -1,8 +1,8 @@
 import About from "../components/About";
 import Navbar from "../components/Navbar";
-import Hero from "../components/Hero";
 import Services from "../components/Services";
 import Results from "../components/Results";
+import Testimonials from "../components/Testimonials";
 import SkinQuiz from "../components/SkinQuiz";
 import News from "../components/News";
 import Contact from "../components/Contact";
@@ -14,10 +14,10 @@ export default function Home() {
       <Navbar />
 
       <main>
-        <Hero />
         <About />
         <Services />
         <Results />
+        <Testimonials />
         <SkinQuiz />
         <News />
         <Contact />

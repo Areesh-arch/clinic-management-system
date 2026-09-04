@@ -2,12 +2,13 @@ const API_BASE_URL =
   import.meta.env.VITE_API_URL ||
   "http://127.0.0.1:8000/api/v1";
 
+
 export async function apiRequest(
   endpoint,
   options = {}
 ) {
   // =====================================================
-  // GET TOKEN
+  // GET AUTH TOKEN
   // =====================================================
 
   const token =
@@ -15,6 +16,17 @@ export async function apiRequest(
     localStorage.getItem("token") ||
     sessionStorage.getItem("access_token") ||
     sessionStorage.getItem("token");
+
+
+  // =====================================================
+  // GET SELECTED TENANT
+  // =====================================================
+
+  const selectedTenantId =
+    localStorage.getItem(
+      "selected_tenant_id"
+    );
+
 
   // =====================================================
   // HEADERS
@@ -24,14 +36,18 @@ export async function apiRequest(
     ...(options.headers || {}),
   };
 
+
   // =====================================================
   // CONTENT TYPE
   // =====================================================
 
-  if (!(options.body instanceof FormData)) {
+  if (
+    !(options.body instanceof FormData)
+  ) {
     headers["Content-Type"] =
       "application/json";
   }
+
 
   // =====================================================
   // AUTHORIZATION
@@ -41,6 +57,25 @@ export async function apiRequest(
     headers.Authorization =
       `Bearer ${token}`;
   }
+
+
+  // =====================================================
+  // SUPER ADMIN TENANT CONTEXT
+  // =====================================================
+  //
+  // Only send the selected tenant when one
+  // has actually been selected.
+  //
+  // The backend remains responsible for
+  // deciding whether the authenticated user
+  // is allowed to use this tenant.
+  //
+
+  if (selectedTenantId) {
+    headers["X-Tenant-ID"] =
+      selectedTenantId;
+  }
+
 
   // =====================================================
   // REQUEST
@@ -54,6 +89,7 @@ export async function apiRequest(
     }
   );
 
+
   // =====================================================
   // UNAUTHORIZED
   // =====================================================
@@ -63,6 +99,7 @@ export async function apiRequest(
       "Authentication failed. Please log in again."
     );
   }
+
 
   // =====================================================
   // OTHER ERRORS
@@ -95,19 +132,21 @@ export async function apiRequest(
             .join(", ");
       }
     } catch {
-      // Ignore JSON parsing failure
+      // Ignore JSON parsing failure.
     }
 
     throw new Error(errorMessage);
   }
 
+
   // =====================================================
-  // DELETE 204
+  // NO CONTENT
   // =====================================================
 
   if (response.status === 204) {
     return null;
   }
+
 
   // =====================================================
   // JSON RESPONSE

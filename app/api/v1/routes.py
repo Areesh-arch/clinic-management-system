@@ -20,7 +20,9 @@ from app.api.v1.endpoints.cms_service import router as cms_service_router
 from app.api.v1.endpoints.cms_result import router as cms_result_router
 from app.api.v1.endpoints.cms_blog import router as cms_blog_router
 from app.api.v1.endpoints.cms_quiz import router as cms_quiz_router
+from app.api.v1.endpoints.cms_testimonial import router as cms_testimonial_router
 from app.api.v1.endpoints.site_settings import router as site_settings_router
+from app.api.v1.endpoints.platform import router as platform_router
 
 api_router = APIRouter(
     prefix="/api/v1"
@@ -232,6 +234,15 @@ api_router.include_router(
     tags=["CMS / Skin Quiz"],
 )
 
+# =========================================================
+# CMS / PATIENT FEEDBACK
+# =========================================================
+
+api_router.include_router(
+    cms_testimonial_router,
+    prefix="/cms/testimonials",
+    tags=["CMS / Patient Feedback"],
+)
 
 # =========================================================
 # SETTINGS / WEBSITE
@@ -251,4 +262,11 @@ api_router.include_router(
     dashboard_router,
     prefix="/dashboard",
     tags=["Dashboard"],
+)
+
+
+api_router.include_router(
+    platform_router,
+    prefix="/platform",
+    tags=["Platform"],
 )

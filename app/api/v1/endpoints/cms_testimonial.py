@@ -1,55 +1,39 @@
-from fastapi import (
-    APIRouter,
-    Depends,
-    HTTPException,
-    status,
-)
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.features import require_feature
 from app.api.permissions import require_roles
-from app.api.tenant_context import (
-    get_effective_tenant_id,
-)
-
+from app.api.tenant_context import get_effective_tenant_id
 from app.database.session import get_db
-
 from app.models.enums import UserRole
-from app.models.feature import Feature
 from app.models.user import User
-
-from app.schemas.patient import (
-    PatientCreate,
-    PatientResponse,
-    PatientUpdate,
+from app.schemas.cms_testimonial import (
+    CMSTestimonialCreate,
+    CMSTestimonialResponse,
+    CMSTestimonialUpdate,
+)
+from app.services.cms_testimonial_service import (
+    create_cms_testimonial_service,
+    delete_cms_testimonial_service,
+    get_cms_testimonial_service,
+    get_cms_testimonials_service,
+    update_cms_testimonial_service,
 )
 
-from app.services.patient_service import (
-    create_patient_service,
-    delete_patient_service,
-    get_patient_service,
-    list_patients_service,
-    update_patient_service,
-)
 
-
-router = APIRouter(
-    prefix="",
-    tags=["Patients"],
-)
+router = APIRouter()
 
 
 # =========================================================
-# CREATE PATIENT
+# CREATE TESTIMONIAL
 # =========================================================
 
 @router.post(
     "/",
-    response_model=PatientResponse,
+    response_model=CMSTestimonialResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def create_patient(
-    patient: PatientCreate,
+def create_testimonial(
+    testimonial_data: CMSTestimonialCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
@@ -61,26 +45,23 @@ def create_patient(
     tenant_id: int = Depends(
         get_effective_tenant_id
     ),
-    _: User = Depends(
-        require_feature(Feature.PATIENTS)
-    ),
 ):
-    return create_patient_service(
+    return create_cms_testimonial_service(
         db=db,
-        patient_data=patient,
+        testimonial_data=testimonial_data,
         tenant_id=tenant_id,
     )
 
 
 # =========================================================
-# LIST PATIENTS
+# GET ALL TESTIMONIALS
 # =========================================================
 
 @router.get(
     "/",
-    response_model=list[PatientResponse],
+    response_model=list[CMSTestimonialResponse],
 )
-def list_patients(
+def get_testimonials(
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
@@ -92,26 +73,23 @@ def list_patients(
     tenant_id: int = Depends(
         get_effective_tenant_id
     ),
-    _: User = Depends(
-        require_feature(Feature.PATIENTS)
-    ),
 ):
-    return list_patients_service(
+    return get_cms_testimonials_service(
         db=db,
         tenant_id=tenant_id,
     )
 
 
 # =========================================================
-# GET PATIENT
+# GET SINGLE TESTIMONIAL
 # =========================================================
 
 @router.get(
-    "/{patient_id}",
-    response_model=PatientResponse,
+    "/{testimonial_id}",
+    response_model=CMSTestimonialResponse,
 )
-def get_patient(
-    patient_id: int,
+def get_testimonial(
+    testimonial_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
@@ -123,36 +101,33 @@ def get_patient(
     tenant_id: int = Depends(
         get_effective_tenant_id
     ),
-    _: User = Depends(
-        require_feature(Feature.PATIENTS)
-    ),
 ):
-    patient = get_patient_service(
+    testimonial = get_cms_testimonial_service(
         db=db,
-        patient_id=patient_id,
+        testimonial_id=testimonial_id,
         tenant_id=tenant_id,
     )
 
-    if not patient:
+    if testimonial is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Patient not found",
+            detail="CMS testimonial not found",
         )
 
-    return patient
+    return testimonial
 
 
 # =========================================================
-# UPDATE PATIENT
+# UPDATE TESTIMONIAL
 # =========================================================
 
 @router.put(
-    "/{patient_id}",
-    response_model=PatientResponse,
+    "/{testimonial_id}",
+    response_model=CMSTestimonialResponse,
 )
-def update_patient(
-    patient_id: int,
-    patient_data: PatientUpdate,
+def update_testimonial(
+    testimonial_id: int,
+    testimonial_data: CMSTestimonialUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
@@ -164,39 +139,36 @@ def update_patient(
     tenant_id: int = Depends(
         get_effective_tenant_id
     ),
-    _: User = Depends(
-        require_feature(Feature.PATIENTS)
-    ),
 ):
-    patient = get_patient_service(
+    testimonial = get_cms_testimonial_service(
         db=db,
-        patient_id=patient_id,
+        testimonial_id=testimonial_id,
         tenant_id=tenant_id,
     )
 
-    if not patient:
+    if testimonial is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Patient not found",
+            detail="CMS testimonial not found",
         )
 
-    return update_patient_service(
+    return update_cms_testimonial_service(
         db=db,
-        patient=patient,
-        patient_data=patient_data,
+        db_testimonial=testimonial,
+        testimonial_data=testimonial_data,
     )
 
 
 # =========================================================
-# DELETE PATIENT
+# DELETE TESTIMONIAL
 # =========================================================
 
 @router.delete(
-    "/{patient_id}",
+    "/{testimonial_id}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-def delete_patient(
-    patient_id: int,
+def delete_testimonial(
+    testimonial_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
@@ -208,25 +180,22 @@ def delete_patient(
     tenant_id: int = Depends(
         get_effective_tenant_id
     ),
-    _: User = Depends(
-        require_feature(Feature.PATIENTS)
-    ),
 ):
-    patient = get_patient_service(
+    testimonial = get_cms_testimonial_service(
         db=db,
-        patient_id=patient_id,
+        testimonial_id=testimonial_id,
         tenant_id=tenant_id,
     )
 
-    if not patient:
+    if testimonial is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Patient not found",
+            detail="CMS testimonial not found",
         )
 
-    delete_patient_service(
+    delete_cms_testimonial_service(
         db=db,
-        patient=patient,
+        db_testimonial=testimonial,
     )
 
     return None

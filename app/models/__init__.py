@@ -17,4 +17,5 @@ from app.models.cms_service import CMSService
 from app.models.cms_result import CMSResult
 from app.models.cms_blog import CMSBlog
 from app.models.cms_quiz import CMSQuiz
+from app.models.cms_testimonial import CMSTestimonial
 from app.models.site_settings import SiteSettings

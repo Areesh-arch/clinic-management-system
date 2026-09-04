@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import {
+  FiArrowRight,
   FiBriefcase,
   FiCheckCircle,
   FiClock,
@@ -19,8 +22,15 @@ import {
   deleteTenant,
 } from "../../services/tenantService";
 
+import {
+  setSelectedTenant,
+  getSelectedTenantId,
+  clearSelectedTenant,
+} from "../../utils/tenantContext";
 
 function Tenants() {
+  const navigate = useNavigate();
+
   const [tenants, setTenants] = useState([]);
 
   const [loading, setLoading] = useState(true);
@@ -39,7 +49,6 @@ function Tenants() {
     owner_email: "",
     owner_password: "",
   });
-
 
   /* ============================================================
      LOAD TENANTS
@@ -72,11 +81,55 @@ function Tenants() {
     }
   };
 
-
   useEffect(() => {
     loadTenants();
   }, []);
 
+  /* ============================================================
+     TENANT SELECTION
+     ============================================================ */
+
+  const handleOpenClinic = (tenant) => {
+    try {
+      if (!tenant || tenant.id === undefined || tenant.id === null) {
+        throw new Error(
+          "This clinic does not have a valid tenant ID."
+        );
+      }
+
+      /*
+       * Store the selected clinic in localStorage.
+       *
+       * api.js automatically reads selected_tenant_id
+       * and sends it as:
+       *
+       * X-Tenant-ID: <tenant id>
+       */
+      setSelectedTenant(tenant);
+
+      setError("");
+      setSuccess(
+        `Opening ${tenant.business_name || "clinic"}...`
+      );
+
+      /*
+       * Go to the clinic dashboard.
+       * From here all clinic modules will use the
+       * selected tenant automatically.
+       */
+      navigate("/dashboard");
+    } catch (err) {
+      console.error(
+        "Failed to open clinic:",
+        err
+      );
+
+      setError(
+        err.message ||
+          "Unable to open this clinic."
+      );
+    }
+  };
 
   /* ============================================================
      FORM HANDLING
@@ -91,7 +144,6 @@ function Tenants() {
     }));
   };
 
-
   const resetForm = () => {
     setForm({
       business_name: "",
@@ -104,14 +156,12 @@ function Tenants() {
     setEditingTenant(null);
   };
 
-
   const openCreateModal = () => {
     resetForm();
     setError("");
     setSuccess("");
     setModalOpen(true);
   };
-
 
   const openEditModal = (tenant) => {
     setEditingTenant(tenant);
@@ -129,7 +179,6 @@ function Tenants() {
     setModalOpen(true);
   };
 
-
   const closeModal = () => {
     if (saving) {
       return;
@@ -138,7 +187,6 @@ function Tenants() {
     setModalOpen(false);
     resetForm();
   };
-
 
   /* ============================================================
      CREATE / UPDATE
@@ -197,7 +245,6 @@ function Tenants() {
     }
   };
 
-
   /* ============================================================
      DELETE
      ============================================================ */
@@ -215,7 +262,22 @@ function Tenants() {
       setError("");
       setSuccess("");
 
+      /*
+       * If the clinic being deleted is currently selected,
+       * clear the tenant context first/after successful deletion.
+       */
+      const selectedTenantId =
+        getSelectedTenantId();
+
       await deleteTenant(tenant.id);
+
+      if (
+        selectedTenantId &&
+        String(selectedTenantId) ===
+          String(tenant.id)
+      ) {
+        clearSelectedTenant();
+      }
 
       setSuccess(
         "Clinic deleted successfully."
@@ -234,7 +296,6 @@ function Tenants() {
       );
     }
   };
-
 
   /* ============================================================
      STATISTICS
@@ -255,12 +316,16 @@ function Tenants() {
   const inactiveClinics =
     totalClinics - activeClinics;
 
+  const selectedTenantId =
+    getSelectedTenantId();
+
+  /* ============================================================
+     RENDER
+     ============================================================ */
 
   return (
     <Layout>
-
       <div className="space-y-8">
-
 
         {/* ======================================================
             HEADER
@@ -284,7 +349,6 @@ function Tenants() {
             </p>
 
           </div>
-
 
           <div className="flex gap-3">
 
@@ -323,7 +387,6 @@ function Tenants() {
               Refresh
             </button>
 
-
             <button
               type="button"
               onClick={openCreateModal}
@@ -353,13 +416,11 @@ function Tenants() {
 
         </section>
 
-
         {/* ======================================================
             SUCCESS
         ====================================================== */}
 
         {success && (
-
           <div className="flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 px-5 py-4 text-sm text-green-700">
 
             <FiCheckCircle />
@@ -367,16 +428,13 @@ function Tenants() {
             <span>{success}</span>
 
           </div>
-
         )}
-
 
         {/* ======================================================
             ERROR
         ====================================================== */}
 
         {error && !modalOpen && (
-
           <div className="flex items-start justify-between gap-4 rounded-xl border border-red-200 bg-red-50 px-5 py-4">
 
             <div className="flex items-start gap-3">
@@ -398,9 +456,7 @@ function Tenants() {
             </button>
 
           </div>
-
         )}
-
 
         {/* ======================================================
             STATISTICS
@@ -408,13 +464,11 @@ function Tenants() {
 
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
 
-
           <StatCard
             icon={<FiBriefcase />}
             label="Total Clinics"
             value={loading ? "..." : totalClinics}
           />
-
 
           <StatCard
             icon={<FiCheckCircle />}
@@ -422,23 +476,19 @@ function Tenants() {
             value={loading ? "..." : activeClinics}
           />
 
-
           <StatCard
             icon={<FiClock />}
             label="Inactive Clinics"
             value={loading ? "..." : inactiveClinics}
           />
 
-
         </div>
-
 
         {/* ======================================================
             TENANT TABLE
         ====================================================== */}
 
         <section className="overflow-hidden rounded-2xl border border-[#E6E1D8] bg-white shadow-sm">
-
 
           <div className="border-b border-[#E6E1D8] px-6 py-5">
 
@@ -466,7 +516,6 @@ function Tenants() {
 
           </div>
 
-
           {loading ? (
 
             <div className="flex min-h-62.5 items-center justify-center">
@@ -488,9 +537,7 @@ function Tenants() {
             <div className="flex min-h-75 flex-col items-center justify-center px-6 text-center">
 
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#EEF3EB] text-2xl text-[#315D4B]">
-
                 <FiBriefcase />
-
               </div>
 
               <h3 className="mt-5 text-lg font-semibold text-[#234D3C]">
@@ -522,6 +569,7 @@ function Tenants() {
                 "
               >
                 <FiPlus />
+
                 Create First Clinic
               </button>
 
@@ -531,7 +579,7 @@ function Tenants() {
 
             <div className="overflow-x-auto">
 
-              <table className="w-full min-w-187.5">
+              <table className="w-full min-w-237.5">
 
                 <thead>
 
@@ -557,123 +605,185 @@ function Tenants() {
 
                 </thead>
 
-
                 <tbody>
 
-                  {tenants.map((tenant) => (
+                  {tenants.map((tenant) => {
 
-                    <tr
-                      key={tenant.id}
-                      className="border-b border-[#EEEAE2] last:border-b-0 hover:bg-[#FCFBF8] transition"
-                    >
+                    const isSelected =
+                      selectedTenantId &&
+                      String(selectedTenantId) ===
+                        String(tenant.id);
 
-                      <td className="px-6 py-5">
+                    return (
+                      <tr
+                        key={tenant.id}
+                        className={`
+                          border-b
+                          border-[#EEEAE2]
+                          last:border-b-0
+                          transition
+                          ${
+                            isSelected
+                              ? "bg-[#F5F8F2]"
+                              : "hover:bg-[#FCFBF8]"
+                          }
+                        `}
+                      >
 
-                        <div className="flex items-center gap-4">
+                        {/* CLINIC */}
 
-                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#EEF3EB] text-[#315D4B]">
+                        <td className="px-6 py-5">
 
-                            <FiBriefcase />
+                          <div className="flex items-center gap-4">
+
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#EEF3EB] text-[#315D4B]">
+                              <FiBriefcase />
+                            </div>
+
+                            <div>
+
+                              <div className="flex items-center gap-2">
+
+                                <p className="font-semibold text-[#234D3C]">
+                                  {tenant.business_name}
+                                </p>
+
+                                {isSelected && (
+                                  <span className="rounded-full bg-[#E8F1E6] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#315D4B]">
+                                    Selected
+                                  </span>
+                                )}
+
+                              </div>
+
+                              <p className="mt-0.5 text-xs text-[#9B8246]">
+                                Tenant #{tenant.id}
+                              </p>
+
+                            </div>
 
                           </div>
 
-                          <div>
+                        </td>
 
-                            <p className="font-semibold text-[#234D3C]">
-                              {tenant.business_name}
-                            </p>
+                        {/* SUBDOMAIN */}
 
-                            <p className="mt-0.5 text-xs text-[#9B8246]">
-                              Tenant #{tenant.id}
-                            </p>
+                        <td className="px-6 py-5">
+
+                          <span className="rounded-lg bg-[#F5F1E7] px-3 py-2 text-sm font-medium text-[#45524A]">
+                            {tenant.subdomain}
+                          </span>
+
+                        </td>
+
+                        {/* STATUS */}
+
+                        <td className="px-6 py-5">
+
+                          <StatusBadge
+                            status={tenant.status}
+                          />
+
+                        </td>
+
+                        {/* ACTIONS */}
+
+                        <td className="px-6 py-5">
+
+                          <div className="flex justify-end gap-2">
+
+                            {/* OPEN CLINIC */}
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleOpenClinic(tenant)
+                              }
+                              className="
+                                inline-flex
+                                items-center
+                                gap-2
+                                rounded-lg
+                                bg-[#315D4B]
+                                px-3
+                                py-2
+                                text-sm
+                                font-semibold
+                                text-white
+                                shadow-sm
+                                transition
+                                hover:bg-[#234D3C]
+                              "
+                            >
+                              <FiArrowRight />
+
+                              {isSelected
+                                ? "Open"
+                                : "Open Clinic"}
+                            </button>
+
+                            {/* EDIT */}
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                openEditModal(tenant)
+                              }
+                              className="
+                                inline-flex
+                                items-center
+                                gap-2
+                                rounded-lg
+                                border
+                                border-[#D8D2C5]
+                                px-3
+                                py-2
+                                text-sm
+                                font-medium
+                                text-[#45524A]
+                                transition
+                                hover:bg-[#F5F1E7]
+                              "
+                            >
+                              <FiEdit3 />
+
+                              Edit
+                            </button>
+
+                            {/* DELETE */}
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleDelete(tenant)
+                              }
+                              className="
+                                inline-flex
+                                items-center
+                                justify-center
+                                rounded-lg
+                                border
+                                border-red-200
+                                px-3
+                                py-2
+                                text-sm
+                                font-medium
+                                text-red-600
+                                transition
+                                hover:bg-red-50
+                              "
+                              aria-label={`Delete ${tenant.business_name}`}
+                            >
+                              <FiTrash2 />
+                            </button>
 
                           </div>
 
-                        </div>
+                        </td>
 
-                      </td>
-
-
-                      <td className="px-6 py-5">
-
-                        <span className="rounded-lg bg-[#F5F1E7] px-3 py-2 text-sm font-medium text-[#45524A]">
-                          {tenant.subdomain}
-                        </span>
-
-                      </td>
-
-
-                      <td className="px-6 py-5">
-
-                        <StatusBadge
-                          status={tenant.status}
-                        />
-
-                      </td>
-
-
-                      <td className="px-6 py-5">
-
-                        <div className="flex justify-end gap-2">
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              openEditModal(tenant)
-                            }
-                            className="
-                              inline-flex
-                              items-center
-                              gap-2
-                              rounded-lg
-                              border
-                              border-[#D8D2C5]
-                              px-3
-                              py-2
-                              text-sm
-                              font-medium
-                              text-[#45524A]
-                              hover:bg-[#F5F1E7]
-                              transition
-                            "
-                          >
-                            <FiEdit3 />
-                            Edit
-                          </button>
-
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleDelete(tenant)
-                            }
-                            className="
-                              inline-flex
-                              items-center
-                              justify-center
-                              rounded-lg
-                              border
-                              border-red-200
-                              px-3
-                              py-2
-                              text-sm
-                              font-medium
-                              text-red-600
-                              hover:bg-red-50
-                              transition
-                            "
-                            aria-label={`Delete ${tenant.business_name}`}
-                          >
-                            <FiTrash2 />
-                          </button>
-
-                        </div>
-
-                      </td>
-
-                    </tr>
-
-                  ))}
+                      </tr>
+                    );
+                  })}
 
                 </tbody>
 
@@ -687,7 +797,6 @@ function Tenants() {
 
       </div>
 
-
       {/* ========================================================
           CREATE / EDIT MODAL
       ======================================================== */}
@@ -697,7 +806,6 @@ function Tenants() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
 
           <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
-
 
             {/* MODAL HEADER */}
 
@@ -725,12 +833,21 @@ function Tenants() {
 
               </div>
 
-
               <button
                 type="button"
                 onClick={closeModal}
                 disabled={saving}
-                className="flex h-10 w-10 items-center justify-center rounded-full text-[#647267] hover:bg-[#F3F5F1] transition"
+                className="
+                  flex
+                  h-10
+                  w-10
+                  items-center
+                  justify-center
+                  rounded-full
+                  text-[#647267]
+                  transition
+                  hover:bg-[#F3F5F1]
+                "
                 aria-label="Close"
               >
                 <span className="text-2xl">
@@ -740,7 +857,6 @@ function Tenants() {
 
             </div>
 
-
             {/* FORM */}
 
             <form
@@ -749,7 +865,6 @@ function Tenants() {
             >
 
               <div className="space-y-6 px-6 py-6">
-
 
                 {/* CLINIC INFORMATION */}
 
@@ -783,7 +898,6 @@ function Tenants() {
 
                 </div>
 
-
                 {/* OWNER INFORMATION */}
 
                 {!editingTenant && (
@@ -798,7 +912,6 @@ function Tenants() {
                       This account will be created as the
                       clinic owner.
                     </p>
-
 
                     <div className="mt-4 grid grid-cols-1 gap-5 md:grid-cols-2">
 
@@ -841,7 +954,6 @@ function Tenants() {
 
                 )}
 
-
                 {/* ERROR INSIDE MODAL */}
 
                 {error && (
@@ -853,7 +965,6 @@ function Tenants() {
                 )}
 
               </div>
-
 
               {/* FOOTER */}
 
@@ -873,13 +984,12 @@ function Tenants() {
                     text-sm
                     font-semibold
                     text-[#45524A]
-                    hover:bg-[#F5F1E7]
                     transition
+                    hover:bg-[#F5F1E7]
                   "
                 >
                   Cancel
                 </button>
-
 
                 <button
                   type="submit"
@@ -895,8 +1005,8 @@ function Tenants() {
                     text-sm
                     font-semibold
                     text-white
-                    hover:bg-[#234D3C]
                     transition
+                    hover:bg-[#234D3C]
                     disabled:cursor-not-allowed
                     disabled:opacity-60
                   "
@@ -928,7 +1038,6 @@ function Tenants() {
   );
 }
 
-
 /* ============================================================
    STAT CARD
    ============================================================ */
@@ -955,7 +1064,6 @@ function StatCard({
 
         </div>
 
-
         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#EEF3EB] text-xl text-[#315D4B]">
           {icon}
         </div>
@@ -965,7 +1073,6 @@ function StatCard({
     </div>
   );
 }
-
 
 /* ============================================================
    FORM FIELD
@@ -1022,7 +1129,6 @@ function FormField({
   );
 }
 
-
 /* ============================================================
    STATUS BADGE
    ============================================================ */
@@ -1071,6 +1177,5 @@ function StatusBadge({ status }) {
     </span>
   );
 }
-
 
 export default Tenants;

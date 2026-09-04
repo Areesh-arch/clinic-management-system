@@ -5,6 +5,7 @@ import {
   FiBookOpen,
   FiHelpCircle,
   FiPhone,
+  FiMessageSquare,
 } from "react-icons/fi";
 
 const ICONS = {
@@ -13,6 +14,7 @@ const ICONS = {
   results: <FiImage />,
   blogs: <FiBookOpen />,
   quiz: <FiHelpCircle />,
+  testimonials: <FiMessageSquare />,
   contact: <FiPhone />,
 };
 
