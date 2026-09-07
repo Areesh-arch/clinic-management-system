@@ -6,19 +6,13 @@ from app.services.dashboard_services import get_dashboard_data
 
 
 router = APIRouter(
-    prefix="",
     tags=["Dashboard"],
 )
 
 
 @router.get(
-    "",
-    response_model=dict,
-)
-@router.get(
     "/",
     response_model=dict,
-    include_in_schema=False,
 )
 def dashboard(
     db=Depends(get_db),

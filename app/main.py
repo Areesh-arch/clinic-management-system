@@ -1,20 +1,15 @@
-from pathlib import Path
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.routes import api_router
+from app.core.config import settings
 
 
 app = FastAPI(
-    title="Clinic Management System",
+    title=settings.APP_NAME,
+    version=settings.APP_VERSION,
 )
 
-
-# =========================================================
-# CORS
-# =========================================================
 
 # =========================================================
 # CORS
@@ -22,12 +17,23 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
+
+    # Normal dashboard/frontend origins
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:5174",
         "http://127.0.0.1:5174",
     ],
+
+    # Clinic public websites:
+    # areesha.localhost:5173
+    # glowskin.localhost:5173
+    # clinic-a.localhost:5173
+    #
+    # Also allows different development ports.
+    allow_origin_regex=r"^https?://[a-zA-Z0-9-]+\.localhost(?::\d+)?$",
+
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -35,33 +41,19 @@ app.add_middleware(
 
 
 # =========================================================
-# STATIC UPLOADS
-# =========================================================
-
-UPLOADS_DIR = Path("uploads")
-
-UPLOADS_DIR.mkdir(
-    parents=True,
-    exist_ok=True,
-)
-
-app.mount(
-    "/uploads",
-    StaticFiles(directory=UPLOADS_DIR),
-    name="uploads",
-)
-
-
-# =========================================================
-# BASIC ROUTES
+# ROOT
 # =========================================================
 
 @app.get("/")
-def root():
+def home():
     return {
-        "message": "Clinic Management System API"
+        "message": "Welcome to Clinic Management System"
     }
 
+
+# =========================================================
+# HEALTH CHECK
+# =========================================================
 
 @app.get("/health")
 def health():
@@ -71,7 +63,8 @@ def health():
 
 
 # =========================================================
-# API V1
+# ROUTERS
 # =========================================================
 
 app.include_router(api_router)
+

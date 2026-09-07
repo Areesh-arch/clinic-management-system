@@ -1,11 +1,125 @@
+import { useState } from "react";
 import "../styles/contact.css";
 
+const API_URL =
+  import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api/v1";
+
 export default function Contact() {
+  const [formData, setFormData] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    message: "",
+  });
+
+  const [status, setStatus] = useState({
+    type: "",
+    message: "",
+  });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+
+    setFormData((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+
+    if (status.message) {
+      setStatus({
+        type: "",
+        message: "",
+      });
+    }
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!formData.name.trim() || !formData.phone.trim()) {
+      setStatus({
+        type: "error",
+        message: "Please enter your name and phone number.",
+      });
+
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    setStatus({
+      type: "",
+      message: "",
+    });
+
+    try {
+      const response = await fetch(`${API_URL}/crm/leads/public`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          full_name: formData.name.trim(),
+          phone: formData.phone.trim(),
+          source: "website",
+          status: "new",
+        }),
+      });
+
+      let data = {};
+
+      try {
+        data = await response.json();
+      } catch {
+        data = {};
+      }
+
+      if (!response.ok) {
+        let errorMessage =
+          "Unable to send your request. Please try again.";
+
+        if (Array.isArray(data?.detail)) {
+          errorMessage = data.detail
+            .map((error) => error?.msg || "Invalid information.")
+            .join(" ");
+        } else if (typeof data?.detail === "string") {
+          errorMessage = data.detail;
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      setStatus({
+        type: "success",
+        message:
+          "Thank you. Your request has been received. Our clinic team will contact you shortly.",
+      });
+
+      setFormData({
+        name: "",
+        phone: "",
+        email: "",
+        message: "",
+      });
+    } catch (error) {
+      console.error("Contact form submission failed:", error);
+
+      setStatus({
+        type: "error",
+        message:
+          error.message ||
+          "Something went wrong. Please try again or contact the clinic directly.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <section id="contact" className="contact-section">
       <div className="contact-container">
-
-        {/* Section Heading */}
         <div className="contact-heading">
           <span className="contact-label">GET IN TOUCH</span>
 
@@ -20,17 +134,14 @@ export default function Contact() {
           </p>
         </div>
 
-        {/* Contact Content */}
         <div className="contact-content">
-
-          {/* Contact Information */}
           <div className="contact-info">
-
             <div className="contact-item">
               <div className="contact-icon">✦</div>
 
               <div>
                 <h3>Visit Our Clinic</h3>
+
                 <p>
                   Your Clinic Address
                   <br />
@@ -44,6 +155,7 @@ export default function Contact() {
 
               <div>
                 <h3>Call Us</h3>
+
                 <a href="tel:+923000000000">
                   +92 300 0000000
                 </a>
@@ -55,6 +167,7 @@ export default function Contact() {
 
               <div>
                 <h3>Email</h3>
+
                 <a href="mailto:info@dermaclinic.com">
                   info@dermaclinic.com
                 </a>
@@ -66,6 +179,7 @@ export default function Contact() {
 
               <div>
                 <h3>Opening Hours</h3>
+
                 <p>
                   Monday – Saturday
                   <br />
@@ -73,46 +187,39 @@ export default function Contact() {
                 </p>
               </div>
             </div>
-
           </div>
 
-          {/* Contact Form */}
           <div className="contact-form-wrapper">
-
             <form
               className="contact-form"
-              onSubmit={(e) => {
-                e.preventDefault();
-                alert("Thank you. We will contact you shortly.");
-              }}
+              onSubmit={handleSubmit}
             >
+              <div className="form-group">
+                <label htmlFor="name">Your Name</label>
 
-              <div className="form-row">
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  placeholder="Enter your name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
 
-                <div className="form-group">
-                  <label htmlFor="name">Your Name</label>
+              <div className="form-group">
+                <label htmlFor="phone">Phone Number</label>
 
-                  <input
-                    id="name"
-                    name="name"
-                    type="text"
-                    placeholder="Enter your name"
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="phone">Phone Number</label>
-
-                  <input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    placeholder="+92"
-                    required
-                  />
-                </div>
-
+                <input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  placeholder="+92 300 0000000"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  required
+                />
               </div>
 
               <div className="form-group">
@@ -123,6 +230,8 @@ export default function Contact() {
                   name="email"
                   type="email"
                   placeholder="your@email.com"
+                  value={formData.email}
+                  onChange={handleChange}
                 />
               </div>
 
@@ -133,21 +242,36 @@ export default function Contact() {
                   id="message"
                   name="message"
                   rows="5"
-                  placeholder="Tell us how we can help..."
-                  required
+                  placeholder="Tell us what you would like to discuss..."
+                  value={formData.message}
+                  onChange={handleChange}
                 />
               </div>
 
-              <button type="submit" className="contact-submit">
-                Send Message
-                <span>→</span>
+              {status.message && (
+                <div
+                  className={`contact-form-status ${
+                    status.type === "success"
+                      ? "success"
+                      : "error"
+                  }`}
+                >
+                  {status.message}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="contact-submit"
+                disabled={isSubmitting}
+              >
+                {isSubmitting
+                  ? "Sending..."
+                  : "Request Consultation"}
               </button>
-
             </form>
-
           </div>
         </div>
-
       </div>
     </section>
   );
