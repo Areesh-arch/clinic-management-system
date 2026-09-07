@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import {
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 
 import Layout from "../../components/layout/Layout";
 
@@ -10,34 +13,38 @@ import PatientFilters from "../../components/patients/PatientFilters";
 import PatientTable from "../../components/patients/PatientTable";
 
 import { getPatients } from "../../services/patientService";
+import { apiRequest } from "../../services/api";
 
 function Patients() {
+  const navigate = useNavigate();
+
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("All");
   const [gender, setGender] = useState("All");
 
-  /*
-   * Modal types:
-   *
-   * null    = no modal
-   * create  = add patient
-   * view    = view patient
-   * edit    = edit patient
-   */
   const [modalType, setModalType] = useState(null);
 
-  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [selectedPatient, setSelectedPatient] =
+    useState(null);
 
-  const [patients, setPatients] = useState([]);
+  const [patients, setPatients] =
+    useState([]);
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [appointments, setAppointments] =
+    useState([]);
 
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState("");
+
+  const [searchParams, setSearchParams] =
+    useSearchParams();
 
   /*
    * ============================================================
-   * LOAD PATIENTS FROM BACKEND
+   * LOAD PATIENTS
    * ============================================================
    */
 
@@ -52,16 +59,18 @@ function Patients() {
 
       if (Array.isArray(data)) {
         patientList = data;
-      } else if (Array.isArray(data.items)) {
+      } else if (Array.isArray(data?.items)) {
         patientList = data.items;
-      } else if (Array.isArray(data.results)) {
+      } else if (Array.isArray(data?.results)) {
         patientList = data.results;
       }
 
       console.log(
-        "Patients loaded from database:",
-        patientList
-      );
+  "PATIENT DATA:",
+  JSON.stringify(patientList, null, 2)
+);
+
+setPatients(patientList);
 
       setPatients(patientList);
     } catch (err) {
@@ -80,24 +89,105 @@ function Patients() {
   };
 
   /*
-   * Load patients when page opens.
+   * ============================================================
+   * LOAD APPOINTMENTS
+   *
+   * Used for the Follow-ups card.
+   * ============================================================
+   */
+
+  const loadAppointments = async () => {
+    try {
+      const data = await apiRequest(
+        "/appointments/"
+      );
+
+      let appointmentList = [];
+
+      if (Array.isArray(data)) {
+        appointmentList = data;
+      } else if (Array.isArray(data?.items)) {
+        appointmentList = data.items;
+      } else if (Array.isArray(data?.results)) {
+        appointmentList = data.results;
+      }
+
+      console.log(
+  "APPOINTMENT DATA:",
+  JSON.stringify(appointmentList, null, 2)
+);
+
+setAppointments(appointmentList);
+
+      setAppointments(appointmentList);
+    } catch (err) {
+      console.error(
+        "Failed to load appointments for patient statistics:",
+        err
+      );
+
+      /*
+       * Do not break the Patient page if appointments
+       * cannot be loaded.
+       */
+      setAppointments([]);
+    }
+  };
+
+  /*
+   * ============================================================
+   * INITIAL LOAD
+   * ============================================================
    */
 
   useEffect(() => {
     loadPatients();
+    loadAppointments();
   }, []);
 
   /*
    * ============================================================
-   * OPEN ADD PATIENT
+   * ADD PATIENT
    * ============================================================
    */
 
   const handleAddPatient = () => {
-    console.log("Opening Add Patient form");
+    console.log(
+      "Opening Add Patient form"
+    );
 
     setSelectedPatient(null);
     setModalType("create");
+  };
+
+  /*
+   * ============================================================
+   * VIEW PATIENT PROFILE
+   * ============================================================
+   */
+
+  const handleViewPatient = (patient) => {
+    console.log(
+      "Opening patient profile:",
+      patient
+    );
+
+    if (!patient?.id) {
+      console.error(
+        "Cannot open patient profile because patient ID is missing.",
+        patient
+      );
+
+      setError(
+        "Unable to open patient profile because the patient ID is missing."
+      );
+
+      return;
+    }
+
+    navigate(
+      `/patients/${patient.id}`
+    );
   };
 
   /*
@@ -114,34 +204,10 @@ function Patients() {
       createdPatient
     );
 
-    /*
-     * Close modal.
-     */
-
     setModalType(null);
     setSelectedPatient(null);
 
-    /*
-     * Reload patients from PostgreSQL.
-     */
-
     await loadPatients();
-  };
-
-  /*
-   * ============================================================
-   * VIEW PATIENT
-   * ============================================================
-   */
-
-  const handleViewPatient = (patient) => {
-    console.log(
-      "Opening patient:",
-      patient
-    );
-
-    setSelectedPatient(patient);
-    setModalType("view");
   };
 
   /*
@@ -174,16 +240,8 @@ function Patients() {
       updatedPatient
     );
 
-    /*
-     * Close edit modal.
-     */
-
     setModalType(null);
     setSelectedPatient(null);
-
-    /*
-     * Reload database data.
-     */
 
     await loadPatients();
   };
@@ -195,7 +253,9 @@ function Patients() {
    */
 
   const handleCloseModal = () => {
-    console.log("Closing patient modal");
+    console.log(
+      "Closing patient modal"
+    );
 
     setModalType(null);
     setSelectedPatient(null);
@@ -208,7 +268,10 @@ function Patients() {
    */
 
   useEffect(() => {
-    if (searchParams.get("new") === "true") {
+    if (
+      searchParams.get("new") ===
+      "true"
+    ) {
       handleAddPatient();
 
       setSearchParams(
@@ -225,35 +288,69 @@ function Patients() {
 
   /*
    * ============================================================
-   * REAL PATIENT STATISTICS
+   * PATIENT STATISTICS
    * ============================================================
    */
 
   const totalPatients =
     patients.length;
 
+  /*
+   * ACTIVE PATIENTS
+   */
+
   const activePatients =
     patients.filter(
       (patient) =>
-        patient.is_active === true ||
-        patient.status === "active" ||
-        patient.status === "Active"
+        patient?.is_active === true ||
+        patient?.status === "active" ||
+        patient?.status === "Active"
     ).length;
 
+  /*
+   * CURRENT MONTH / YEAR
+   */
+
+  const now = new Date();
+
   const currentMonth =
-    new Date().getMonth();
+    now.getMonth();
 
   const currentYear =
-    new Date().getFullYear();
+    now.getFullYear();
+
+  /*
+   * ============================================================
+   * NEW THIS MONTH
+   *
+   * Different backend versions may use different field names.
+   * We support the common possibilities.
+   * ============================================================
+   */
 
   const newThisMonth =
     patients.filter((patient) => {
-      if (!patient.created_at) {
+      const registrationDate =
+        patient?.created_at ||
+        patient?.createdAt ||
+        patient?.created_on ||
+        patient?.registration_date ||
+        patient?.registered_at;
+
+      if (!registrationDate) {
         return false;
       }
 
       const createdDate =
-        new Date(patient.created_at);
+        new Date(registrationDate);
+
+      if (
+        Number.isNaN(
+          createdDate.getTime()
+        )
+      ) {
+        return false;
+      }
 
       return (
         createdDate.getMonth() ===
@@ -264,14 +361,47 @@ function Patients() {
     }).length;
 
   /*
-   * Follow-ups are not being calculated yet because
-   * the patient endpoint does not provide follow-up
-   * information.
+   * ============================================================
+   * FOLLOW-UPS
    *
-   * Do NOT use fake data here.
+   * Appointment schema currently has no dedicated
+   * "is_follow_up" field.
+   *
+   * Therefore, for now we identify follow-up appointments
+   * from the appointment reason.
+   *
+   * Supports:
+   * Follow-up
+   * Follow up
+   * Followup
+   * follow-UP
+   * etc.
+   * ============================================================
    */
 
-  const followUps = 0;
+  const followUps =
+    appointments.filter(
+      (appointment) => {
+        const reason =
+          String(
+            appointment?.reason || ""
+          )
+            .trim()
+            .toLowerCase();
+
+        return (
+          reason.includes("follow-up") ||
+          reason.includes("follow up") ||
+          reason.includes("followup")
+        );
+      }
+    ).length;
+
+  /*
+   * ============================================================
+   * RENDER
+   * ============================================================
+   */
 
   return (
     <Layout>
@@ -282,23 +412,54 @@ function Patients() {
         ===================================================== */}
 
         <PatientHeader
-          onAddPatient={handleAddPatient}
+          onAddPatient={
+            handleAddPatient
+          }
         />
 
         {/* =====================================================
             PATIENT STATISTICS
         ===================================================== */}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        <div
+          className="
+            grid
+            grid-cols-1
+            md:grid-cols-2
+            xl:grid-cols-4
+            gap-6
+          "
+        >
 
           {/* TOTAL PATIENTS */}
 
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-            <p className="text-sm text-slate-500">
+          <div
+            className="
+              bg-white
+              rounded-2xl
+              border
+              border-slate-200
+              shadow-sm
+              p-6
+            "
+          >
+            <p
+              className="
+                text-sm
+                text-slate-500
+              "
+            >
               Total Patients
             </p>
 
-            <p className="text-4xl font-bold text-slate-800 mt-2">
+            <p
+              className="
+                text-4xl
+                font-bold
+                text-slate-800
+                mt-2
+              "
+            >
               {loading
                 ? "..."
                 : totalPatients}
@@ -307,12 +468,33 @@ function Patients() {
 
           {/* ACTIVE PATIENTS */}
 
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-            <p className="text-sm text-slate-500">
+          <div
+            className="
+              bg-white
+              rounded-2xl
+              border
+              border-slate-200
+              shadow-sm
+              p-6
+            "
+          >
+            <p
+              className="
+                text-sm
+                text-slate-500
+              "
+            >
               Active Patients
             </p>
 
-            <p className="text-4xl font-bold text-slate-800 mt-2">
+            <p
+              className="
+                text-4xl
+                font-bold
+                text-slate-800
+                mt-2
+              "
+            >
               {loading
                 ? "..."
                 : activePatients}
@@ -321,27 +503,71 @@ function Patients() {
 
           {/* NEW THIS MONTH */}
 
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-            <p className="text-sm text-slate-500">
+          <div
+            className="
+              bg-white
+              rounded-2xl
+              border
+              border-slate-200
+              shadow-sm
+              p-6
+            "
+          >
+            <p
+              className="
+                text-sm
+                text-slate-500
+              "
+            >
               New This Month
             </p>
 
-            <p className="text-4xl font-bold text-slate-800 mt-2">
+            <p
+              className="
+                text-4xl
+                font-bold
+                text-slate-800
+                mt-2
+              "
+            >
               {loading
                 ? "..."
                 : newThisMonth}
             </p>
           </div>
 
-          {/* FOLLOW UPS */}
+          {/* FOLLOW-UPS */}
 
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-            <p className="text-sm text-slate-500">
+          <div
+            className="
+              bg-white
+              rounded-2xl
+              border
+              border-slate-200
+              shadow-sm
+              p-6
+            "
+          >
+            <p
+              className="
+                text-sm
+                text-slate-500
+              "
+            >
               Follow-ups
             </p>
 
-            <p className="text-4xl font-bold text-slate-800 mt-2">
-              {followUps}
+            <p
+              className="
+                text-4xl
+                font-bold
+                text-slate-800
+                mt-2
+              "
+            >
+              {loading
+                ? "..."
+                : followUps}
             </p>
           </div>
 
@@ -351,8 +577,15 @@ function Patients() {
             SEARCH + FILTERS
         ===================================================== */}
 
-        <div className="flex flex-col lg:flex-row justify-between gap-4">
-
+        <div
+          className="
+            flex
+            flex-col
+            lg:flex-row
+            justify-between
+            gap-4
+          "
+        >
           <PatientSearch
             search={search}
             setSearch={setSearch}
@@ -364,7 +597,6 @@ function Patients() {
             gender={gender}
             setGender={setGender}
           />
-
         </div>
 
         {/* =====================================================
@@ -372,9 +604,20 @@ function Patients() {
         ===================================================== */}
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-5">
-
-            <p className="text-red-700">
+          <div
+            className="
+              bg-red-50
+              border
+              border-red-200
+              rounded-xl
+              p-5
+            "
+          >
+            <p
+              className="
+                text-red-700
+              "
+            >
               {error}
             </p>
 
@@ -394,7 +637,6 @@ function Patients() {
             >
               Try Again
             </button>
-
           </div>
         )}
 
@@ -415,12 +657,11 @@ function Patients() {
       </div>
 
       {/* =======================================================
-          CREATE / EDIT MODAL
+          CREATE / EDIT PATIENT MODAL
       ======================================================= */}
 
       {(modalType === "create" ||
         modalType === "edit") && (
-
         <div
           className="
             fixed
@@ -434,7 +675,6 @@ function Patients() {
             p-4
           "
         >
-
           <div
             className="
               relative
@@ -461,28 +701,37 @@ function Patients() {
                 py-5
               "
             >
-
               <div>
-
-                <h2 className="text-2xl font-semibold text-slate-800">
+                <h2
+                  className="
+                    text-2xl
+                    font-semibold
+                    text-slate-800
+                  "
+                >
                   {modalType === "create"
                     ? "Add New Patient"
                     : "Edit Patient"}
                 </h2>
 
-                <p className="text-sm text-slate-500 mt-1">
+                <p
+                  className="
+                    text-sm
+                    text-slate-500
+                    mt-1
+                  "
+                >
                   {modalType === "create"
                     ? "Create a new patient record."
                     : "Update patient information."}
                 </p>
-
               </div>
-
-              {/* CLOSE BUTTON */}
 
               <button
                 type="button"
-                onClick={handleCloseModal}
+                onClick={
+                  handleCloseModal
+                }
                 className="
                   w-10
                   h-10
@@ -497,11 +746,15 @@ function Patients() {
                 "
                 aria-label="Close"
               >
-                <span className="text-3xl leading-none">
+                <span
+                  className="
+                    text-3xl
+                    leading-none
+                  "
+                >
                   ×
                 </span>
               </button>
-
             </div>
 
             {/* FORM */}
@@ -513,7 +766,6 @@ function Patients() {
                 p-6
               "
             >
-
               <PatientForm
                 initialData={
                   modalType === "edit"
@@ -532,337 +784,13 @@ function Patients() {
                     : handlePatientUpdated
                 }
               />
-
             </div>
 
           </div>
-
-        </div>
-      )}
-
-      {/* =======================================================
-          VIEW PATIENT MODAL
-      ======================================================= */}
-
-      {modalType === "view" &&
-        selectedPatient && (
-
-        <div
-          className="
-            fixed
-            inset-0
-            z-50
-            flex
-            items-center
-            justify-center
-            bg-black/40
-            backdrop-blur-sm
-            p-4
-          "
-        >
-
-          <div
-            className="
-              relative
-              w-full
-              max-w-3xl
-              max-h-[90vh]
-              overflow-hidden
-              rounded-2xl
-              bg-white
-              shadow-2xl
-            "
-          >
-
-            {/* VIEW HEADER */}
-
-            <div
-              className="
-                sticky
-                top-0
-                z-10
-                bg-white
-                flex
-                items-center
-                justify-between
-                border-b
-                border-slate-200
-                px-6
-                py-5
-              "
-            >
-
-              <div>
-
-                <h2 className="text-2xl font-semibold text-slate-800">
-                  Patient Details
-                </h2>
-
-                <p className="text-sm text-slate-500 mt-1">
-                  Complete patient information
-                </p>
-
-              </div>
-
-              <button
-                type="button"
-                onClick={handleCloseModal}
-                className="
-                  w-10
-                  h-10
-                  rounded-full
-                  flex
-                  items-center
-                  justify-center
-                  text-slate-500
-                  hover:bg-slate-100
-                  hover:text-slate-800
-                  transition
-                "
-                aria-label="Close"
-              >
-                <span className="text-3xl leading-none">
-                  ×
-                </span>
-              </button>
-
-            </div>
-
-            {/* VIEW CONTENT */}
-
-            <div className="max-h-[calc(90vh-90px)] overflow-y-auto p-6">
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-
-                <Detail
-                  label="First Name"
-                  value={
-                    selectedPatient.first_name
-                  }
-                />
-
-                <Detail
-                  label="Last Name"
-                  value={
-                    selectedPatient.last_name
-                  }
-                />
-
-                <Detail
-                  label="Gender"
-                  value={
-                    selectedPatient.gender
-                  }
-                />
-
-                <Detail
-                  label="Date of Birth"
-                  value={
-                    selectedPatient.date_of_birth
-                  }
-                />
-
-                <Detail
-                  label="Phone"
-                  value={
-                    selectedPatient.phone
-                  }
-                />
-
-                <Detail
-                  label="Email"
-                  value={
-                    selectedPatient.email
-                  }
-                />
-
-                <Detail
-                  label="CNIC"
-                  value={
-                    selectedPatient.cnic
-                  }
-                />
-
-                <Detail
-                  label="Occupation"
-                  value={
-                    selectedPatient.occupation
-                  }
-                />
-
-                <Detail
-                  label="City"
-                  value={
-                    selectedPatient.city
-                  }
-                />
-
-                <Detail
-                  label="Country"
-                  value={
-                    selectedPatient.country
-                  }
-                />
-
-                <Detail
-                  label="Blood Group"
-                  value={
-                    selectedPatient.blood_group
-                  }
-                />
-
-                <Detail
-                  label="Marital Status"
-                  value={
-                    selectedPatient.marital_status
-                  }
-                />
-
-                <Detail
-                  label="Emergency Contact"
-                  value={
-                    selectedPatient.emergency_contact_name
-                  }
-                />
-
-                <Detail
-                  label="Emergency Phone"
-                  value={
-                    selectedPatient.emergency_contact_phone
-                  }
-                />
-
-              </div>
-
-              {/* LONG TEXT FIELDS */}
-
-              <div className="mt-6 space-y-5">
-
-                <Detail
-                  label="Address"
-                  value={
-                    selectedPatient.address
-                  }
-                />
-
-                <Detail
-                  label="Allergies"
-                  value={
-                    selectedPatient.allergies
-                  }
-                />
-
-                <Detail
-                  label="Medical History"
-                  value={
-                    selectedPatient.medical_history
-                  }
-                />
-
-                <Detail
-                  label="Notes"
-                  value={
-                    selectedPatient.notes
-                  }
-                />
-
-              </div>
-
-              {/* VIEW FOOTER */}
-
-              <div
-                className="
-                  flex
-                  justify-end
-                  gap-3
-                  mt-8
-                  pt-5
-                  border-t
-                  border-slate-200
-                "
-              >
-
-                <button
-                  type="button"
-                  onClick={handleCloseModal}
-                  className="
-                    px-5
-                    py-2.5
-                    rounded-xl
-                    border
-                    border-slate-300
-                    text-slate-700
-                    hover:bg-slate-50
-                    transition
-                  "
-                >
-                  Close
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setModalType("edit");
-                  }}
-                  className="
-                    px-5
-                    py-2.5
-                    rounded-xl
-                    bg-[#5F7A63]
-                    text-white
-                    hover:bg-[#4F6853]
-                    transition
-                  "
-                >
-                  Edit Patient
-                </button>
-
-              </div>
-
-            </div>
-
-          </div>
-
         </div>
       )}
 
     </Layout>
-  );
-}
-
-/*
- * ============================================================
- * DETAIL COMPONENT
- * ============================================================
- */
-
-function Detail({
-  label,
-  value,
-}) {
-  return (
-    <div className="w-full">
-
-      <p className="text-sm font-medium text-slate-500 mb-1">
-        {label}
-      </p>
-
-      <div
-        className="
-          rounded-xl
-          bg-slate-50
-          border
-          border-slate-200
-          px-4
-          py-3
-          text-slate-800
-          min-h-[46px]
-        "
-      >
-        {value || "—"}
-      </div>
-
-    </div>
   );
 }
 

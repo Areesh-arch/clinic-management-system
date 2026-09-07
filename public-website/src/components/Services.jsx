@@ -1,33 +1,10 @@
 import "../styles/services.css";
 
-const services = [
-  {
-    number: "01",
-    title: "Skin Rejuvenation",
-    description:
-      "Refined treatments designed to restore luminosity, texture, and a naturally healthy appearance.",
-  },
-  {
-    number: "02",
-    title: "Facial Aesthetics",
-    description:
-      "Thoughtfully tailored aesthetic treatments that enhance your natural features with subtle results.",
-  },
-  {
-    number: "03",
-    title: "Acne & Scar Care",
-    description:
-      "Personalized dermatological care focused on clearer skin and improved texture.",
-  },
-  {
-    number: "04",
-    title: "Advanced Injectables",
-    description:
-      "Precise, medically guided treatments designed to create balanced and natural-looking results.",
-  },
-];
+export default function Services({ services = [] }) {
+  const activeServices = services.filter(
+    (service) => service.is_active !== false
+  );
 
-export default function Services() {
   return (
     <section className="services" id="treatments">
       <div className="services-container">
@@ -51,13 +28,13 @@ export default function Services() {
         </div>
 
         <div className="services-grid">
-          {services.map((service) => (
+          {activeServices.map((service, index) => (
             <article
               className="service-card"
-              key={service.number}
+              key={service.id ?? service.slug ?? index}
             >
               <span className="service-number">
-                {service.number}
+                {String(index + 1).padStart(2, "0")}
               </span>
 
               <div className="service-content">

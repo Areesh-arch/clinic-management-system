@@ -1,5 +1,8 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.routes import api_router
 from app.core.config import settings
@@ -26,7 +29,7 @@ app.add_middleware(
         "http://127.0.0.1:5174",
     ],
 
-    # Clinic public websites:
+    # Clinic public websites
     # areesha.localhost:5173
     # glowskin.localhost:5173
     # clinic-a.localhost:5173
@@ -37,6 +40,25 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+
+# =========================================================
+# STATIC UPLOADS
+# =========================================================
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+UPLOADS_DIR = BASE_DIR / "uploads"
+UPLOADS_DIR.mkdir(
+    parents=True,
+    exist_ok=True,
+)
+
+app.mount(
+    "/uploads",
+    StaticFiles(directory=str(UPLOADS_DIR)),
+    name="uploads",
 )
 
 
@@ -67,4 +89,3 @@ def health():
 # =========================================================
 
 app.include_router(api_router)
-

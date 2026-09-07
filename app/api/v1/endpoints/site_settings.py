@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.permissions import require_roles
@@ -18,12 +18,67 @@ from app.services.site_settings_service import (
     update_site_settings_service,
 )
 
+from app.api.v1.endpoints.lead import resolve_public_tenant
+
 
 router = APIRouter(
     prefix="",
     tags=["Settings / Website"],
 )
 
+
+# ============================================================
+# PUBLIC WEBSITE — GET SITE SETTINGS
+# ============================================================
+
+@router.get(
+    "/public",
+    response_model=SiteSettingsResponse,
+)
+def get_public_site_settings(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Return website settings for the clinic identified by the
+    public website hostname.
+
+    Examples:
+
+        areesha.localhost:5173
+            ↓
+        areesha
+            ↓
+        Tenant.subdomain == "areesha"
+            ↓
+        that clinic's site settings
+
+    This endpoint is PUBLIC.
+    It does not require a login or Authorization header.
+    """
+
+    tenant = resolve_public_tenant(
+        request=request,
+        db=db,
+    )
+
+    settings = get_site_settings_service(
+        db=db,
+        tenant_id=tenant.id,
+    )
+
+    if not settings:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Site settings not found for this clinic.",
+        )
+
+    return settings
+
+
+# ============================================================
+# DASHBOARD — GET SITE SETTINGS
+# ============================================================
 
 @router.get(
     "/",
@@ -53,6 +108,10 @@ def get_settings(
 
     return settings
 
+
+# ============================================================
+# DASHBOARD — CREATE SITE SETTINGS
+# ============================================================
 
 @router.post(
     "/",
@@ -88,6 +147,10 @@ def create_settings(
         tenant_id=current_user.tenant_id,
     )
 
+
+# ============================================================
+# DASHBOARD — UPDATE SITE SETTINGS
+# ============================================================
 
 @router.put(
     "/",

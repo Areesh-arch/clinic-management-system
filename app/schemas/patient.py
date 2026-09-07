@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr
@@ -81,3 +81,7 @@ class PatientResponse(PatientBase):
     tenant_id: int
     medical_record_number: str
     is_active: bool
+
+    # Timestamp information
+    created_at: datetime
+    updated_at: datetime

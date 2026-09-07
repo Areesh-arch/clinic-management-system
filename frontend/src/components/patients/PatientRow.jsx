@@ -42,7 +42,6 @@ function PatientRow({
       {/* NAME */}
       <td className="px-6 py-5">
         <div className="flex items-center gap-3">
-          {/* Avatar */}
           <div
             className="
               w-10
@@ -55,7 +54,7 @@ function PatientRow({
               justify-center
               font-semibold
               text-sm
-              flex-shrink-0
+              shrink-0
             "
           >
             {patientName.charAt(0).toUpperCase()}
@@ -143,7 +142,8 @@ function PatientRow({
       {/* ACTIONS */}
       <td className="px-6 py-5">
         <div className="flex items-center gap-2">
-          {/* VIEW */}
+
+          {/* VIEW PROFILE */}
           <button
             type="button"
             onClick={() => {
@@ -151,24 +151,32 @@ function PatientRow({
                 onView(patient);
               }
             }}
-            title="View patient"
+            title="View patient profile"
             className="
-              w-9
-              h-9
-              rounded-lg
-              flex
+              inline-flex
               items-center
-              justify-center
-              text-[#60738F]
-              bg-transparent
-              hover:bg-[#EAF2E7]
-              hover:text-[#5F7A63]
+              gap-2
+              px-3
+              py-2
+              rounded-lg
+              text-[#5F7A63]
+              bg-[#EAF2E7]
+              hover:bg-[#DCE9D9]
               transition-all
               duration-200
               cursor-pointer
+              font-medium
+              text-sm
             "
           >
-            <FiEye size={19} strokeWidth={2} />
+            <FiEye
+              size={17}
+              strokeWidth={2}
+            />
+
+            <span>
+              View Profile
+            </span>
           </button>
 
           {/* EDIT */}
@@ -196,7 +204,10 @@ function PatientRow({
               cursor-pointer
             "
           >
-            <FiEdit2 size={19} strokeWidth={2} />
+            <FiEdit2
+              size={19}
+              strokeWidth={2}
+            />
           </button>
 
           {/* DELETE */}
@@ -224,8 +235,12 @@ function PatientRow({
               cursor-pointer
             "
           >
-            <FiTrash2 size={19} strokeWidth={2} />
+            <FiTrash2
+              size={19}
+              strokeWidth={2}
+            />
           </button>
+
         </div>
       </td>
     </tr>

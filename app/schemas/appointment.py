@@ -5,10 +5,6 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.models.enums import AppointmentStatus
 
 
-# =========================================================
-# CREATE
-# =========================================================
-
 class AppointmentCreate(BaseModel):
 
     patient_id: int
@@ -24,12 +20,10 @@ class AppointmentCreate(BaseModel):
 
     reason: str | None = None
 
+    is_follow_up: bool = False
+
     notes: str | None = None
 
-
-# =========================================================
-# UPDATE
-# =========================================================
 
 class AppointmentUpdate(BaseModel):
 
@@ -48,12 +42,10 @@ class AppointmentUpdate(BaseModel):
 
     reason: str | None = None
 
+    is_follow_up: bool | None = None
+
     notes: str | None = None
 
-
-# =========================================================
-# RESPONSE
-# =========================================================
 
 class AppointmentResponse(BaseModel):
 
@@ -72,6 +64,8 @@ class AppointmentResponse(BaseModel):
     status: AppointmentStatus
 
     reason: str | None
+
+    is_follow_up: bool
 
     notes: str | None
 

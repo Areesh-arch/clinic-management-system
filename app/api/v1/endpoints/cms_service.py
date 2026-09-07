@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.permissions import require_roles
@@ -20,11 +20,36 @@ from app.services.cms_service_service import (
     update_cms_service_service,
 )
 
+from app.api.v1.endpoints.lead import resolve_public_tenant
+
 
 router = APIRouter(
     prefix="",
     tags=["CMS / Services"],
 )
+
+
+# =========================================================
+# PUBLIC WEBSITE — LIST SERVICES
+# =========================================================
+
+@router.get(
+    "/public",
+    response_model=list[CMSServiceResponse],
+)
+def public_services(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    tenant = resolve_public_tenant(
+        request=request,
+        db=db,
+    )
+
+    return get_cms_services_service(
+        db=db,
+        tenant_id=tenant.id,
+    )
 
 
 # =========================================================
@@ -47,7 +72,6 @@ def create_service(
         )
     ),
 ):
-
     return create_cms_service_service(
         db=db,
         service_data=service_data,
@@ -56,7 +80,7 @@ def create_service(
 
 
 # =========================================================
-# LIST SERVICES
+# LIST SERVICES — DASHBOARD
 # =========================================================
 
 @router.get(
@@ -73,7 +97,6 @@ def list_services(
         )
     ),
 ):
-
     return get_cms_services_service(
         db=db,
         tenant_id=current_user.tenant_id,
@@ -99,7 +122,6 @@ def get_service(
         )
     ),
 ):
-
     service = get_cms_service_service(
         db=db,
         service_id=service_id,
@@ -135,7 +157,6 @@ def update_service(
         )
     ),
 ):
-
     service = get_cms_service_service(
         db=db,
         service_id=service_id,
@@ -174,7 +195,6 @@ def delete_service(
         )
     ),
 ):
-
     service = get_cms_service_service(
         db=db,
         service_id=service_id,

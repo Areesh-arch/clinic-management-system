@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.permissions import require_roles
@@ -6,11 +6,13 @@ from app.api.tenant_context import get_effective_tenant_id
 from app.database.session import get_db
 from app.models.enums import UserRole
 from app.models.user import User
+
 from app.schemas.cms_testimonial import (
     CMSTestimonialCreate,
     CMSTestimonialResponse,
     CMSTestimonialUpdate,
 )
+
 from app.services.cms_testimonial_service import (
     create_cms_testimonial_service,
     delete_cms_testimonial_service,
@@ -19,8 +21,33 @@ from app.services.cms_testimonial_service import (
     update_cms_testimonial_service,
 )
 
+from app.api.v1.endpoints.lead import resolve_public_tenant
+
 
 router = APIRouter()
+
+
+# =========================================================
+# PUBLIC WEBSITE — LIST TESTIMONIALS
+# =========================================================
+
+@router.get(
+    "/public",
+    response_model=list[CMSTestimonialResponse],
+)
+def public_testimonials(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    tenant = resolve_public_tenant(
+        request=request,
+        db=db,
+    )
+
+    return get_cms_testimonials_service(
+        db=db,
+        tenant_id=tenant.id,
+    )
 
 
 # =========================================================
@@ -42,9 +69,7 @@ def create_testimonial(
             UserRole.SUPER_ADMIN,
         )
     ),
-    tenant_id: int = Depends(
-        get_effective_tenant_id
-    ),
+    tenant_id: int = Depends(get_effective_tenant_id),
 ):
     return create_cms_testimonial_service(
         db=db,
@@ -70,9 +95,7 @@ def get_testimonials(
             UserRole.SUPER_ADMIN,
         )
     ),
-    tenant_id: int = Depends(
-        get_effective_tenant_id
-    ),
+    tenant_id: int = Depends(get_effective_tenant_id),
 ):
     return get_cms_testimonials_service(
         db=db,
@@ -98,9 +121,7 @@ def get_testimonial(
             UserRole.SUPER_ADMIN,
         )
     ),
-    tenant_id: int = Depends(
-        get_effective_tenant_id
-    ),
+    tenant_id: int = Depends(get_effective_tenant_id),
 ):
     testimonial = get_cms_testimonial_service(
         db=db,
@@ -136,9 +157,7 @@ def update_testimonial(
             UserRole.SUPER_ADMIN,
         )
     ),
-    tenant_id: int = Depends(
-        get_effective_tenant_id
-    ),
+    tenant_id: int = Depends(get_effective_tenant_id),
 ):
     testimonial = get_cms_testimonial_service(
         db=db,
@@ -177,9 +196,7 @@ def delete_testimonial(
             UserRole.SUPER_ADMIN,
         )
     ),
-    tenant_id: int = Depends(
-        get_effective_tenant_id
-    ),
+    tenant_id: int = Depends(get_effective_tenant_id),
 ):
     testimonial = get_cms_testimonial_service(
         db=db,

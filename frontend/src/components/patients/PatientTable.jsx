@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 
 import PatientRow from "./PatientRow";
@@ -94,32 +95,30 @@ function PatientTable({
       : "Active";
   };
 
-  const formattedPatients = patients.map(
+  const formattedPatients = patients.map((patient) => {
+    const firstName =
+      patient?.first_name || "";
+
+    const lastName =
+      patient?.last_name || "";
+
+    return {
+      ...patient,
+
+      name:
+        `${firstName} ${lastName}`.trim() ||
+        "Unnamed Patient",
+
+      age: calculateAge(
+        patient?.date_of_birth
+      ),
+
+      status: getPatientStatus(patient),
+    };
+  });
+
+  const filteredPatients = formattedPatients.filter(
     (patient) => {
-      const firstName =
-        patient?.first_name || "";
-
-      const lastName =
-        patient?.last_name || "";
-
-      return {
-        ...patient,
-
-        name:
-          `${firstName} ${lastName}`.trim() ||
-          "Unnamed Patient",
-
-        age: calculateAge(
-          patient?.date_of_birth
-        ),
-
-        status: getPatientStatus(patient),
-      };
-    }
-  );
-
-  const filteredPatients =
-    formattedPatients.filter((patient) => {
       const searchText =
         search.trim().toLowerCase();
 
@@ -127,32 +126,64 @@ function PatientTable({
         patient.name?.toLowerCase() || "";
 
       const medicalRecordNumber =
-        patient.medical_record_number
-          ?.toLowerCase() || "";
+        String(
+          patient.medical_record_number || ""
+        ).toLowerCase();
 
       const phone =
-        patient.phone?.toLowerCase() || "";
+        String(
+          patient.phone || ""
+        ).toLowerCase();
 
+      /*
+       * SEARCH
+       */
       const matchesSearch =
         searchText === "" ||
         patientName.includes(searchText) ||
         medicalRecordNumber.includes(searchText) ||
         phone.includes(searchText);
 
+      /*
+       * STATUS
+       */
       const matchesStatus =
         status === "All" ||
-        patient.status === status;
+        String(patient.status || "").toLowerCase() ===
+          String(status || "").toLowerCase();
+
+      /*
+       * GENDER
+       *
+       * Backend may return:
+       * male / female
+       *
+       * Frontend filter uses:
+       * Male / Female
+       *
+       * So compare both values in lowercase.
+       */
+      const patientGender =
+        String(patient?.gender || "")
+          .trim()
+          .toLowerCase();
+
+      const selectedGender =
+        String(gender || "")
+          .trim()
+          .toLowerCase();
 
       const matchesGender =
-        gender === "All" ||
-        patient.gender === gender;
+        selectedGender === "all" ||
+        patientGender === selectedGender;
 
       return (
         matchesSearch &&
         matchesStatus &&
         matchesGender
       );
-    });
+    }
+  );
 
   const handleView = async (patient) => {
     console.log("Viewing patient:", patient);
@@ -374,7 +405,7 @@ function PatientTable({
           py-7
           border-b
           border-[#E5EBE4]
-          bg-gradient-to-r
+          bg-linear-to-r
           from-[#F8FAF7]
           to-white
         "
@@ -427,7 +458,7 @@ function PatientTable({
       {/* TABLE */}
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[900px]">
+        <table className="w-full min-w-225">
           <thead>
             <tr
               className="

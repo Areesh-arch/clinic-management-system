@@ -1,26 +1,40 @@
 import "../styles/hero.css";
 
-export default function Hero() {
+export default function Hero({ settings }) {
+  const homepageImage =
+    settings?.homepage_image_url ||
+    "";
+
   return (
     <section className="hero" id="home">
       <div className="hero-container">
+
         <div className="hero-content">
+
           <p className="hero-eyebrow">
-            AESTHETIC & DERMATOLOGY
+            {settings?.homepage_eyebrow ||
+              "AESTHETIC & DERMATOLOGY"}
           </p>
 
           <h1>
-            Refined care.
-            <br />
-            <em>Beautifully natural.</em>
+            {settings?.homepage_title ? (
+              settings.homepage_title
+            ) : (
+              <>
+                Refined care.
+                <br />
+                <em>Beautifully natural.</em>
+              </>
+            )}
           </h1>
 
           <p className="hero-description">
-            Personalized dermatological and aesthetic care designed
-            around your skin, your confidence, and your individuality.
+            {settings?.homepage_description ||
+              "Personalized dermatological and aesthetic care designed around your skin, your confidence, and your individuality."}
           </p>
 
           <div className="hero-actions">
+
             <a
               href="#appointment"
               className="hero-primary-button"
@@ -34,14 +48,30 @@ export default function Hero() {
             >
               Explore Treatments
             </a>
+
           </div>
+
         </div>
 
+
         <div className="hero-visual">
-          <div className="hero-image-placeholder">
-            <span>CLINIC IMAGE</span>
-          </div>
+
+          {homepageImage ? (
+            <div className="hero-image-wrapper">
+              <img
+                src={homepageImage}
+                alt="Clinic"
+                className="hero-image"
+              />
+            </div>
+          ) : (
+            <div className="hero-image-placeholder">
+              <span>CLINIC IMAGE</span>
+            </div>
+          )}
+
         </div>
+
       </div>
     </section>
   );

@@ -1,34 +1,14 @@
 import "../styles/testimonials.css";
 import TestimonialCard from "./TestimonialCard";
 
-const testimonials = [
-  {
-    id: 1,
-    name: "Ayesha K.",
-    treatment: "Skin Rejuvenation",
-    rating: 5,
-    feedback:
-      "The entire experience was wonderful. Everything was explained clearly, and the results feel natural and beautifully suited to my skin.",
-  },
-  {
-    id: 2,
-    name: "Maham R.",
-    treatment: "Acne & Scar Care",
-    rating: 5,
-    feedback:
-      "I finally feel confident about my skin again. The treatment plan was carefully designed around my concerns and the progress has been amazing.",
-  },
-  {
-    id: 3,
-    name: "Sana A.",
-    treatment: "Facial Aesthetics",
-    rating: 5,
-    feedback:
-      "I wanted subtle results and that is exactly what I received. The whole process felt professional, comfortable, and very personal.",
-  },
-];
- 
-export default function Testimonials() {
+export default function Testimonials({
+  testimonials = [],
+}) {
+  const activeTestimonials = testimonials.filter(
+    (testimonial) =>
+      testimonial.is_active !== false
+  );
+
   return (
     <section className="testimonials" id="feedback">
       <div className="testimonials-container">
@@ -53,7 +33,7 @@ export default function Testimonials() {
         </div>
 
         <div className="testimonials-grid">
-          {testimonials.map((testimonial) => (
+          {activeTestimonials.map((testimonial) => (
             <TestimonialCard
               key={testimonial.id}
               testimonial={testimonial}

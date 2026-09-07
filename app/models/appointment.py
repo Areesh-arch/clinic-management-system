@@ -4,6 +4,7 @@ from datetime import date, time
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
+    Boolean,
     ForeignKey,
     Date,
     Time,
@@ -36,10 +37,6 @@ class Appointment(Base, IDMixin, TimestampMixin):
 
     __tablename__ = "appointments"
 
-    # ======================================================
-    # TENANT
-    # ======================================================
-
     tenant_id: Mapped[int] = mapped_column(
         ForeignKey(
             "tenants.id",
@@ -49,10 +46,6 @@ class Appointment(Base, IDMixin, TimestampMixin):
         index=True,
     )
 
-    # ======================================================
-    # PATIENT
-    # ======================================================
-
     patient_id: Mapped[int] = mapped_column(
         ForeignKey(
             "patients.id",
@@ -61,10 +54,6 @@ class Appointment(Base, IDMixin, TimestampMixin):
         nullable=False,
         index=True,
     )
-
-    # ======================================================
-    # SCHEDULE
-    # ======================================================
 
     appointment_date: Mapped[date] = mapped_column(
         Date,
@@ -82,10 +71,6 @@ class Appointment(Base, IDMixin, TimestampMixin):
         nullable=False,
     )
 
-    # ======================================================
-    # STATUS
-    # ======================================================
-
     status: Mapped[AppointmentStatus] = mapped_column(
         Enum(
             AppointmentStatus,
@@ -95,23 +80,21 @@ class Appointment(Base, IDMixin, TimestampMixin):
         nullable=False,
     )
 
-    # ======================================================
-    # DETAILS
-    # ======================================================
-
     reason: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
+    )
+
+    is_follow_up: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
     )
 
     notes: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
-
-    # ======================================================
-    # RELATIONSHIPS
-    # ======================================================
 
     tenant: Mapped["Tenant"] = relationship(
         "Tenant",

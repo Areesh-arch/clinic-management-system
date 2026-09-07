@@ -6,9 +6,7 @@ import { apiRequest } from "./api";
 
 const cmsService = {
   // =====================================================
-  // SERVICES
-  // Backend:
-  // /api/v1/cms/services/
+  // SERVICES / TREATMENTS
   // =====================================================
 
   getServices: async () => {
@@ -32,6 +30,23 @@ const cmsService = {
   deleteService: async (id) => {
     return apiRequest(`/cms/services/${id}`, {
       method: "DELETE",
+    });
+  },
+
+  // =====================================================
+  // CMS IMAGE UPLOAD
+  // Backend:
+  // POST /api/v1/cms/images/
+  // =====================================================
+
+  uploadImage: async (file) => {
+    const formData = new FormData();
+
+    formData.append("image", file);
+
+    return apiRequest("/cms/images/", {
+      method: "POST",
+      body: formData,
     });
   },
 
@@ -143,6 +158,20 @@ const cmsService = {
   },
 
   updateSiteSettings: async (data) => {
+    return apiRequest("/settings/site/", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  // =====================================================
+  // SAVE SITE SETTINGS
+  //
+  // The backend PUT endpoint creates the settings
+  // automatically if they don't already exist.
+  // =====================================================
+
+  saveSiteSettings: async (data) => {
     return apiRequest("/settings/site/", {
       method: "PUT",
       body: JSON.stringify(data),

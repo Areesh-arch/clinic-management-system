@@ -13,6 +13,8 @@ import Tenants from "../pages/Tenants";
 import Subscriptions from "../pages/Subscriptions/index.jsx";
 
 import Patients from "../pages/Patients";
+import PatientProfile from "../pages/PatientProfile";
+
 import Staff from "../pages/Staff";
 import Treatments from "../pages/Treatments";
 import Appointments from "../pages/Appointments";
@@ -80,12 +82,13 @@ function AppRouter() {
             path="/tenants"
             element={<Tenants />}
           />
-          
+
           <Route
             path="/subscriptions"
             element={<Subscriptions />}
           />
-          
+
+
           {/* ===================================================
               CLINIC MODULES
           =================================================== */}
@@ -93,6 +96,12 @@ function AppRouter() {
           <Route
             path="/patients"
             element={<Patients />}
+          />
+
+          {/* PATIENT PROFILE */}
+          <Route
+            path="/patients/:patientId"
+            element={<PatientProfile />}
           />
 
           <Route

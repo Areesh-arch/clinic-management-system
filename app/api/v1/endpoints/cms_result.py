@@ -1,4 +1,13 @@
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+)
 from sqlalchemy.orm import Session
 
 from app.api.permissions import require_roles
@@ -16,11 +25,36 @@ from app.services.cms_result_service import (
     update_cms_result_service,
 )
 
+from app.api.v1.endpoints.lead import resolve_public_tenant
+
 
 router = APIRouter(
     prefix="",
     tags=["CMS / Results"],
 )
+
+
+# =========================================================
+# PUBLIC WEBSITE — LIST RESULTS
+# =========================================================
+
+@router.get(
+    "/public",
+    response_model=list[CMSResultResponse],
+)
+def public_results(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    tenant = resolve_public_tenant(
+        request=request,
+        db=db,
+    )
+
+    return get_cms_results_service(
+        db=db,
+        tenant_id=tenant.id,
+    )
 
 
 # =========================================================
@@ -39,12 +73,9 @@ async def create_result(
     treatment_name: str | None = Form(None),
     display_order: int = Form(0),
     is_active: bool = Form(True),
-
     before_image: UploadFile | None = File(None),
     after_image: UploadFile | None = File(None),
-
     db: Session = Depends(get_db),
-
     current_user: User = Depends(
         require_roles(
             UserRole.OWNER,
@@ -53,7 +84,6 @@ async def create_result(
         )
     ),
 ):
-
     return await create_cms_result_service(
         db=db,
         title=title,
@@ -69,7 +99,7 @@ async def create_result(
 
 
 # =========================================================
-# LIST RESULTS
+# LIST RESULTS — DASHBOARD
 # =========================================================
 
 @router.get(
@@ -78,7 +108,6 @@ async def create_result(
 )
 def list_results(
     db: Session = Depends(get_db),
-
     current_user: User = Depends(
         require_roles(
             UserRole.OWNER,
@@ -87,7 +116,6 @@ def list_results(
         )
     ),
 ):
-
     return get_cms_results_service(
         db=db,
         tenant_id=current_user.tenant_id,
@@ -104,9 +132,7 @@ def list_results(
 )
 def get_result(
     result_id: int,
-
     db: Session = Depends(get_db),
-
     current_user: User = Depends(
         require_roles(
             UserRole.OWNER,
@@ -115,7 +141,6 @@ def get_result(
         )
     ),
 ):
-
     result = get_cms_result_service(
         db=db,
         result_id=result_id,
@@ -141,19 +166,15 @@ def get_result(
 )
 async def update_result(
     result_id: int,
-
     title: str | None = Form(None),
     slug: str | None = Form(None),
     description: str | None = Form(None),
     treatment_name: str | None = Form(None),
     display_order: int | None = Form(None),
     is_active: bool | None = Form(None),
-
     before_image: UploadFile | None = File(None),
     after_image: UploadFile | None = File(None),
-
     db: Session = Depends(get_db),
-
     current_user: User = Depends(
         require_roles(
             UserRole.OWNER,
@@ -162,7 +183,6 @@ async def update_result(
         )
     ),
 ):
-
     result = get_cms_result_service(
         db=db,
         result_id=result_id,
@@ -199,9 +219,7 @@ async def update_result(
 )
 def delete_result(
     result_id: int,
-
     db: Session = Depends(get_db),
-
     current_user: User = Depends(
         require_roles(
             UserRole.OWNER,
@@ -210,7 +228,6 @@ def delete_result(
         )
     ),
 ):
-
     result = get_cms_result_service(
         db=db,
         result_id=result_id,
