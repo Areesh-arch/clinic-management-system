@@ -4,7 +4,6 @@ import { useSearchParams } from "react-router-dom";
 import Layout from "../../components/layout/Layout";
 
 import AppointmentHeader from "../../components/appointments/AppointmentHeader";
-import AppointmentStats from "../../components/appointments/AppointmentStats";
 import AppointmentSearch from "../../components/appointments/AppointmentSearch";
 import AppointmentFilters from "../../components/appointments/AppointmentFilters";
 import AppointmentTable from "../../components/appointments/AppointmentTable";
@@ -17,169 +16,244 @@ import {
   deleteAppointment,
 } from "../../services/appointmentService";
 
+import {
+  getPatients,
+} from "../../services/patientService";
 
 function Appointments() {
-
-  // ==========================================
-  // APPOINTMENT DATA
-  // ==========================================
-
   const [appointments, setAppointments] = useState([]);
+  const [patients, setPatients] = useState([]);
 
   const [loading, setLoading] = useState(true);
-
   const [error, setError] = useState("");
 
-
-  // ==========================================
-  // FILTERS
-  // ==========================================
-
   const [search, setSearch] = useState("");
-
-  const [doctor, setDoctor] = useState("All");
-
   const [status, setStatus] = useState("All");
-
   const [date, setDate] = useState("All");
 
-
-  // ==========================================
-  // MODAL
-  // ==========================================
-
   const [showModal, setShowModal] = useState(false);
-
   const [modalMode, setModalMode] = useState("create");
-
   const [selectedAppointment, setSelectedAppointment] =
     useState(null);
-
-
-  // ==========================================
-  // URL PARAMETERS
-  // ==========================================
 
   const [searchParams, setSearchParams] =
     useSearchParams();
 
+  // ======================================================
+  // NORMALIZE API LIST
+  // ======================================================
 
-  // ==========================================
-  // LOAD APPOINTMENTS
-  // ==========================================
+  const normalizeList = (data) => {
+    if (Array.isArray(data)) {
+      return data;
+    }
+
+    if (Array.isArray(data?.items)) {
+      return data.items;
+    }
+
+    if (Array.isArray(data?.results)) {
+      return data.results;
+    }
+
+    return [];
+  };
+
+  // ======================================================
+  // LOAD APPOINTMENTS + PATIENTS
+  // ======================================================
 
   const loadAppointments = async () => {
-
     try {
-
       setLoading(true);
-
       setError("");
 
-      const data = await getAppointments();
+      const [
+        appointmentsResult,
+        patientsResult,
+      ] = await Promise.all([
+        getAppointments(),
+        getPatients(),
+      ]);
+
+      const appointmentList =
+        normalizeList(
+          appointmentsResult
+        );
+
+      const patientList =
+        normalizeList(
+          patientsResult
+        );
 
       console.log(
         "Appointments received from backend:",
-        data
+        appointmentList
       );
 
-      setAppointments(data);
+      console.log(
+        "Patients received from backend:",
+        patientList
+      );
 
+      // --------------------------------------------------
+      // Build patient map from CURRENT TENANT ONLY.
+      //
+      // We intentionally do NOT call getPatient()
+      // for missing IDs here.
+      //
+      // This prevents the appointment page from trying
+      // to resolve a patient outside the current tenant.
+      // --------------------------------------------------
+
+      const patientMap = new Map();
+
+      patientList.forEach((patient) => {
+        if (
+          patient?.id !== null &&
+          patient?.id !== undefined
+        ) {
+          patientMap.set(
+            Number(patient.id),
+            patient
+          );
+        }
+      });
+
+      setPatients(patientList);
+
+      // --------------------------------------------------
+      // Enrich appointments with patient information.
+      // --------------------------------------------------
+
+      const enrichedAppointments =
+        appointmentList.map(
+          (appointment) => {
+            const patient =
+              patientMap.get(
+                Number(
+                  appointment?.patient_id
+                )
+              );
+
+            if (!patient) {
+              return {
+                ...appointment,
+                patient_name: "",
+                medical_record_number: "",
+              };
+            }
+
+            const patientName = [
+              patient?.first_name,
+              patient?.last_name,
+            ]
+              .filter(Boolean)
+              .join(" ")
+              .trim();
+
+            return {
+              ...appointment,
+
+              patient_name:
+                patientName ||
+                "Unknown Patient",
+
+              medical_record_number:
+                patient?.medical_record_number ||
+                "",
+            };
+          }
+        );
+
+      console.log(
+        "Enriched appointments:",
+        enrichedAppointments
+      );
+
+      setAppointments(
+        enrichedAppointments
+      );
     } catch (error) {
-
       console.error(
         "Failed to load appointments:",
         error
       );
 
       setError(
-        error.message ||
+        error?.message ||
           "Failed to load appointments."
       );
-
     } finally {
-
       setLoading(false);
-
     }
-
   };
 
-
-  // ==========================================
+  // ======================================================
   // INITIAL LOAD
-  // ==========================================
+  // ======================================================
 
   useEffect(() => {
-
     loadAppointments();
-
   }, []);
 
-
-  // ==========================================
-  // OPEN NEW APPOINTMENT
-  // ==========================================
+  // ======================================================
+  // ADD APPOINTMENT
+  // ======================================================
 
   const handleAddAppointment = () => {
-
     setSelectedAppointment(null);
-
     setModalMode("create");
-
     setShowModal(true);
-
   };
 
+  // ======================================================
+  // VIEW
+  // ======================================================
 
-  // ==========================================
-  // OPEN VIEW MODAL
-  // ==========================================
-
-  const handleViewAppointment = (appointment) => {
-
+  const handleViewAppointment = (
+    appointment
+  ) => {
     console.log(
       "Viewing appointment:",
       appointment
     );
 
-    setSelectedAppointment(appointment);
+    setSelectedAppointment(
+      appointment
+    );
 
     setModalMode("view");
-
     setShowModal(true);
-
   };
 
+  // ======================================================
+  // EDIT
+  // ======================================================
 
-  // ==========================================
-  // OPEN EDIT MODAL
-  // ==========================================
-
-  const handleEditAppointment = (appointment) => {
-
+  const handleEditAppointment = (
+    appointment
+  ) => {
     console.log(
       "Editing appointment:",
       appointment
     );
 
-    setSelectedAppointment(appointment);
+    setSelectedAppointment(
+      appointment
+    );
 
     setModalMode("edit");
-
     setShowModal(true);
-
   };
 
-
-  // ==========================================
-  // DELETE APPOINTMENT
-  // ==========================================
+  // ======================================================
+  // DELETE
+  // ======================================================
 
   const handleDeleteAppointment = async (
     appointment
   ) => {
-
     const confirmed = window.confirm(
       `Are you sure you want to delete appointment #${appointment.id}?`
     );
@@ -189,7 +263,6 @@ function Appointments() {
     }
 
     try {
-
       console.log(
         "Deleting appointment:",
         appointment
@@ -199,9 +272,6 @@ function Appointments() {
         appointment.id
       );
 
-      // Remove deleted appointment
-      // from the current UI.
-
       setAppointments(
         (currentAppointments) =>
           currentAppointments.filter(
@@ -209,177 +279,127 @@ function Appointments() {
               item.id !== appointment.id
           )
       );
-
     } catch (error) {
-
       console.error(
         "Failed to delete appointment:",
         error
       );
 
       alert(
-        error.message ||
+        error?.message ||
           "Failed to delete appointment."
       );
-
     }
-
   };
 
-
-  // ==========================================
-  // AFTER CREATE / UPDATE
-  // ==========================================
+  // ======================================================
+  // AFTER SAVE
+  // ======================================================
 
   const handleAppointmentSaved = async (
     savedAppointment
   ) => {
-
     try {
-
       console.log(
         "Appointment saved successfully:",
         savedAppointment
       );
 
-      // IMPORTANT:
-      // Reload the appointments from the backend.
-      //
-      // This guarantees that the table displays
-      // the actual database record returned by
-      // GET /api/v1/appointments/
-
       await loadAppointments();
 
-      // Close modal
-
       setShowModal(false);
-
       setSelectedAppointment(null);
-
     } catch (error) {
-
       console.error(
         "Failed to refresh appointments after save:",
         error
       );
 
       setError(
-        error.message ||
+        error?.message ||
           "Appointment was saved, but appointments could not be refreshed."
       );
-
     }
-
   };
 
-
-  // ==========================================
+  // ======================================================
   // CLOSE MODAL
-  // ==========================================
+  // ======================================================
 
   const handleCloseModal = () => {
-
     setShowModal(false);
-
     setSelectedAppointment(null);
-
   };
 
-
-  // ==========================================
-  // DOCTOR OPTIONS
-  // ==========================================
-
-  const doctorOptions = useMemo(() => {
-
-    const uniqueDoctors = [
-      ...new Set(
-        appointments.map(
-          (appointment) =>
-            appointment.doctor_id
-        )
-      ),
-    ];
-
-    return uniqueDoctors
-      .filter(
-        (doctorId) =>
-          doctorId !== null &&
-          doctorId !== undefined
-      )
-      .sort(
-        (a, b) => a - b
-      );
-
-  }, [appointments]);
-
-
-  // ==========================================
+  // ======================================================
   // STATUS OPTIONS
-  // ==========================================
+  // ======================================================
 
   const statusOptions = useMemo(() => {
-
     const uniqueStatuses = [
       ...new Set(
         appointments.map(
           (appointment) =>
-            appointment.status
+            appointment?.status
         )
       ),
     ];
 
     return uniqueStatuses.filter(
-      (status) =>
-        status !== null &&
-        status !== undefined &&
-        status !== ""
+      (statusValue) =>
+        statusValue !== null &&
+        statusValue !== undefined &&
+        statusValue !== ""
     );
-
   }, [appointments]);
 
-
-  // ==========================================
-  // ?new=true
-  // ==========================================
+  // ======================================================
+  // HANDLE URL PARAMETERS
+  //
+  // Examples:
+  //
+  // /appointments?new=true
+  //
+  // /appointments?patient_id=20
+  //
+  // /appointments?new=true&patient_id=20
+  // ======================================================
 
   useEffect(() => {
+    const newAppointment =
+      searchParams.get("new") === "true";
+
+    const patientId =
+      searchParams.get("patient_id");
 
     if (
-      searchParams.get("new") === "true"
+      newAppointment ||
+      patientId
     ) {
+      setSelectedAppointment(null);
+      setModalMode("create");
+      setShowModal(true);
 
-      handleAddAppointment();
-
+      // Remove the parameters after reading them.
       setSearchParams(
         {},
         {
           replace: true,
         }
       );
-
     }
-
   }, [
     searchParams,
     setSearchParams,
   ]);
 
-
-  // ==========================================
+  // ======================================================
   // RENDER
-  // ==========================================
+  // ======================================================
 
   return (
-
     <Layout>
-
       <div className="space-y-8">
-
-        {/* ====================================
-            HEADER
-        ==================================== */}
 
         <AppointmentHeader
           onAddAppointment={
@@ -387,147 +407,83 @@ function Appointments() {
           }
         />
 
-
-        {/* ====================================
-            SEARCH
-        ==================================== */}
-
         <AppointmentSearch
           search={search}
           setSearch={setSearch}
         />
 
-
-        {/* ====================================
-            FILTERS
-        ==================================== */}
-
         <div
           className="
-            flex
-            flex-col
+            flex flex-col
             lg:flex-row
             justify-between
             gap-4
           "
         >
-
           <AppointmentFilters
-
-            doctor={doctor}
-            setDoctor={setDoctor}
-
             status={status}
             setStatus={setStatus}
-
             date={date}
             setDate={setDate}
-
-            doctors={doctorOptions}
             statuses={statusOptions}
-
           />
-
         </div>
 
-
-        {/* ====================================
-            TABLE
-        ==================================== */}
-
         <AppointmentTable
-
           appointments={appointments}
-
           loading={loading}
-
           error={error}
-
           search={search}
-
-          doctor={doctor}
-
           status={status}
-
           date={date}
-
-          onView={
-            handleViewAppointment
-          }
-
-          onEdit={
-            handleEditAppointment
-          }
-
-          onDelete={
-            handleDeleteAppointment
-          }
-
-          onRetry={
-            loadAppointments
-          }
-
+          onView={handleViewAppointment}
+          onEdit={handleEditAppointment}
+          onDelete={handleDeleteAppointment}
+          onRetry={loadAppointments}
         />
-
       </div>
 
-
-      {/* ======================================
-          MODAL
-      ====================================== */}
-
       {showModal && (
-
         <AppointmentModal
-
           open={showModal}
-
-          onClose={
-            handleCloseModal
-          }
-
+          onClose={handleCloseModal}
         >
-
-          {/* ================================
-              VIEW
-          ================================= */}
+          {/* VIEW */}
 
           {modalMode === "view" && (
-
             <AppointmentDetails
-
               appointment={
                 selectedAppointment
               }
-
               onClose={
                 handleCloseModal
               }
-
               onEdit={() => {
-
                 setModalMode("edit");
-
               }}
-
             />
-
           )}
 
-
-          {/* ================================
-              CREATE / EDIT
-          ================================= */}
+          {/* CREATE / EDIT */}
 
           {(modalMode === "create" ||
             modalMode === "edit") && (
-
             <AppointmentForm
-
               mode={modalMode}
-
               appointment={
                 selectedAppointment
+              }
+
+              patients={patients}
+
+              appointments={
+                appointments
+              }
+
+              initialPatientId={
+                searchParams.get(
+                  "patient_id"
+                ) || ""
               }
 
               onSuccess={
@@ -537,20 +493,12 @@ function Appointments() {
               onCancel={
                 handleCloseModal
               }
-
             />
-
           )}
-
         </AppointmentModal>
-
       )}
-
     </Layout>
-
   );
-
 }
-
 
 export default Appointments;

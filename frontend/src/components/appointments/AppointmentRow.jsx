@@ -1,3 +1,4 @@
+
 import {
   FiEye,
   FiEdit,
@@ -6,7 +7,6 @@ import {
 
 import AppointmentStatusBadge from "./AppointmentStatusBadge";
 
-
 function AppointmentRow({
   appointment,
   statusLabel,
@@ -14,54 +14,40 @@ function AppointmentRow({
   onEdit,
   onDelete,
 }) {
-
-
   // ==========================================
   // DATE
   // ==========================================
 
   const formatDate = (value) => {
-
     if (!value) {
       return "-";
     }
 
+    const date = new Date(`${value}T00:00:00`);
 
-    const date =
-      new Date(
-        `${value}T00:00:00`
-      );
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
 
-
-    return date.toLocaleDateString(
-      "en-GB",
-      {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }
-    );
-
+    return date.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
   };
-
 
   // ==========================================
   // TIME
   // ==========================================
 
   const formatTime = (value) => {
-
     if (!value) {
       return "-";
     }
 
+    const [hours, minutes] = String(value).split(":");
 
-    const [hours, minutes] =
-      value.split(":");
-
-
-    const date =
-      new Date();
+    const date = new Date();
 
     date.setHours(
       Number(hours),
@@ -70,160 +56,218 @@ function AppointmentRow({
       0
     );
 
-
-    return date.toLocaleTimeString(
-      "en-US",
-      {
-        hour: "numeric",
-        minute: "2-digit",
-      }
-    );
-
+    return date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+    });
   };
 
+  // ==========================================
+  // PATIENT
+  // ==========================================
+
+  const patientName =
+    appointment?.patient_name ||
+    appointment?.patient?.full_name ||
+    appointment?.patient?.name ||
+    "";
+
+  const patientMrn =
+    appointment?.medical_record_number ||
+    appointment?.patient?.medical_record_number ||
+    "";
 
   // ==========================================
   // RENDER
   // ==========================================
 
   return (
+    <tr
+      className="
+        border-b
+        border-slate-100
+        hover:bg-[#FAFCF9]
+        transition-all
+        duration-200
+        group
+      "
+    >
+      {/* ====================================
+          PATIENT
+      ==================================== */}
 
-    <tr className="
-      border-b
-      border-slate-100
-      hover:bg-[#FAFCF9]
-      transition-all
-      duration-200
-      group
-    ">
+      <td
+        className="
+          px-7
+          py-6
+          whitespace-nowrap
+        "
+      >
+        {patientName ? (
+          <div>
+            <div
+              className="
+                font-semibold
+                text-[#193B63]
+              "
+            >
+              {patientName}
+            </div>
 
+            {patientMrn && (
+              <div
+                className="
+                  text-xs
+                  text-slate-500
+                  mt-1
+                "
+              >
+                {patientMrn}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div>
+            <div
+              className="
+                font-semibold
+                text-[#193B63]
+              "
+            >
+              Patient #{appointment?.patient_id}
+            </div>
 
-      {/* DATE */}
+            <div
+              className="
+                text-xs
+                text-slate-400
+                mt-1
+              "
+            >
+              Patient details loading
+            </div>
+          </div>
+        )}
+      </td>
 
-      <td className="
-        px-7
-        py-6
-        text-slate-600
-        whitespace-nowrap
-      ">
+      {/* ====================================
+          DATE
+      ==================================== */}
 
+      <td
+        className="
+          px-5
+          py-6
+          text-slate-600
+          whitespace-nowrap
+        "
+      >
         {formatDate(
-          appointment.appointment_date
+          appointment?.appointment_date
         )}
-
       </td>
 
+      {/* ====================================
+          TIME
+      ==================================== */}
 
-      {/* TIME */}
-
-      <td className="
-        px-5
-        py-6
-        text-slate-600
-        font-medium
-        whitespace-nowrap
-      ">
-
+      <td
+        className="
+          px-5
+          py-6
+          text-slate-600
+          font-medium
+          whitespace-nowrap
+        "
+      >
         {formatTime(
-          appointment.appointment_time
+          appointment?.appointment_time
         )}
-
       </td>
 
+      {/* ====================================
+          REASON
+      ==================================== */}
 
-      {/* PATIENT */}
-
-      <td className="
-        px-5
-        py-6
-        font-semibold
-        text-[#193B63]
-        whitespace-nowrap
-      ">
-
-        Patient #{appointment.patient_id}
-
-      </td>
-
-
-      {/* DOCTOR */}
-
-      <td className="
-        px-5
-        py-6
-        text-slate-600
-        whitespace-nowrap
-      ">
-
-        Doctor #{appointment.doctor_id}
-
-      </td>
-
-
-      {/* REASON */}
-
-      <td className="
-        px-5
-        py-6
-        text-slate-600
-        max-w-[220px]
-      ">
-
-        <span className="
-          block
-          truncate
-        ">
-
-          {appointment.reason || "-"}
-
+      <td
+        className="
+          px-5
+          py-6
+          text-slate-600
+          max-w-65
+        "
+      >
+        <span
+          className="
+            block
+            truncate
+          "
+          title={
+            appointment?.reason || "-"
+          }
+        >
+          {appointment?.reason || "-"}
         </span>
 
+        {appointment?.is_follow_up === true && (
+          <span
+            className="
+              inline-flex
+              mt-2
+              px-2.5
+              py-1
+              rounded-full
+              bg-[#EEF4EA]
+              text-[#556B55]
+              text-xs
+              font-medium
+            "
+          >
+            Follow-up
+          </span>
+        )}
       </td>
 
+      {/* ====================================
+          STATUS
+      ==================================== */}
 
-      {/* STATUS */}
-
-      <td className="
-        px-5
-        py-6
-      ">
-
+      <td
+        className="
+          px-5
+          py-6
+        "
+      >
         <AppointmentStatusBadge
           status={statusLabel}
         />
-
       </td>
 
+      {/* ====================================
+          ACTIONS
+      ==================================== */}
 
-      {/* ACTIONS */}
-
-      <td className="
-        px-7
-        py-6
-      ">
-
-        <div className="
-          flex
-          items-center
-          gap-3
-        ">
-
-
+      <td
+        className="
+          px-7
+          py-6
+        "
+      >
+        <div
+          className="
+            flex
+            items-center
+            gap-3
+          "
+        >
           {/* VIEW */}
 
           <button
             type="button"
             onClick={() => {
-
-              console.log(
-                "Viewing appointment:",
-                appointment
-              );
-
               if (onView) {
                 onView(appointment);
               }
-
             }}
             title="View appointment"
             className="
@@ -242,27 +286,17 @@ function AppointmentRow({
               duration-200
             "
           >
-
             <FiEye size={19} />
-
           </button>
-
 
           {/* EDIT */}
 
           <button
             type="button"
             onClick={() => {
-
-              console.log(
-                "Editing appointment:",
-                appointment
-              );
-
               if (onEdit) {
                 onEdit(appointment);
               }
-
             }}
             title="Edit appointment"
             className="
@@ -281,27 +315,17 @@ function AppointmentRow({
               duration-200
             "
           >
-
             <FiEdit size={19} />
-
           </button>
-
 
           {/* DELETE */}
 
           <button
             type="button"
             onClick={() => {
-
-              console.log(
-                "Deleting appointment:",
-                appointment
-              );
-
               if (onDelete) {
                 onDelete(appointment);
               }
-
             }}
             title="Delete appointment"
             className="
@@ -320,21 +344,12 @@ function AppointmentRow({
               duration-200
             "
           >
-
             <FiTrash2 size={19} />
-
           </button>
-
-
         </div>
-
       </td>
-
     </tr>
-
   );
-
 }
-
 
 export default AppointmentRow;

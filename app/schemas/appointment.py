@@ -20,7 +20,16 @@ class AppointmentCreate(BaseModel):
 
     reason: str | None = None
 
-    is_follow_up: bool = False
+    # None means:
+    # let the backend automatically determine
+    # whether this is a follow-up.
+    #
+    # True means:
+    # staff explicitly wants follow-up.
+    #
+    # False means:
+    # staff explicitly wants a normal/new appointment.
+    is_follow_up: bool | None = None
 
     notes: str | None = None
 

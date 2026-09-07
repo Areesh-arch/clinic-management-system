@@ -21,11 +21,9 @@ function AppointmentSearch({
         type="text"
         value={search}
         onChange={(event) =>
-          setSearch(
-            event.target.value
-          )
+          setSearch(event.target.value)
         }
-        placeholder="Search patient, doctor or reason..."
+        placeholder="Search patient or reason..."
         className="
           w-full
           pl-11

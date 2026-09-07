@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import {
   FiArrowLeft,
@@ -6,9 +7,6 @@ import {
   FiCreditCard,
   FiFileText,
   FiHeart,
-  FiMail,
-  FiMapPin,
-  FiPhone,
   FiPlus,
   FiUser,
 } from "react-icons/fi";
@@ -107,8 +105,13 @@ function SectionAction({ children, onClick }) {
 function InfoCard({ label, value }) {
   return (
     <div>
-      <p className="text-xs font-medium text-gray-500 mb-1">{label}</p>
-      <p className="text-sm text-[#26372A] wrap-break-words">{value || "—"}</p>
+      <p className="text-xs font-medium text-gray-500 mb-1">
+        {label}
+      </p>
+
+      <p className="text-sm text-[#26372A] wrap-break-words">
+        {value || "—"}
+      </p>
     </div>
   );
 }
@@ -116,7 +119,10 @@ function InfoCard({ label, value }) {
 function TextCard({ label, value }) {
   return (
     <div className="bg-[#F8FAF7] border border-[#E8ECE6] rounded-xl p-4">
-      <p className="text-xs font-medium text-gray-500 mb-2">{label}</p>
+      <p className="text-xs font-medium text-gray-500 mb-2">
+        {label}
+      </p>
+
       <p className="text-sm text-[#26372A] whitespace-pre-line">
         {value || "—"}
       </p>
@@ -133,7 +139,9 @@ function MoneyCard({ label, value, highlight = false }) {
           : "bg-[#F8FAF7] border-[#E8ECE6]"
       }`}
     >
-      <p className="text-xs font-medium text-gray-500 mb-1">{label}</p>
+      <p className="text-xs font-medium text-gray-500 mb-1">
+        {label}
+      </p>
 
       <p
         className={`text-xl font-semibold ${
@@ -246,7 +254,9 @@ export default function PatientProfile() {
         console.error("Failed to load patient profile:", err);
 
         if (mounted) {
-          setError(err.message || "Failed to load patient profile.");
+          setError(
+            err.message || "Failed to load patient profile."
+          );
         }
       } finally {
         if (mounted) {
@@ -339,11 +349,15 @@ export default function PatientProfile() {
     0
   );
 
-  const outstanding = Math.max(totalCharges - totalPaid, 0);
+  const outstanding = Math.max(
+    totalCharges - totalPaid,
+    0
+  );
 
   return (
     <Layout>
       <div className="p-6 space-y-6">
+
         {/* Back */}
         <button
           type="button"
@@ -381,7 +395,9 @@ export default function PatientProfile() {
                         : "bg-[#EAF2E7] text-[#5F7A63]"
                     }`}
                   >
-                    {patient?.is_active === false ? "Inactive" : "Active"}
+                    {patient?.is_active === false
+                      ? "Inactive"
+                      : "Active"}
                   </span>
                 </div>
               </div>
@@ -439,7 +455,9 @@ export default function PatientProfile() {
 
             <InfoCard
               label="Date of Birth"
-              value={formatDate(patient?.date_of_birth || patient?.dob)}
+              value={formatDate(
+                patient?.date_of_birth || patient?.dob
+              )}
             />
 
             <InfoCard
@@ -516,79 +534,6 @@ export default function PatientProfile() {
           </div>
         </Section>
 
-        {/* Treatment History */}
-        <Section
-          title="Treatment History"
-          icon={<FiFileText size={17} />}
-          action={
-            <SectionAction onClick={goToTreatments}>
-              Add Treatment
-            </SectionAction>
-          }
-        >
-          {visits.length === 0 ? (
-            <EmptyState message="No treatment history available." />
-          ) : (
-            <div className="space-y-4">
-              {visits.map((visit) => (
-                <div
-                  key={visit.id}
-                  className="border border-[#E8ECE6] rounded-xl p-4"
-                >
-                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-semibold text-[#26372A]">
-                        {visit?.diagnosis || "Treatment / Visit"}
-                      </p>
-
-                      <div className="flex flex-wrap gap-x-5 gap-y-2 mt-2 text-xs text-gray-500">
-                        <span>
-                          Date: {formatDate(visit?.visit_date || visit?.date)}
-                        </span>
-
-                        <span>
-                          Doctor:{" "}
-                          {visit?.doctor?.name ||
-                            visit?.doctor_name ||
-                            visit?.doctor_id ||
-                            "—"}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="text-left md:text-right">
-                      <p className="text-xs text-gray-500">
-                        Charges
-                      </p>
-
-                      <p className="text-sm font-semibold text-[#26372A]">
-                        {formatCurrency(
-                          visit?.charge ||
-                            visit?.charges ||
-                            visit?.amount ||
-                            0
-                        )}
-                      </p>
-                    </div>
-                  </div>
-
-                  {(visit?.notes || visit?.description) && (
-                    <div className="mt-4 pt-4 border-t border-[#E8ECE6]">
-                      <p className="text-xs text-gray-500 mb-1">
-                        Notes
-                      </p>
-
-                      <p className="text-sm text-[#26372A]">
-                        {visit?.notes || visit?.description}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </Section>
-
         {/* Appointments */}
         <Section
           title="Appointments"
@@ -615,7 +560,7 @@ export default function PatientProfile() {
                     </th>
 
                     <th className="text-left text-xs font-semibold text-gray-500 py-3 pr-4">
-                      Doctor
+                      Reason
                     </th>
 
                     <th className="text-left text-xs font-semibold text-gray-500 py-3">
@@ -645,9 +590,9 @@ export default function PatientProfile() {
                       </td>
 
                       <td className="py-4 pr-4 text-sm text-gray-600">
-                        {appointment?.doctor?.name ||
-                          appointment?.doctor_name ||
-                          appointment?.doctor_id ||
+                        {appointment?.reason ||
+                          appointment?.purpose ||
+                          appointment?.notes ||
                           "—"}
                       </td>
 
@@ -660,6 +605,86 @@ export default function PatientProfile() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+        </Section>
+
+        {/* Treatment History */}
+        <Section
+          title="Treatment History"
+          icon={<FiFileText size={17} />}
+          action={
+            <SectionAction onClick={goToTreatments}>
+              Add Treatment
+            </SectionAction>
+          }
+        >
+          {visits.length === 0 ? (
+            <EmptyState message="No treatment history available." />
+          ) : (
+            <div className="space-y-4">
+              {visits.map((visit) => (
+                <div
+                  key={visit.id}
+                  className="border border-[#E8ECE6] rounded-xl p-4"
+                >
+                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-semibold text-[#26372A]">
+                        {visit?.diagnosis ||
+                          "Treatment / Visit"}
+                      </p>
+
+                      <div className="flex flex-wrap gap-x-5 gap-y-2 mt-2 text-xs text-gray-500">
+                        <span>
+                          Date:{" "}
+                          {formatDate(
+                            visit?.visit_date ||
+                              visit?.date
+                          )}
+                        </span>
+
+                        <span>
+                          Doctor:{" "}
+                          {visit?.doctor?.name ||
+                            visit?.doctor_name ||
+                            visit?.doctor_id ||
+                            "—"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="text-left md:text-right">
+                      <p className="text-xs text-gray-500">
+                        Charges
+                      </p>
+
+                      <p className="text-sm font-semibold text-[#26372A]">
+                        {formatCurrency(
+                          visit?.charge ||
+                            visit?.charges ||
+                            visit?.amount ||
+                            0
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  {(visit?.notes ||
+                    visit?.description) && (
+                    <div className="mt-4 pt-4 border-t border-[#E8ECE6]">
+                      <p className="text-xs text-gray-500 mb-1">
+                        Notes
+                      </p>
+
+                      <p className="text-sm text-[#26372A]">
+                        {visit?.notes ||
+                          visit?.description}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </Section>

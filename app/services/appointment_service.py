@@ -30,8 +30,6 @@ def _get_tenant_id(current_user: User) -> int:
     """
     Return the clinic/tenant belonging to the
     authenticated user.
-
-    The owner does NOT need a doctor/staff profile.
     """
 
     if current_user.tenant_id is None:
@@ -148,6 +146,69 @@ def _check_overlap(
             )
 
 
+def _has_previous_appointment(
+    db: Session,
+    patient_id: int,
+    tenant_id: int,
+) -> bool:
+    """
+    Check whether this patient has had a previous
+    appointment in the same clinic.
+
+    Tenant filtering is mandatory here so an appointment
+    from another clinic can never make this appointment
+    a follow-up.
+    """
+
+    previous_appointment = (
+        db.query(Appointment)
+        .filter(
+            Appointment.patient_id == patient_id,
+            Appointment.tenant_id == tenant_id,
+        )
+        .first()
+    )
+
+    return previous_appointment is not None
+
+
+def _determine_follow_up(
+    db: Session,
+    patient_id: int,
+    tenant_id: int,
+    requested_value: bool | None,
+) -> bool:
+    """
+    Determine the final follow-up value.
+
+    Rules:
+
+    requested_value is True
+        -> staff explicitly selected follow-up
+        -> return True
+
+    requested_value is False
+        -> staff explicitly removed follow-up
+        -> return False
+
+    requested_value is None
+        -> no manual decision
+        -> automatically detect from patient history
+    """
+
+    if requested_value is True:
+        return True
+
+    if requested_value is False:
+        return False
+
+    return _has_previous_appointment(
+        db=db,
+        patient_id=patient_id,
+        tenant_id=tenant_id,
+    )
+
+
 # =========================================================
 # CREATE APPOINTMENT
 # =========================================================
@@ -206,12 +267,37 @@ def create_appointment_service(
     )
 
     # -----------------------------------------------------
-    # 6. Create appointment
+    # 6. Automatically determine follow-up
+    #
+    # None = automatic
+    # True = force follow-up
+    # False = force new appointment
+    # -----------------------------------------------------
+
+    final_is_follow_up = _determine_follow_up(
+        db=db,
+        patient_id=appointment_data.patient_id,
+        tenant_id=tenant_id,
+        requested_value=appointment_data.is_follow_up,
+    )
+
+    # -----------------------------------------------------
+    # 7. Build final appointment data
+    # -----------------------------------------------------
+
+    final_appointment_data = appointment_data.model_copy(
+        update={
+            "is_follow_up": final_is_follow_up,
+        }
+    )
+
+    # -----------------------------------------------------
+    # 8. Create appointment
     # -----------------------------------------------------
 
     return create_appointment(
         db=db,
-        appointment_data=appointment_data,
+        appointment_data=final_appointment_data,
         tenant_id=tenant_id,
     )
 
@@ -374,7 +460,7 @@ def update_appointment_service(
     )
 
     # -----------------------------------------------------
-    # Validate patient if changed
+    # Validate patient
     # -----------------------------------------------------
 
     _validate_patient(
