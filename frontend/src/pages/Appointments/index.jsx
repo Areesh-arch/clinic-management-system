@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+
 import { useSearchParams } from "react-router-dom";
 
 import Layout from "../../components/layout/Layout";
@@ -7,6 +8,7 @@ import AppointmentHeader from "../../components/appointments/AppointmentHeader";
 import AppointmentSearch from "../../components/appointments/AppointmentSearch";
 import AppointmentFilters from "../../components/appointments/AppointmentFilters";
 import AppointmentTable from "../../components/appointments/AppointmentTable";
+import AppointmentCalendar from "../../components/appointments/AppointmentCalendar";
 import AppointmentModal from "../../components/appointments/AppointmentModal";
 import AppointmentForm from "../../components/appointments/AppointmentForm";
 import AppointmentDetails from "../../components/appointments/AppointmentDetails";
@@ -20,24 +22,62 @@ import {
   getPatients,
 } from "../../services/patientService";
 
+
 function Appointments() {
-  const [appointments, setAppointments] = useState([]);
-  const [patients, setPatients] = useState([]);
+  const [appointments, setAppointments] =
+    useState([]);
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  /*
+   * Patients are still loaded because AppointmentForm
+   * needs them for patient selection.
+   *
+   * IMPORTANT:
+   * We do NOT use patients to resolve patient names
+   * for appointments.
+   *
+   * Backend AppointmentResponse already provides:
+   * patient_name
+   * medical_record_number
+   */
+  const [patients, setPatients] =
+    useState([]);
 
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("All");
-  const [date, setDate] = useState("All");
+  const [loading, setLoading] =
+    useState(true);
 
-  const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState("create");
+  const [error, setError] =
+    useState("");
+
+  const [search, setSearch] =
+    useState("");
+
+  const [status, setStatus] =
+    useState("All");
+
+  const [date, setDate] =
+    useState("All");
+
+  /*
+   * TABLE / CALENDAR
+   */
+  const [viewMode, setViewMode] =
+    useState("table");
+
+  /*
+   * MODAL
+   */
+  const [showModal, setShowModal] =
+    useState(false);
+
+  const [modalMode, setModalMode] =
+    useState("create");
+
   const [selectedAppointment, setSelectedAppointment] =
     useState(null);
 
   const [searchParams, setSearchParams] =
     useSearchParams();
+
 
   // ======================================================
   // NORMALIZE API LIST
@@ -59,6 +99,7 @@ function Appointments() {
     return [];
   };
 
+
   // ======================================================
   // LOAD APPOINTMENTS + PATIENTS
   // ======================================================
@@ -67,6 +108,18 @@ function Appointments() {
     try {
       setLoading(true);
       setError("");
+
+      /*
+       * We still load patients because AppointmentForm
+       * requires the patient list.
+       *
+       * We do NOT use patients to enrich appointments.
+       *
+       * Backend already returns:
+       *
+       * patient_name
+       * medical_record_number
+       */
 
       const [
         appointmentsResult,
@@ -96,84 +149,28 @@ function Appointments() {
         patientList
       );
 
-      // --------------------------------------------------
-      // Build patient map from CURRENT TENANT ONLY.
-      //
-      // We intentionally do NOT call getPatient()
-      // for missing IDs here.
-      //
-      // This prevents the appointment page from trying
-      // to resolve a patient outside the current tenant.
-      // --------------------------------------------------
+      /*
+       * Patients are only needed by AppointmentForm.
+       */
+      setPatients(
+        patientList
+      );
 
-      const patientMap = new Map();
-
-      patientList.forEach((patient) => {
-        if (
-          patient?.id !== null &&
-          patient?.id !== undefined
-        ) {
-          patientMap.set(
-            Number(patient.id),
-            patient
-          );
-        }
-      });
-
-      setPatients(patientList);
-
-      // --------------------------------------------------
-      // Enrich appointments with patient information.
-      // --------------------------------------------------
-
-      const enrichedAppointments =
-        appointmentList.map(
-          (appointment) => {
-            const patient =
-              patientMap.get(
-                Number(
-                  appointment?.patient_id
-                )
-              );
-
-            if (!patient) {
-              return {
-                ...appointment,
-                patient_name: "",
-                medical_record_number: "",
-              };
-            }
-
-            const patientName = [
-              patient?.first_name,
-              patient?.last_name,
-            ]
-              .filter(Boolean)
-              .join(" ")
-              .trim();
-
-            return {
-              ...appointment,
-
-              patient_name:
-                patientName ||
-                "Unknown Patient",
-
-              medical_record_number:
-                patient?.medical_record_number ||
-                "",
-            };
-          }
-        );
+      /*
+       * Do NOT build a patientMap here.
+       *
+       * AppointmentResponse already contains
+       * patient_name and medical_record_number.
+       */
+      setAppointments(
+        appointmentList
+      );
 
       console.log(
-        "Enriched appointments:",
-        enrichedAppointments
+        "Appointments with backend patient data:",
+        appointmentList
       );
 
-      setAppointments(
-        enrichedAppointments
-      );
     } catch (error) {
       console.error(
         "Failed to load appointments:",
@@ -184,10 +181,12 @@ function Appointments() {
         error?.message ||
           "Failed to load appointments."
       );
+
     } finally {
       setLoading(false);
     }
   };
+
 
   // ======================================================
   // INITIAL LOAD
@@ -196,6 +195,7 @@ function Appointments() {
   useEffect(() => {
     loadAppointments();
   }, []);
+
 
   // ======================================================
   // ADD APPOINTMENT
@@ -207,8 +207,9 @@ function Appointments() {
     setShowModal(true);
   };
 
+
   // ======================================================
-  // VIEW
+  // VIEW APPOINTMENT
   // ======================================================
 
   const handleViewAppointment = (
@@ -227,8 +228,9 @@ function Appointments() {
     setShowModal(true);
   };
 
+
   // ======================================================
-  // EDIT
+  // EDIT APPOINTMENT
   // ======================================================
 
   const handleEditAppointment = (
@@ -247,16 +249,18 @@ function Appointments() {
     setShowModal(true);
   };
 
+
   // ======================================================
-  // DELETE
+  // DELETE APPOINTMENT
   // ======================================================
 
   const handleDeleteAppointment = async (
     appointment
   ) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete appointment #${appointment.id}?`
-    );
+    const confirmed =
+      window.confirm(
+        `Are you sure you want to delete appointment #${appointment.id}?`
+      );
 
     if (!confirmed) {
       return;
@@ -279,6 +283,7 @@ function Appointments() {
               item.id !== appointment.id
           )
       );
+
     } catch (error) {
       console.error(
         "Failed to delete appointment:",
@@ -291,6 +296,7 @@ function Appointments() {
       );
     }
   };
+
 
   // ======================================================
   // AFTER SAVE
@@ -309,6 +315,7 @@ function Appointments() {
 
       setShowModal(false);
       setSelectedAppointment(null);
+
     } catch (error) {
       console.error(
         "Failed to refresh appointments after save:",
@@ -322,6 +329,7 @@ function Appointments() {
     }
   };
 
+
   // ======================================================
   // CLOSE MODAL
   // ======================================================
@@ -329,7 +337,25 @@ function Appointments() {
   const handleCloseModal = () => {
     setShowModal(false);
     setSelectedAppointment(null);
+
+    /*
+     * If appointment creation was opened from:
+     *
+     * /appointments?patient_id=20
+     *
+     * remove the URL parameters when the modal closes.
+     *
+     * This prevents the form from automatically opening
+     * again after the user closes it.
+     */
+    if (
+      searchParams.has("patient_id") ||
+      searchParams.has("new")
+    ) {
+      setSearchParams({});
+    }
   };
+
 
   // ======================================================
   // STATUS OPTIONS
@@ -352,6 +378,230 @@ function Appointments() {
         statusValue !== ""
     );
   }, [appointments]);
+
+
+  // ======================================================
+  // FILTER APPOINTMENTS FOR CALENDAR
+  //
+  // AppointmentTable already receives the filters
+  // directly.
+  //
+  // Calendar needs its own filtered list because
+  // Calendar does not know about search/status/date
+  // state.
+  // ======================================================
+
+  const filteredAppointments = useMemo(() => {
+    const normalizedSearch =
+      String(search || "")
+        .trim()
+        .toLowerCase();
+
+    const normalizedStatus =
+      String(status || "")
+        .trim()
+        .toLowerCase();
+
+    const today = new Date();
+
+    today.setHours(
+      0,
+      0,
+      0,
+      0
+    );
+
+    return appointments.filter(
+      (appointment) => {
+
+        // ----------------------------------------------
+        // SEARCH
+        // ----------------------------------------------
+
+        if (normalizedSearch) {
+          const patientName =
+            String(
+              appointment?.patient_name ||
+                appointment?.patient?.full_name ||
+                appointment?.patient?.name ||
+                ""
+            ).toLowerCase();
+
+          const mrn =
+            String(
+              appointment?.medical_record_number ||
+                appointment?.patient?.medical_record_number ||
+                ""
+            ).toLowerCase();
+
+          const reason =
+            String(
+              appointment?.reason || ""
+            ).toLowerCase();
+
+          const matchesSearch =
+            patientName.includes(
+              normalizedSearch
+            ) ||
+            mrn.includes(
+              normalizedSearch
+            ) ||
+            reason.includes(
+              normalizedSearch
+            );
+
+          if (!matchesSearch) {
+            return false;
+          }
+        }
+
+
+        // ----------------------------------------------
+        // STATUS
+        // ----------------------------------------------
+
+        if (
+          status &&
+          status !== "All"
+        ) {
+          const appointmentStatus =
+            String(
+              appointment?.status || ""
+            )
+              .trim()
+              .toLowerCase();
+
+          const selectedStatus =
+            normalizedStatus;
+
+          const normalizedAppointmentStatus =
+            appointmentStatus === "pending"
+              ? "scheduled"
+              : appointmentStatus;
+
+          const normalizedSelectedStatus =
+            selectedStatus === "pending"
+              ? "scheduled"
+              : selectedStatus;
+
+          if (
+            normalizedAppointmentStatus !==
+            normalizedSelectedStatus
+          ) {
+            return false;
+          }
+        }
+
+
+        // ----------------------------------------------
+        // DATE
+        // ----------------------------------------------
+
+        if (
+          date &&
+          date !== "All"
+        ) {
+          const appointmentDate =
+            appointment?.appointment_date;
+
+          if (!appointmentDate) {
+            return false;
+          }
+
+          const appointmentDateObject =
+            new Date(
+              `${appointmentDate}T00:00:00`
+            );
+
+          if (
+            Number.isNaN(
+              appointmentDateObject.getTime()
+            )
+          ) {
+            return false;
+          }
+
+          appointmentDateObject.setHours(
+            0,
+            0,
+            0,
+            0
+          );
+
+
+          const normalizedDate =
+            String(date)
+              .trim()
+              .toLowerCase();
+
+
+          // Today
+          if (
+            normalizedDate ===
+              "today"
+          ) {
+            if (
+              appointmentDateObject.getTime() !==
+              today.getTime()
+            ) {
+              return false;
+            }
+          }
+
+
+          // Upcoming
+          else if (
+            normalizedDate ===
+              "upcoming"
+          ) {
+            if (
+              appointmentDateObject.getTime() <
+              today.getTime()
+            ) {
+              return false;
+            }
+          }
+
+
+          // Past
+          else if (
+            normalizedDate ===
+              "past"
+          ) {
+            if (
+              appointmentDateObject.getTime() >=
+              today.getTime()
+            ) {
+              return false;
+            }
+          }
+
+
+          // Specific date value
+          else if (
+            /^\d{4}-\d{2}-\d{2}$/.test(
+              normalizedDate
+            )
+          ) {
+            if (
+              appointmentDate !==
+              normalizedDate
+            ) {
+              return false;
+            }
+          }
+        }
+
+        return true;
+      }
+    );
+  }, [
+    appointments,
+    search,
+    status,
+    date,
+  ]);
+
 
   // ======================================================
   // HANDLE URL PARAMETERS
@@ -379,19 +629,11 @@ function Appointments() {
       setSelectedAppointment(null);
       setModalMode("create");
       setShowModal(true);
-
-      // Remove the parameters after reading them.
-      setSearchParams(
-        {},
-        {
-          replace: true,
-        }
-      );
     }
   }, [
     searchParams,
-    setSearchParams,
   ]);
+
 
   // ======================================================
   // RENDER
@@ -399,18 +641,39 @@ function Appointments() {
 
   return (
     <Layout>
+
       <div className="space-y-8">
+
+        {/* =================================================
+            HEADER
+        ================================================= */}
 
         <AppointmentHeader
           onAddAppointment={
             handleAddAppointment
           }
+          viewMode={
+            viewMode
+          }
+          onViewModeChange={
+            setViewMode
+          }
         />
+
+
+        {/* =================================================
+            SEARCH
+        ================================================= */}
 
         <AppointmentSearch
           search={search}
           setSearch={setSearch}
         />
+
+
+        {/* =================================================
+            FILTERS
+        ================================================= */}
 
         <div
           className="
@@ -429,28 +692,83 @@ function Appointments() {
           />
         </div>
 
-        <AppointmentTable
-          appointments={appointments}
-          loading={loading}
-          error={error}
-          search={search}
-          status={status}
-          date={date}
-          onView={handleViewAppointment}
-          onEdit={handleEditAppointment}
-          onDelete={handleDeleteAppointment}
-          onRetry={loadAppointments}
-        />
+
+        {/* =================================================
+            TABLE / CALENDAR
+        ================================================= */}
+
+        {viewMode === "table" ? (
+
+          <AppointmentTable
+            appointments={
+              appointments
+            }
+            loading={
+              loading
+            }
+            error={
+              error
+            }
+            search={
+              search
+            }
+            status={
+              status
+            }
+            date={
+              date
+            }
+            onView={
+              handleViewAppointment
+            }
+            onEdit={
+              handleEditAppointment
+            }
+            onDelete={
+              handleDeleteAppointment
+            }
+            onRetry={
+              loadAppointments
+            }
+          />
+
+        ) : (
+
+          <AppointmentCalendar
+            appointments={
+              filteredAppointments
+            }
+            onView={
+              handleViewAppointment
+            }
+          />
+
+        )}
+
       </div>
 
+
+      {/* ===================================================
+          MODAL
+      =================================================== */}
+
       {showModal && (
+
         <AppointmentModal
-          open={showModal}
-          onClose={handleCloseModal}
+          open={
+            showModal
+          }
+          onClose={
+            handleCloseModal
+          }
         >
-          {/* VIEW */}
+
+          {/* =================================================
+              VIEW
+          ================================================= */}
 
           {modalMode === "view" && (
+
             <AppointmentDetails
               appointment={
                 selectedAppointment
@@ -459,22 +777,34 @@ function Appointments() {
                 handleCloseModal
               }
               onEdit={() => {
-                setModalMode("edit");
+                setModalMode(
+                  "edit"
+                );
               }}
             />
+
           )}
 
-          {/* CREATE / EDIT */}
+
+          {/* =================================================
+              CREATE / EDIT
+          ================================================= */}
 
           {(modalMode === "create" ||
             modalMode === "edit") && (
+
             <AppointmentForm
-              mode={modalMode}
+              mode={
+                modalMode
+              }
+
               appointment={
                 selectedAppointment
               }
 
-              patients={patients}
+              patients={
+                patients
+              }
 
               appointments={
                 appointments
@@ -494,11 +824,16 @@ function Appointments() {
                 handleCloseModal
               }
             />
+
           )}
+
         </AppointmentModal>
+
       )}
+
     </Layout>
   );
 }
+
 
 export default Appointments;

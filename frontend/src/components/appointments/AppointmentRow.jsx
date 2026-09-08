@@ -1,4 +1,3 @@
-
 import {
   FiEye,
   FiEdit,
@@ -14,38 +13,36 @@ function AppointmentRow({
   onEdit,
   onDelete,
 }) {
-  // ==========================================
-  // DATE
-  // ==========================================
-
   const formatDate = (value) => {
-    if (!value) {
-      return "-";
-    }
+    if (!value) return "-";
 
-    const date = new Date(`${value}T00:00:00`);
+    const date = new Date(
+      `${value}T00:00:00`
+    );
 
-    if (Number.isNaN(date.getTime())) {
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
       return value;
     }
 
-    return date.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    return date.toLocaleDateString(
+      "en-GB",
+      {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }
+    );
   };
 
-  // ==========================================
-  // TIME
-  // ==========================================
-
   const formatTime = (value) => {
-    if (!value) {
-      return "-";
-    }
+    if (!value) return "-";
 
-    const [hours, minutes] = String(value).split(":");
+    const [hours, minutes] =
+      String(value).split(":");
 
     const date = new Date();
 
@@ -56,15 +53,14 @@ function AppointmentRow({
       0
     );
 
-    return date.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-    });
+    return date.toLocaleTimeString(
+      "en-US",
+      {
+        hour: "numeric",
+        minute: "2-digit",
+      }
+    );
   };
-
-  // ==========================================
-  // PATIENT
-  // ==========================================
 
   const patientName =
     appointment?.patient_name ||
@@ -77,131 +73,50 @@ function AppointmentRow({
     appointment?.patient?.medical_record_number ||
     "";
 
-  // ==========================================
-  // RENDER
-  // ==========================================
-
   return (
-    <tr
-      className="
-        border-b
-        border-slate-100
-        hover:bg-[#FAFCF9]
-        transition-all
-        duration-200
-        group
-      "
-    >
-      {/* ====================================
-          PATIENT
-      ==================================== */}
+    <tr className="border-b border-[#E8ECE6] hover:bg-[#FAFCF9] transition-all duration-200 group">
 
-      <td
-        className="
-          px-7
-          py-6
-          whitespace-nowrap
-        "
-      >
+      <td className="px-7 py-6 whitespace-nowrap">
         {patientName ? (
           <div>
-            <div
-              className="
-                font-semibold
-                text-[#193B63]
-              "
-            >
+            <div className="font-semibold text-[#294936]">
               {patientName}
             </div>
 
             {patientMrn && (
-              <div
-                className="
-                  text-xs
-                  text-slate-500
-                  mt-1
-                "
-              >
+              <div className="text-xs text-[#7A827C] mt-1">
                 {patientMrn}
               </div>
             )}
           </div>
         ) : (
           <div>
-            <div
-              className="
-                font-semibold
-                text-[#193B63]
-              "
-            >
+            <div className="font-semibold text-[#294936]">
               Patient #{appointment?.patient_id}
             </div>
 
-            <div
-              className="
-                text-xs
-                text-slate-400
-                mt-1
-              "
-            >
+            <div className="text-xs text-[#9AA19B] mt-1">
               Patient details loading
             </div>
           </div>
         )}
       </td>
 
-      {/* ====================================
-          DATE
-      ==================================== */}
-
-      <td
-        className="
-          px-5
-          py-6
-          text-slate-600
-          whitespace-nowrap
-        "
-      >
+      <td className="px-5 py-6 text-[#69736B] whitespace-nowrap">
         {formatDate(
           appointment?.appointment_date
         )}
       </td>
 
-      {/* ====================================
-          TIME
-      ==================================== */}
-
-      <td
-        className="
-          px-5
-          py-6
-          text-slate-600
-          font-medium
-          whitespace-nowrap
-        "
-      >
+      <td className="px-5 py-6 text-[#69736B] font-medium whitespace-nowrap">
         {formatTime(
           appointment?.appointment_time
         )}
       </td>
 
-      {/* ====================================
-          REASON
-      ==================================== */}
-
-      <td
-        className="
-          px-5
-          py-6
-          text-slate-600
-          max-w-65
-        "
-      >
+      <td className="px-5 py-6 text-[#69736B] max-w-65">
         <span
-          className="
-            block
-            truncate
-          "
+          className="block truncate"
           title={
             appointment?.reason || "-"
           }
@@ -214,11 +129,10 @@ function AppointmentRow({
             className="
               inline-flex
               mt-2
-              px-2.5
-              py-1
+              px-2.5 py-1
               rounded-full
-              bg-[#EEF4EA]
-              text-[#556B55]
+              bg-[#EEF3EC]
+              text-[#647760]
               text-xs
               font-medium
             "
@@ -228,59 +142,35 @@ function AppointmentRow({
         )}
       </td>
 
-      {/* ====================================
-          STATUS
-      ==================================== */}
-
-      <td
-        className="
-          px-5
-          py-6
-        "
-      >
+      <td className="px-5 py-6">
         <AppointmentStatusBadge
           status={statusLabel}
         />
       </td>
 
-      {/* ====================================
-          ACTIONS
-      ==================================== */}
-
-      <td
-        className="
-          px-7
-          py-6
-        "
-      >
-        <div
-          className="
-            flex
-            items-center
-            gap-3
-          "
-        >
-          {/* VIEW */}
+      <td className="px-7 py-6">
+        <div className="flex items-center gap-3">
 
           <button
             type="button"
             onClick={() => {
               if (onView) {
-                onView(appointment);
+                onView(
+                  appointment
+                );
               }
             }}
             title="View appointment"
             className="
-              w-11
-              h-11
+              w-11 h-11
               rounded-xl
-              bg-[#F5F8F5]
-              text-[#5B7898]
+              bg-[#F1F5EF]
+              text-[#647760]
               flex
               items-center
               justify-center
-              hover:bg-[#EAF1E8]
-              hover:text-[#556B55]
+              hover:bg-[#E5EEE2]
+              hover:text-[#294936]
               hover:-translate-y-0.5
               transition-all
               duration-200
@@ -289,27 +179,26 @@ function AppointmentRow({
             <FiEye size={19} />
           </button>
 
-          {/* EDIT */}
-
           <button
             type="button"
             onClick={() => {
               if (onEdit) {
-                onEdit(appointment);
+                onEdit(
+                  appointment
+                );
               }
             }}
             title="Edit appointment"
             className="
-              w-11
-              h-11
+              w-11 h-11
               rounded-xl
-              bg-[#F5F8F5]
-              text-[#5B7898]
+              bg-[#F1F5EF]
+              text-[#647760]
               flex
               items-center
               justify-center
-              hover:bg-blue-50
-              hover:text-blue-600
+              hover:bg-[#E5EEE2]
+              hover:text-[#294936]
               hover:-translate-y-0.5
               transition-all
               duration-200
@@ -318,27 +207,26 @@ function AppointmentRow({
             <FiEdit size={19} />
           </button>
 
-          {/* DELETE */}
-
           <button
             type="button"
             onClick={() => {
               if (onDelete) {
-                onDelete(appointment);
+                onDelete(
+                  appointment
+                );
               }
             }}
             title="Delete appointment"
             className="
-              w-11
-              h-11
+              w-11 h-11
               rounded-xl
-              bg-[#FBF6F6]
-              text-[#7D8795]
+              bg-[#FAF1F1]
+              text-[#8B6868]
               flex
               items-center
               justify-center
-              hover:bg-red-50
-              hover:text-red-600
+              hover:bg-[#F8E6E6]
+              hover:text-[#9A5555]
               hover:-translate-y-0.5
               transition-all
               duration-200
@@ -346,6 +234,7 @@ function AppointmentRow({
           >
             <FiTrash2 size={19} />
           </button>
+
         </div>
       </td>
     </tr>

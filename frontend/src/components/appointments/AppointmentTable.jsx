@@ -1,4 +1,3 @@
-
 import AppointmentRow from "./AppointmentRow";
 
 function AppointmentTable({
@@ -17,7 +16,7 @@ function AppointmentTable({
   onRetry,
 }) {
   // ==========================================
-  // FORMAT STATUS
+  // NORMALIZE STATUS
   // ==========================================
 
   const normalizeStatus = (value) => {
@@ -29,27 +28,43 @@ function AppointmentTable({
   };
 
   // ==========================================
+  // STATUS DISPLAY
+  // ==========================================
+
+  const getStatusLabel = (value) => {
+    const normalized = normalizeStatus(value);
+
+    switch (normalized) {
+      case "SCHEDULED":
+      case "PENDING":
+        return "Pending";
+
+      case "COMPLETED":
+        return "Completed";
+
+      case "CANCELLED":
+      case "CANCELED":
+        return "Cancelled";
+
+      case "NO_SHOW":
+      case "NO-SHOW":
+      case "NOSHOW":
+        return "No Show";
+
+      default:
+        return value || "-";
+    }
+  };
+
+  // ==========================================
   // FILTER APPOINTMENTS
   // ==========================================
 
   const filteredAppointments = appointments.filter(
     (appointment) => {
-      // --------------------------------------
-      // SEARCH
-      // --------------------------------------
-
       const searchValue = String(search || "")
         .toLowerCase()
         .trim();
-
-      /*
-       * Patient name will be available after
-       * we connect the appointment list with
-       * patient data.
-       *
-       * For now we search the patient ID too,
-       * so existing data continues to work.
-       */
 
       const patientText = `patient #${
         appointment?.patient_id ?? ""
@@ -132,34 +147,6 @@ function AppointmentTable({
   );
 
   // ==========================================
-  // STATUS DISPLAY
-  // ==========================================
-
-  const getStatusLabel = (value) => {
-    const normalized = normalizeStatus(value);
-
-    if (
-      normalized === "SCHEDULED" ||
-      normalized === "PENDING"
-    ) {
-      return "Pending";
-    }
-
-    if (normalized === "COMPLETED") {
-      return "Completed";
-    }
-
-    if (
-      normalized === "CANCELLED" ||
-      normalized === "CANCELED"
-    ) {
-      return "Cancelled";
-    }
-
-    return value || "-";
-  };
-
-  // ==========================================
   // LOADING
   // ==========================================
 
@@ -204,12 +191,7 @@ function AppointmentTable({
           overflow-hidden
         "
       >
-        <div
-          className="
-            p-12
-            text-center
-          "
-        >
+        <div className="p-12 text-center">
           <p
             className="
               text-red-600
@@ -256,9 +238,7 @@ function AppointmentTable({
         overflow-hidden
       "
     >
-      {/* ====================================
-          HEADER
-      ==================================== */}
+      {/* HEADER */}
 
       <div
         className="
@@ -285,12 +265,7 @@ function AppointmentTable({
             Appointment Schedule
           </h2>
 
-          <p
-            className="
-              text-slate-500
-              mt-1
-            "
-          >
+          <p className="text-slate-500 mt-1">
             {filteredAppointments.length} appointments found
           </p>
         </div>
@@ -310,9 +285,7 @@ function AppointmentTable({
         </div>
       </div>
 
-      {/* ====================================
-          TABLE
-      ==================================== */}
+      {/* TABLE */}
 
       <div className="overflow-x-auto">
         <table
@@ -321,10 +294,6 @@ function AppointmentTable({
             min-w-212.5
           "
         >
-          {/* ==================================
-              HEAD
-          ================================== */}
-
           <thead>
             <tr
               className="
@@ -334,8 +303,6 @@ function AppointmentTable({
                 text-[#31577E]
               "
             >
-              {/* PATIENT FIRST */}
-
               <th
                 className="
                   px-7
@@ -346,8 +313,6 @@ function AppointmentTable({
               >
                 Patient
               </th>
-
-              {/* DATE */}
 
               <th
                 className="
@@ -360,8 +325,6 @@ function AppointmentTable({
                 Date
               </th>
 
-              {/* TIME */}
-
               <th
                 className="
                   px-5
@@ -372,8 +335,6 @@ function AppointmentTable({
               >
                 Time
               </th>
-
-              {/* REASON */}
 
               <th
                 className="
@@ -386,8 +347,6 @@ function AppointmentTable({
                 Reason
               </th>
 
-              {/* STATUS */}
-
               <th
                 className="
                   px-5
@@ -398,8 +357,6 @@ function AppointmentTable({
               >
                 Status
               </th>
-
-              {/* ACTIONS */}
 
               <th
                 className="
@@ -413,10 +370,6 @@ function AppointmentTable({
               </th>
             </tr>
           </thead>
-
-          {/* ==================================
-              BODY
-          ================================== */}
 
           <tbody>
             {filteredAppointments.length > 0 ? (

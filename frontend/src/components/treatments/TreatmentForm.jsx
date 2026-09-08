@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { getAppointments } from "../../services/appointmentService";
+import { getPatients } from "../../services/patientService";
 
 import {
   createTreatment,
@@ -18,42 +19,23 @@ function TreatmentForm({
   // MODE
   // =====================================================
 
-  const isEditing =
-    Boolean(treatment);
+  const isEditing = Boolean(treatment);
 
 
   // =====================================================
   // STATE
   // =====================================================
 
-  const [
-    appointments,
-    setAppointments,
-  ] = useState([]);
+  const [appointments, setAppointments] = useState([]);
+  const [patients, setPatients] = useState([]);
 
+  const [loadingAppointments, setLoadingAppointments] =
+    useState(true);
 
-  const [
-    loadingAppointments,
-    setLoadingAppointments,
-  ] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
-
-  const [
-    saving,
-    setSaving,
-  ] = useState(false);
-
-
-  const [
-    error,
-    setError,
-  ] = useState("");
-
-
-  const [
-    formData,
-    setFormData,
-  ] = useState({
+  const [formData, setFormData] = useState({
     appointment_id: "",
     diagnosis: "",
     notes: "",
@@ -64,82 +46,70 @@ function TreatmentForm({
 
 
   // =====================================================
-  // LOAD APPOINTMENTS
+  // LOAD APPOINTMENTS + PATIENTS
   // =====================================================
 
   useEffect(() => {
 
-    const loadAppointments =
-      async () => {
+    const loadData = async () => {
 
-        try {
+      try {
 
-          setLoadingAppointments(
-            true
-          );
+        setLoadingAppointments(true);
+        setError("");
 
-          setError("");
+        const [
+          appointmentData,
+          patientData,
+        ] = await Promise.all([
+          getAppointments(),
+          getPatients(),
+        ]);
 
+        console.log(
+          "Appointments available for treatment:",
+          appointmentData
+        );
 
-          const data =
-            await getAppointments();
+        console.log(
+          "Patients available for treatment:",
+          patientData
+        );
 
+        const appointmentList =
+          Array.isArray(appointmentData)
+            ? appointmentData
+            : [];
 
-          console.log(
-            "Appointments available for treatment:",
-            data
-          );
+        const patientList =
+          Array.isArray(patientData)
+            ? patientData
+            : [];
 
+        setAppointments(appointmentList);
+        setPatients(patientList);
 
-          /*
-           * IMPORTANT:
-           *
-           * Do NOT filter appointments by
-           * status === "SCHEDULED" here.
-           *
-           * We first need to display the actual
-           * appointments returned by the backend.
-           *
-           * Once the complete workflow is working,
-           * we can add business rules for which
-           * appointments can become visits.
-           */
+      } catch (err) {
 
-          const appointmentList =
-            Array.isArray(data)
-              ? data
-              : [];
+        console.error(
+          "Failed to load appointments/patients:",
+          err
+        );
 
+        setError(
+          err.message ||
+          "Failed to load appointments and patients."
+        );
 
-          setAppointments(
-            appointmentList
-          );
+      } finally {
 
-        } catch (err) {
+        setLoadingAppointments(false);
 
-          console.error(
-            "Failed to load appointments:",
-            err
-          );
+      }
 
+    };
 
-          setError(
-            err.message ||
-            "Failed to load appointments."
-          );
-
-        } finally {
-
-          setLoadingAppointments(
-            false
-          );
-
-        }
-
-      };
-
-
-    loadAppointments();
+    loadData();
 
   }, []);
 
@@ -164,12 +134,10 @@ function TreatmentForm({
       return;
     }
 
-
     setFormData({
 
       appointment_id:
-        treatment.appointment_id ??
-        "",
+        treatment.appointment_id ?? "",
 
       diagnosis:
         treatment.diagnosis ??
@@ -202,22 +170,279 @@ function TreatmentForm({
   // HANDLE INPUT
   // =====================================================
 
-  const handleChange = (
-    event
-  ) => {
+  const handleChange = (event) => {
 
     const {
       name,
       value,
     } = event.target;
 
+    setFormData((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
 
-    setFormData(
-      (previous) => ({
-        ...previous,
-        [name]: value,
-      })
+  };
+
+
+  // =====================================================
+  // PATIENT HELPERS
+  // =====================================================
+
+  const getPatientIdFromAppointment = (
+    appointment
+  ) => {
+
+    return (
+      appointment?.patient_id ??
+      appointment?.patient?.id ??
+      appointment?.patient_data?.id ??
+      appointment?.patient_info?.id ??
+      null
     );
+
+  };
+
+
+  const findPatientForAppointment = (
+    appointment
+  ) => {
+
+    const patientId =
+      getPatientIdFromAppointment(
+        appointment
+      );
+
+    if (
+      patientId === null ||
+      patientId === undefined
+    ) {
+      return null;
+    }
+
+    return (
+      patients.find(
+        (patient) =>
+          String(patient.id) ===
+          String(patientId)
+      ) || null
+    );
+
+  };
+
+
+  const getPatientName = (appointment) => {
+
+    // -------------------------------------------------
+    // First try patient already included in appointment
+    // -------------------------------------------------
+
+    const embeddedPatient =
+      appointment?.patient ||
+      appointment?.patient_data ||
+      appointment?.patient_info ||
+      null;
+
+    const directName =
+      appointment?.patient_name ||
+      appointment?.patient_full_name;
+
+    if (directName) {
+      return directName;
+    }
+
+    const embeddedName =
+      embeddedPatient?.name ||
+      embeddedPatient?.full_name;
+
+    if (embeddedName) {
+      return embeddedName;
+    }
+
+    const embeddedFirstName =
+      embeddedPatient?.first_name ||
+      appointment?.patient_first_name ||
+      "";
+
+    const embeddedLastName =
+      embeddedPatient?.last_name ||
+      appointment?.patient_last_name ||
+      "";
+
+    const embeddedFullName =
+      `${embeddedFirstName} ${embeddedLastName}`.trim();
+
+    if (embeddedFullName) {
+      return embeddedFullName;
+    }
+
+
+    // -------------------------------------------------
+    // Otherwise find patient using patient_id
+    // -------------------------------------------------
+
+    const patient =
+      findPatientForAppointment(
+        appointment
+      );
+
+    if (!patient) {
+      return "Unknown patient";
+    }
+
+    const patientName =
+      patient.name ||
+      patient.full_name;
+
+    if (patientName) {
+      return patientName;
+    }
+
+    const firstName =
+      patient.first_name ||
+      "";
+
+    const lastName =
+      patient.last_name ||
+      "";
+
+    const fullName =
+      `${firstName} ${lastName}`.trim();
+
+    return fullName || "Unknown patient";
+
+  };
+
+
+  const getPatientMrn = (appointment) => {
+
+    // -------------------------------------------------
+    // First try appointment response
+    // -------------------------------------------------
+
+    const embeddedPatient =
+      appointment?.patient ||
+      appointment?.patient_data ||
+      appointment?.patient_info ||
+      null;
+
+    const directMrn =
+      appointment?.medical_record_number ||
+      appointment?.patient_mrn ||
+      appointment?.mrn;
+
+    if (directMrn) {
+      return directMrn;
+    }
+
+    const embeddedMrn =
+      embeddedPatient?.medical_record_number ||
+      embeddedPatient?.mrn;
+
+    if (embeddedMrn) {
+      return embeddedMrn;
+    }
+
+
+    // -------------------------------------------------
+    // Otherwise find patient using patient_id
+    // -------------------------------------------------
+
+    const patient =
+      findPatientForAppointment(
+        appointment
+      );
+
+    if (!patient) {
+      return "";
+    }
+
+    return (
+      patient.medical_record_number ||
+      patient.mrn ||
+      ""
+    );
+
+  };
+
+
+  // =====================================================
+  // APPOINTMENT HELPERS
+  // =====================================================
+
+  const getAppointmentDate = (
+    appointment
+  ) => {
+
+    return (
+      appointment?.appointment_date ||
+      appointment?.date ||
+      ""
+    );
+
+  };
+
+
+  const getAppointmentTime = (
+    appointment
+  ) => {
+
+    const value =
+      appointment?.appointment_time ||
+      appointment?.time ||
+      "";
+
+    if (!value) {
+      return "";
+    }
+
+    if (
+      typeof value === "string" &&
+      value.includes("T")
+    ) {
+
+      return (
+        value.split("T")[1]?.slice(0, 5) ||
+        value
+      );
+
+    }
+
+    return String(value).slice(0, 5);
+
+  };
+
+
+  const getAppointmentReason = (
+    appointment
+  ) => {
+
+    return (
+      appointment?.reason ||
+      appointment?.purpose ||
+      appointment?.chief_complaint ||
+      appointment?.notes ||
+      ""
+    );
+
+  };
+
+
+  const formatAppointmentDate = (
+    value
+  ) => {
+
+    if (!value) {
+      return "Date not available";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+
+    return date.toLocaleDateString();
 
   };
 
@@ -229,12 +454,8 @@ function TreatmentForm({
   const selectedAppointment =
     appointments.find(
       (appointment) =>
-        String(
-          appointment.id
-        ) ===
-        String(
-          formData.appointment_id
-        )
+        String(appointment.id) ===
+        String(formData.appointment_id)
     );
 
 
@@ -242,184 +463,194 @@ function TreatmentForm({
   // SUBMIT
   // =====================================================
 
-  const handleSubmit =
-    async (event) => {
+  const handleSubmit = async (event) => {
 
-      event.preventDefault();
+    event.preventDefault();
 
-
-      setError("");
+    setError("");
 
 
-      // -------------------------------------------------
-      // CREATE VALIDATION
-      // -------------------------------------------------
+    // -------------------------------------------------
+    // CREATE VALIDATION
+    // -------------------------------------------------
 
-      if (
-        !isEditing &&
-        !formData.appointment_id
-      ) {
+    if (
+      !isEditing &&
+      !formData.appointment_id
+    ) {
 
-        setError(
-          "Please select an appointment."
-        );
+      setError(
+        "Please select an appointment."
+      );
 
-        return;
-      }
+      return;
 
-
-      // -------------------------------------------------
-      // DIAGNOSIS VALIDATION
-      // -------------------------------------------------
-
-      if (
-        !formData.diagnosis.trim()
-      ) {
-
-        setError(
-          "Please enter the diagnosis/treatment details."
-        );
-
-        return;
-      }
+    }
 
 
-      try {
+    // -------------------------------------------------
+    // DIAGNOSIS VALIDATION
+    // -------------------------------------------------
 
-        setSaving(true);
+    if (
+      !formData.diagnosis.trim()
+    ) {
 
+      setError(
+        "Please enter the diagnosis/treatment details."
+      );
 
-        // ------------------------------------------------
-        // CREATE PAYLOAD
-        // ------------------------------------------------
+      return;
 
-        const createPayload = {
-
-          appointment_id:
-            Number(
-              formData.appointment_id
-            ),
-
-          diagnosis:
-            formData.diagnosis.trim(),
-
-          chief_complaint:
-            formData.chief_complaint.trim() ||
-            null,
-
-          notes:
-            formData.notes.trim() ||
-            null,
-
-          charge:
-            formData.charge !== ""
-              ? Number(
-                  formData.charge
-                )
-              : 0,
-
-        };
+    }
 
 
-        // ------------------------------------------------
-        // UPDATE PAYLOAD
-        // ------------------------------------------------
-        //
-        // appointment_id is intentionally NOT included
-        // because the appointment should not be changed
-        // when editing an existing treatment.
-        //
+    // -------------------------------------------------
+    // STATUS VALIDATION FOR UPDATE
+    // -------------------------------------------------
 
-        const updatePayload = {
+    if (
+      isEditing &&
+      ![
+        "IN_PROGRESS",
+        "COMPLETED",
+        "CANCELLED",
+      ].includes(formData.status)
+    ) {
 
-          status:
-            formData.status ||
-            "IN_PROGRESS",
+      setError(
+        "Please select a valid treatment status."
+      );
 
-          diagnosis:
-            formData.diagnosis.trim(),
+      return;
 
-          chief_complaint:
-            formData.chief_complaint.trim() ||
-            null,
-
-          notes:
-            formData.notes.trim() ||
-            null,
-
-          charge:
-            formData.charge !== ""
-              ? Number(
-                  formData.charge
-                )
-              : 0,
-
-        };
+    }
 
 
-        // ------------------------------------------------
-        // SEND REQUEST
-        // ------------------------------------------------
+    try {
 
-        let result;
+      setSaving(true);
 
 
-        if (isEditing) {
+      // ------------------------------------------------
+      // CREATE PAYLOAD
+      // ------------------------------------------------
 
-          result =
-            await updateTreatment(
-              treatment.id,
-              updatePayload
-            );
+      const createPayload = {
 
-        } else {
+        appointment_id:
+          Number(
+            formData.appointment_id
+          ),
 
-          result =
-            await createTreatment(
-              createPayload
-            );
+        diagnosis:
+          formData.diagnosis.trim(),
 
-        }
+        chief_complaint:
+          formData.chief_complaint.trim() ||
+          null,
+
+        notes:
+          formData.notes.trim() ||
+          null,
+
+        charge:
+          formData.charge !== ""
+            ? Number(formData.charge)
+            : 0,
+
+      };
 
 
-        console.log(
-          "Treatment saved:",
-          result
-        );
+      // ------------------------------------------------
+      // UPDATE PAYLOAD
+      // ------------------------------------------------
+
+      const updatePayload = {
+
+        status:
+          formData.status ||
+          "IN_PROGRESS",
+
+        diagnosis:
+          formData.diagnosis.trim(),
+
+        chief_complaint:
+          formData.chief_complaint.trim() ||
+          null,
+
+        notes:
+          formData.notes.trim() ||
+          null,
+
+        charge:
+          formData.charge !== ""
+            ? Number(formData.charge)
+            : 0,
+
+      };
 
 
-        // ------------------------------------------------
-        // SUCCESS
-        // ------------------------------------------------
+      // ------------------------------------------------
+      // SEND REQUEST
+      // ------------------------------------------------
 
-        if (onSuccess) {
+      let result;
 
-          await onSuccess(
-            result
+      if (isEditing) {
+
+        result =
+          await updateTreatment(
+            treatment.id,
+            updatePayload
           );
 
-        }
+      } else {
 
-      } catch (err) {
-
-        console.error(
-          "Failed to save treatment:",
-          err
-        );
-
-
-        setError(
-          err.message ||
-          "Failed to save treatment."
-        );
-
-      } finally {
-
-        setSaving(false);
+        result =
+          await createTreatment(
+            createPayload
+          );
 
       }
 
-    };
+
+      console.log(
+        "Treatment saved:",
+        result
+      );
+
+
+      // ------------------------------------------------
+      // SUCCESS
+      // ------------------------------------------------
+
+      if (onSuccess) {
+
+        await onSuccess(result);
+
+      }
+
+
+    } catch (err) {
+
+      console.error(
+        "Failed to save treatment:",
+        err
+      );
+
+      setError(
+        err.message ||
+        "Failed to save treatment."
+      );
+
+    } finally {
+
+      setSaving(false);
+
+    }
+
+  };
 
 
   // =====================================================
@@ -435,7 +666,7 @@ function TreatmentForm({
 
       {/* =================================================
           TITLE
-      ================================================= */}
+          ================================================= */}
 
       <h2
         className="
@@ -444,17 +675,15 @@ function TreatmentForm({
           text-[#25312A]
         "
       >
-
         {isEditing
           ? "Edit Treatment"
           : "Add Treatment"}
-
       </h2>
 
 
       {/* =================================================
           ERROR
-      ================================================= */}
+          ================================================= */}
 
       {error && (
 
@@ -469,9 +698,7 @@ function TreatmentForm({
             text-red-700
           "
         >
-
           {error}
-
         </div>
 
       )}
@@ -479,7 +706,7 @@ function TreatmentForm({
 
       {/* =================================================
           APPOINTMENT
-      ================================================= */}
+          ================================================= */}
 
       <div>
 
@@ -493,9 +720,7 @@ function TreatmentForm({
             text-[#45524A]
           "
         >
-
           Appointment
-
         </label>
 
 
@@ -528,52 +753,79 @@ function TreatmentForm({
         >
 
           <option value="">
-
             {loadingAppointments
               ? "Loading appointments..."
               : appointments.length === 0
                 ? "No appointments available"
                 : "Select appointment"}
-
           </option>
 
 
           {appointments.map(
-            (appointment) => (
+            (appointment) => {
 
-              <option
-                key={
-                  appointment.id
-                }
-                value={
-                  appointment.id
-                }
-              >
+              const patientName =
+                getPatientName(
+                  appointment
+                );
 
-                Appointment #
-                {appointment.id}
+              const patientMrn =
+                getPatientMrn(
+                  appointment
+                );
 
-                {" - "}
+              const date =
+                getAppointmentDate(
+                  appointment
+                );
 
-                {appointment.appointment_date ||
-                  appointment.date ||
-                  "N/A"}
+              const time =
+                getAppointmentTime(
+                  appointment
+                );
 
-                {appointment.status
-                  ? ` (${appointment.status})`
-                  : ""}
+              const reason =
+                getAppointmentReason(
+                  appointment
+                );
 
-              </option>
 
-            )
+              return (
+
+                <option
+                  key={appointment.id}
+                  value={appointment.id}
+                >
+
+                  {patientName}
+
+                  {patientMrn
+                    ? ` — ${patientMrn}`
+                    : ""}
+
+                  {" | "}
+
+                  {formatAppointmentDate(
+                    date
+                  )}
+
+                  {time
+                    ? ` ${time}`
+                    : ""}
+
+                  {reason
+                    ? ` — ${reason}`
+                    : ""}
+
+                </option>
+
+              );
+
+            }
           )}
 
         </select>
 
-
-        {/* -------------------------------------------------
-            APPOINTMENT HELP
-        ------------------------------------------------- */}
 
         {!loadingAppointments &&
           appointments.length === 0 && (
@@ -585,10 +837,8 @@ function TreatmentForm({
                 text-amber-600
               "
             >
-
               No appointments were returned
               by the backend.
-
             </p>
 
           )}
@@ -598,7 +848,7 @@ function TreatmentForm({
 
       {/* =================================================
           SELECTED APPOINTMENT INFO
-      ================================================= */}
+          ================================================= */}
 
       {selectedAppointment && (
 
@@ -618,62 +868,102 @@ function TreatmentForm({
               text-gray-500
             "
           >
-
             Selected appointment
-
           </p>
 
 
           <p
             className="
               mt-1
+              text-lg
               font-semibold
               text-[#25312A]
             "
           >
-
-            Appointment #
-            {selectedAppointment.id}
-
+            {getPatientName(
+              selectedAppointment
+            )}
           </p>
 
 
-          <p
-            className="
-              mt-1
-              text-sm
-              text-gray-600
-            "
-          >
-
-            Date:{" "}
-
-            {
-              selectedAppointment.appointment_date ||
-              selectedAppointment.date ||
-              "N/A"
-            }
-
-          </p>
-
-
-          {selectedAppointment.status && (
+          {getPatientMrn(
+            selectedAppointment
+          ) && (
 
             <p
               className="
                 mt-1
                 text-sm
-                text-gray-600
+                font-medium
+                text-[#5F7A63]
               "
             >
-
-              Status:{" "}
-
-              {selectedAppointment.status}
-
+              MRN:{" "}
+              {getPatientMrn(
+                selectedAppointment
+              )}
             </p>
 
           )}
+
+
+          <div
+            className="
+              mt-3
+              space-y-1
+              text-sm
+              text-gray-600
+            "
+          >
+
+            <p>
+              Date:{" "}
+              {formatAppointmentDate(
+                getAppointmentDate(
+                  selectedAppointment
+                )
+              )}
+            </p>
+
+
+            {getAppointmentTime(
+              selectedAppointment
+            ) && (
+
+              <p>
+                Time:{" "}
+                {getAppointmentTime(
+                  selectedAppointment
+                )}
+              </p>
+
+            )}
+
+
+            {getAppointmentReason(
+              selectedAppointment
+            ) && (
+
+              <p>
+                Reason:{" "}
+                {getAppointmentReason(
+                  selectedAppointment
+                )}
+              </p>
+
+            )}
+
+
+            {selectedAppointment.status && (
+
+              <p>
+                Status:{" "}
+                {selectedAppointment.status}
+              </p>
+
+            )}
+
+          </div>
 
         </div>
 
@@ -682,7 +972,7 @@ function TreatmentForm({
 
       {/* =================================================
           CHIEF COMPLAINT
-      ================================================= */}
+          ================================================= */}
 
       <div>
 
@@ -696,9 +986,7 @@ function TreatmentForm({
             text-[#45524A]
           "
         >
-
           Chief Complaint
-
         </label>
 
 
@@ -731,7 +1019,7 @@ function TreatmentForm({
 
       {/* =================================================
           DIAGNOSIS
-      ================================================= */}
+          ================================================= */}
 
       <div>
 
@@ -745,9 +1033,7 @@ function TreatmentForm({
             text-[#45524A]
           "
         >
-
           Diagnosis / Treatment Details
-
         </label>
 
 
@@ -780,7 +1066,7 @@ function TreatmentForm({
 
       {/* =================================================
           CHARGE
-      ================================================= */}
+          ================================================= */}
 
       <div>
 
@@ -794,9 +1080,7 @@ function TreatmentForm({
             text-[#45524A]
           "
         >
-
           Charge
-
         </label>
 
 
@@ -831,7 +1115,7 @@ function TreatmentForm({
 
       {/* =================================================
           STATUS
-      ================================================= */}
+          ================================================= */}
 
       {isEditing && (
 
@@ -847,9 +1131,7 @@ function TreatmentForm({
               text-[#45524A]
             "
           >
-
             Status
-
           </label>
 
 
@@ -884,8 +1166,8 @@ function TreatmentForm({
               Completed
             </option>
 
-            <option value="SCHEDULED">
-              Scheduled
+            <option value="CANCELLED">
+              Cancelled
             </option>
 
           </select>
@@ -897,7 +1179,7 @@ function TreatmentForm({
 
       {/* =================================================
           NOTES
-      ================================================= */}
+          ================================================= */}
 
       <div>
 
@@ -911,9 +1193,7 @@ function TreatmentForm({
             text-[#45524A]
           "
         >
-
           Notes
-
         </label>
 
 
@@ -947,7 +1227,7 @@ function TreatmentForm({
 
       {/* =================================================
           FOOTER
-      ================================================= */}
+          ================================================= */}
 
       <div
         className="
@@ -980,9 +1260,7 @@ function TreatmentForm({
               disabled:opacity-60
             "
           >
-
             Cancel
-
           </button>
 
         )}

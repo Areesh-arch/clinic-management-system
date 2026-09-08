@@ -4,7 +4,6 @@ import TreatmentRow from "./TreatmentRow";
 function TreatmentTable({
   treatments,
   search,
-  doctor,
   status,
   onEdit,
   onDelete,
@@ -14,17 +13,34 @@ function TreatmentTable({
     treatments.filter((item) => {
 
       const patientName =
-        item.patient_name || "";
+        item.patient_name ||
+        item.patient?.name ||
+        [
+          item.patient?.first_name,
+          item.patient?.last_name,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .trim() ||
+        "";
 
-      const doctorName =
-        item.doctor_name || "";
+
+      const patientMrn =
+        item.medical_record_number ||
+        item.patient_mrn ||
+        item.patient?.medical_record_number ||
+        item.patient?.mrn ||
+        "";
+
 
       const treatmentName =
-        item.treatment || "";
+        item.treatment ||
+        item.diagnosis ||
+        "";
 
 
       const searchValue =
-        search.toLowerCase();
+        search.toLowerCase().trim();
 
 
       const matchesSearch =
@@ -32,18 +48,13 @@ function TreatmentTable({
           .toLowerCase()
           .includes(searchValue) ||
 
-        doctorName
+        patientMrn
           .toLowerCase()
           .includes(searchValue) ||
 
         treatmentName
           .toLowerCase()
           .includes(searchValue);
-
-
-      const matchesDoctor =
-        doctor === "All" ||
-        doctorName === doctor;
 
 
       const matchesStatus =
@@ -53,9 +64,9 @@ function TreatmentTable({
 
       return (
         matchesSearch &&
-        matchesDoctor &&
         matchesStatus
       );
+
     });
 
 
@@ -73,10 +84,6 @@ function TreatmentTable({
 
               <th className="text-left p-4">
                 Patient
-              </th>
-
-              <th className="text-left p-4">
-                Doctor
               </th>
 
               <th className="text-left p-4">
@@ -111,7 +118,7 @@ function TreatmentTable({
               <tr>
 
                 <td
-                  colSpan="7"
+                  colSpan="6"
                   className="text-center p-10 text-gray-500"
                 >
                   No treatments found.
@@ -154,6 +161,7 @@ function TreatmentTable({
       </div>
 
     </div>
+
   );
 }
 

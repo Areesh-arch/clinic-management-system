@@ -1,6 +1,5 @@
 import {
   useEffect,
-  useMemo,
   useState,
 } from "react";
 
@@ -21,10 +20,17 @@ import {
   deleteTreatment,
 } from "../../services/treatmentService";
 
+import {
+  getPatients,
+} from "../../services/patientService";
+
 
 function Treatments() {
 
   const [treatments, setTreatments] =
+    useState([]);
+
+  const [patients, setPatients] =
     useState([]);
 
   const [loading, setLoading] =
@@ -35,9 +41,6 @@ function Treatments() {
 
   const [search, setSearch] =
     useState("");
-
-  const [doctor, setDoctor] =
-    useState("All");
 
   const [status, setStatus] =
     useState("All");
@@ -57,7 +60,7 @@ function Treatments() {
 
 
   // =====================================================
-  // LOAD TREATMENTS
+  // LOAD TREATMENTS + PATIENTS
   // =====================================================
 
   const loadTreatments = async () => {
@@ -67,70 +70,211 @@ function Treatments() {
       setLoading(true);
       setError("");
 
-      const data =
-        await getTreatments();
+      const [
+        treatmentData,
+        patientData,
+      ] = await Promise.all([
+        getTreatments(),
+        getPatients(),
+      ]);
 
       console.log(
         "Treatments received from backend:",
-        data
+        treatmentData
       );
 
-      const normalized =
-        Array.isArray(data)
-          ? data.map((visit) => ({
-              id: visit.id,
+      console.log(
+        "Patients received from backend:",
+        patientData
+      );
 
-              tenant_id:
-                visit.tenant_id,
-
-              appointment_id:
-                visit.appointment_id,
-
-              patient_id:
-                visit.patient_id,
-
-              doctor_id:
-                visit.doctor_id,
-
-              patient_name:
-                visit.patient_name ||
-                `Patient #${visit.patient_id}`,
-
-              doctor_name:
-                visit.doctor_name ||
-                `Doctor #${visit.doctor_id}`,
-
-              treatment:
-                visit.diagnosis ||
-                "—",
-
-              diagnosis:
-                visit.diagnosis ||
-                "",
-
-              chief_complaint:
-                visit.chief_complaint ||
-                "",
-
-              notes:
-                visit.notes ||
-                "",
-
-              date:
-                visit.visit_time,
-
-              cost:
-                visit.charge ?? 0,
-
-              charge:
-                visit.charge ?? 0,
-
-              status:
-                visit.status,
-            }))
+      const treatmentList =
+        Array.isArray(treatmentData)
+          ? treatmentData
           : [];
 
+      const patientList =
+        Array.isArray(patientData)
+          ? patientData
+          : [];
+
+      setPatients(patientList);
+
+
+      // =================================================
+      // NORMALIZE TREATMENTS / VISITS
+      // =================================================
+
+      const normalized =
+        treatmentList.map((visit) => {
+
+          const patientId =
+            visit.patient_id ??
+            visit.patient?.id ??
+            null;
+
+
+          // ---------------------------------------------
+          // FIND REAL PATIENT
+          // ---------------------------------------------
+
+          const patient =
+            patientList.find(
+              (item) =>
+                String(item.id) ===
+                String(patientId)
+            ) || null;
+
+
+          // ---------------------------------------------
+          // PATIENT NAME
+          // ---------------------------------------------
+
+          const embeddedPatient =
+            visit.patient ||
+            visit.patient_data ||
+            visit.patient_info ||
+            null;
+
+
+          const embeddedFirstName =
+            embeddedPatient?.first_name ||
+            visit.patient_first_name ||
+            "";
+
+
+          const embeddedLastName =
+            embeddedPatient?.last_name ||
+            visit.patient_last_name ||
+            "";
+
+
+          const embeddedFullName =
+            [
+              embeddedFirstName,
+              embeddedLastName,
+            ]
+              .filter(Boolean)
+              .join(" ")
+              .trim();
+
+
+          const patientFirstName =
+            patient?.first_name ||
+            "";
+
+
+          const patientLastName =
+            patient?.last_name ||
+            "";
+
+
+          const patientFullName =
+            [
+              patientFirstName,
+              patientLastName,
+            ]
+              .filter(Boolean)
+              .join(" ")
+              .trim();
+
+
+          const patientName =
+            visit.patient_name ||
+            visit.patient_full_name ||
+            embeddedPatient?.name ||
+            embeddedPatient?.full_name ||
+            embeddedFullName ||
+            patientFullName ||
+            "Unknown patient";
+
+
+          // ---------------------------------------------
+          // PATIENT MRN
+          // ---------------------------------------------
+
+          const patientMrn =
+            visit.medical_record_number ||
+            visit.patient_mrn ||
+            visit.mrn ||
+            embeddedPatient?.medical_record_number ||
+            embeddedPatient?.mrn ||
+            patient?.medical_record_number ||
+            patient?.mrn ||
+            "";
+
+
+          // ---------------------------------------------
+          // RETURN NORMALIZED TREATMENT
+          // ---------------------------------------------
+
+          return {
+
+            id:
+              visit.id,
+
+            tenant_id:
+              visit.tenant_id,
+
+            appointment_id:
+              visit.appointment_id,
+
+            patient_id:
+              patientId,
+
+            patient_name:
+              patientName,
+
+            medical_record_number:
+              patientMrn,
+
+            patient_mrn:
+              patientMrn,
+
+            patient:
+              patient,
+
+            treatment:
+              visit.diagnosis ||
+              "—",
+
+            diagnosis:
+              visit.diagnosis ||
+              "",
+
+            chief_complaint:
+              visit.chief_complaint ||
+              "",
+
+            notes:
+              visit.notes ||
+              "",
+
+            date:
+              visit.visit_time,
+
+            cost:
+              visit.charge ?? 0,
+
+            charge:
+              visit.charge ?? 0,
+
+            status:
+              visit.status,
+
+          };
+
+        });
+
+
+      console.log(
+        "Normalized treatments:",
+        normalized
+      );
+
+
       setTreatments(normalized);
+
 
     } catch (err) {
 
@@ -143,6 +287,7 @@ function Treatments() {
         err.message ||
         "Failed to load treatments."
       );
+
 
     } finally {
 
@@ -175,6 +320,7 @@ function Treatments() {
     ) {
 
       setEditingTreatment(null);
+
       setShowModal(true);
 
       setSearchParams(
@@ -193,32 +339,12 @@ function Treatments() {
 
 
   // =====================================================
-  // DOCTORS
-  // =====================================================
-
-  const doctors =
-    useMemo(() => {
-
-      return [
-        ...new Set(
-          treatments
-            .map(
-              (item) =>
-                item.doctor_name
-            )
-            .filter(Boolean)
-        ),
-      ];
-
-    }, [treatments]);
-
-
-  // =====================================================
   // STATISTICS
   // =====================================================
 
   const total =
     treatments.length;
+
 
   const completed =
     treatments.filter(
@@ -227,18 +353,20 @@ function Treatments() {
         "COMPLETED"
     ).length;
 
-  const scheduled =
-    treatments.filter(
-      (item) =>
-        item.status ===
-        "SCHEDULED"
-    ).length;
 
   const inProgress =
     treatments.filter(
       (item) =>
         item.status ===
         "IN_PROGRESS"
+    ).length;
+
+
+  const cancelled =
+    treatments.filter(
+      (item) =>
+        item.status ===
+        "CANCELLED"
     ).length;
 
 
@@ -324,9 +452,11 @@ function Treatments() {
           "Are you sure you want to delete this treatment?"
         );
 
+
       if (!confirmed) {
         return;
       }
+
 
       try {
 
@@ -337,16 +467,20 @@ function Treatments() {
           treatment.id
         );
 
+
         await deleteTreatment(
           treatment.id
         );
+
 
         console.log(
           "Treatment deleted successfully:",
           treatment.id
         );
 
+
         await loadTreatments();
+
 
       } catch (err) {
 
@@ -354,6 +488,7 @@ function Treatments() {
           "Failed to delete treatment:",
           err
         );
+
 
         setError(
           err.message ||
@@ -436,11 +571,11 @@ function Treatments() {
           <div className={card}>
 
             <h3>
-              Scheduled
+              In Progress
             </h3>
 
             <p className="text-3xl font-bold mt-3">
-              {scheduled}
+              {inProgress}
             </p>
 
           </div>
@@ -449,11 +584,11 @@ function Treatments() {
           <div className={card}>
 
             <h3>
-              In Progress
+              Cancelled
             </h3>
 
             <p className="text-3xl font-bold mt-3">
-              {inProgress}
+              {cancelled}
             </p>
 
           </div>
@@ -476,11 +611,8 @@ function Treatments() {
             ================================================= */}
 
         <TreatmentFilters
-          doctor={doctor}
-          setDoctor={setDoctor}
           status={status}
           setStatus={setStatus}
-          doctors={doctors}
         />
 
 
@@ -503,7 +635,6 @@ function Treatments() {
           <TreatmentTable
             treatments={treatments}
             search={search}
-            doctor={doctor}
             status={status}
             onEdit={handleEdit}
             onDelete={handleDelete}

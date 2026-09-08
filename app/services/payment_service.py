@@ -12,6 +12,12 @@ from app.crud.payment import (
 from app.models.payment import Payment
 from app.models.patient import Patient
 from app.models.visit import Visit
+from app.models.appointment import Appointment
+
+from app.models.enums import (
+    AppointmentStatus,
+    VisitStatus,
+)
 
 from app.schemas.payment import (
     PaymentCreate,
@@ -22,6 +28,120 @@ from app.services.outstanding_service import (
     refresh_outstanding_for_visit,
 )
 
+
+# =========================================================
+# APPOINTMENT STATUS SYNCHRONIZATION
+# =========================================================
+
+def sync_appointment_status_from_visit_and_payment(
+    db: Session,
+    visit: Visit,
+    tenant_id: int,
+):
+    """
+    Automatically synchronize appointment status.
+
+    Business rule:
+
+        Visit COMPLETED
+        +
+        Payment fully paid
+        =
+        Appointment COMPLETED
+
+    Otherwise:
+
+        Appointment remains SCHEDULED.
+
+    This makes the workflow easy for clinic staff.
+    They do not need to manually change appointment status.
+    """
+
+    # -----------------------------------------------------
+    # Visit must have an appointment
+    # -----------------------------------------------------
+
+    if visit.appointment_id is None:
+        return
+
+    # -----------------------------------------------------
+    # Find appointment
+    # -----------------------------------------------------
+
+    appointment = (
+        db.query(Appointment)
+        .filter(
+            Appointment.id == visit.appointment_id,
+            Appointment.tenant_id == tenant_id,
+        )
+        .first()
+    )
+
+    if appointment is None:
+        return
+
+    # -----------------------------------------------------
+    # Calculate total paid for this visit
+    # -----------------------------------------------------
+
+    total_paid = (
+        db.query(
+            func.coalesce(
+                func.sum(Payment.amount),
+                0,
+            )
+        )
+        .filter(
+            Payment.visit_id == visit.id,
+            Payment.tenant_id == tenant_id,
+        )
+        .scalar()
+    )
+
+    total_paid = float(total_paid or 0)
+
+    # -----------------------------------------------------
+    # Calculate visit charge
+    # -----------------------------------------------------
+
+    visit_charge = float(
+        visit.charge or 0
+    )
+
+    # -----------------------------------------------------
+    # Determine whether payment is complete
+    # -----------------------------------------------------
+
+    payment_completed = (
+        total_paid >= visit_charge
+    )
+
+    # -----------------------------------------------------
+    # FINAL BUSINESS RULE
+    # -----------------------------------------------------
+
+    if (
+        visit.status == VisitStatus.COMPLETED
+        and payment_completed
+    ):
+        appointment.status = (
+            AppointmentStatus.COMPLETED
+        )
+
+    else:
+        # If treatment is not complete OR payment is
+        # not fully paid, appointment remains pending.
+        appointment.status = (
+            AppointmentStatus.SCHEDULED
+        )
+
+    db.commit()
+    db.refresh(appointment)
+
+
+# =========================================================
+# CREATE PAYMENT
+# =========================================================
 
 def create_payment_service(
     db: Session,
@@ -39,7 +159,15 @@ def create_payment_service(
     6. Payment amount is positive
     7. Payment does not exceed remaining balance
 
-    After creating the payment, Outstanding is refreshed.
+    After creating the payment:
+
+        Outstanding is refreshed.
+
+    Then:
+
+        If Visit is COMPLETED
+        AND payment is fully paid
+        Appointment becomes COMPLETED automatically.
     """
 
     # ----------------------------------
@@ -101,7 +229,12 @@ def create_payment_service(
     # ----------------------------------
 
     already_paid = (
-        db.query(func.coalesce(func.sum(Payment.amount), 0))
+        db.query(
+            func.coalesce(
+                func.sum(Payment.amount),
+                0,
+            )
+        )
         .filter(
             Payment.visit_id == visit.id,
             Payment.tenant_id == tenant_id,
@@ -109,13 +242,18 @@ def create_payment_service(
         .scalar()
     )
 
-    already_paid = float(already_paid or 0)
+    already_paid = float(
+        already_paid or 0
+    )
 
     # ----------------------------------
     # Calculate remaining balance
     # ----------------------------------
 
-    remaining_balance = float(visit.charge) - already_paid
+    remaining_balance = (
+        float(visit.charge)
+        - already_paid
+    )
 
     # ----------------------------------
     # Prevent overpayment
@@ -152,8 +290,22 @@ def create_payment_service(
         tenant_id=tenant_id,
     )
 
+    # ----------------------------------
+    # AUTOMATIC APPOINTMENT COMPLETION
+    # ----------------------------------
+
+    sync_appointment_status_from_visit_and_payment(
+        db=db,
+        visit=visit,
+        tenant_id=tenant_id,
+    )
+
     return payment
 
+
+# =========================================================
+# GET ONE PAYMENT
+# =========================================================
 
 def get_payment_service(
     db: Session,
@@ -182,6 +334,10 @@ def get_payment_service(
     return payment
 
 
+# =========================================================
+# LIST PAYMENTS
+# =========================================================
+
 def list_payments_service(
     db: Session,
     tenant_id: int,
@@ -196,6 +352,10 @@ def list_payments_service(
     )
 
 
+# =========================================================
+# UPDATE PAYMENT
+# =========================================================
+
 def update_payment_service(
     db: Session,
     payment: Payment,
@@ -204,6 +364,12 @@ def update_payment_service(
 ):
     """
     Update a payment while preventing overpayment.
+
+    After updating:
+
+        Outstanding is refreshed.
+
+        Appointment status is recalculated automatically.
     """
 
     # ----------------------------------
@@ -234,11 +400,16 @@ def update_payment_service(
 
     # ----------------------------------
     # Calculate other payments
-    # excluding the payment being edited
+    # excluding current payment
     # ----------------------------------
 
     other_payments = (
-        db.query(func.coalesce(func.sum(Payment.amount), 0))
+        db.query(
+            func.coalesce(
+                func.sum(Payment.amount),
+                0,
+            )
+        )
         .filter(
             Payment.visit_id == payment.visit_id,
             Payment.tenant_id == tenant_id,
@@ -247,14 +418,17 @@ def update_payment_service(
         .scalar()
     )
 
-    other_payments = float(other_payments or 0)
+    other_payments = float(
+        other_payments or 0
+    )
 
     # ----------------------------------
     # Calculate remaining balance
     # ----------------------------------
 
     remaining_balance = (
-        float(payment.visit.charge) - other_payments
+        float(payment.visit.charge)
+        - other_payments
     )
 
     # ----------------------------------
@@ -287,8 +461,36 @@ def update_payment_service(
         tenant_id=tenant_id,
     )
 
+    # ----------------------------------
+    # Refresh visit object
+    # ----------------------------------
+
+    visit = (
+        db.query(Visit)
+        .filter(
+            Visit.id == old_visit_id,
+            Visit.tenant_id == tenant_id,
+        )
+        .first()
+    )
+
+    # ----------------------------------
+    # AUTOMATIC APPOINTMENT STATUS
+    # ----------------------------------
+
+    if visit is not None:
+        sync_appointment_status_from_visit_and_payment(
+            db=db,
+            visit=visit,
+            tenant_id=tenant_id,
+        )
+
     return updated_payment
 
+
+# =========================================================
+# DELETE PAYMENT
+# =========================================================
 
 def delete_payment_service(
     db: Session,
@@ -296,8 +498,16 @@ def delete_payment_service(
     tenant_id: int,
 ):
     """
-    Delete payment and automatically recalculate
-    the Outstanding amount for the related visit.
+    Delete payment.
+
+    After deleting:
+
+        Outstanding is recalculated.
+
+        Appointment status is recalculated automatically.
+
+    Therefore, if a fully-paid appointment becomes unpaid,
+    it will automatically return to Pending.
     """
 
     # ----------------------------------
@@ -309,7 +519,7 @@ def delete_payment_service(
             "Payment does not belong to this clinic."
         )
 
-    # Save visit ID before deleting payment
+    # Save visit ID before deleting
     visit_id = payment.visit_id
 
     # ----------------------------------
@@ -330,5 +540,29 @@ def delete_payment_service(
         visit_id=visit_id,
         tenant_id=tenant_id,
     )
+
+    # ----------------------------------
+    # Get visit
+    # ----------------------------------
+
+    visit = (
+        db.query(Visit)
+        .filter(
+            Visit.id == visit_id,
+            Visit.tenant_id == tenant_id,
+        )
+        .first()
+    )
+
+    # ----------------------------------
+    # AUTOMATIC APPOINTMENT STATUS
+    # ----------------------------------
+
+    if visit is not None:
+        sync_appointment_status_from_visit_and_payment(
+            db=db,
+            visit=visit,
+            tenant_id=tenant_id,
+        )
 
     return None

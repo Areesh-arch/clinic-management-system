@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.crud.appointment import (
@@ -9,35 +10,14 @@ from app.crud.appointment import (
     update_appointment,
     delete_appointment,
 )
-
 from app.models.appointment import Appointment
+from app.models.enums import AppointmentStatus
 from app.models.patient import Patient
 from app.models.user import User
-
-from app.models.enums import AppointmentStatus
-
 from app.schemas.appointment import (
     AppointmentCreate,
     AppointmentUpdate,
 )
-
-
-# =========================================================
-# HELPERS
-# =========================================================
-
-def _get_tenant_id(current_user: User) -> int:
-    """
-    Return the clinic/tenant belonging to the
-    authenticated user.
-    """
-
-    if current_user.tenant_id is None:
-        raise ValueError(
-            "User is not associated with a clinic."
-        )
-
-    return current_user.tenant_id
 
 
 def _validate_patient(
@@ -45,7 +25,6 @@ def _validate_patient(
     patient_id: int,
     tenant_id: int,
 ) -> Patient:
-
     patient = (
         db.query(Patient)
         .filter(
@@ -56,8 +35,9 @@ def _validate_patient(
     )
 
     if patient is None:
-        raise ValueError(
-            "Patient not found."
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Patient not found in the selected clinic.",
         )
 
     return patient
@@ -66,28 +46,26 @@ def _validate_patient(
 def _validate_future_datetime(
     appointment_date,
     appointment_time,
-) -> datetime:
-
+) -> None:
     appointment_datetime = datetime.combine(
         appointment_date,
         appointment_time,
     )
 
     if appointment_datetime <= datetime.now():
-        raise ValueError(
-            "Appointment date and time must be in the future."
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Appointment date and time must be in the future.",
         )
-
-    return appointment_datetime
 
 
 def _validate_duration(
     duration_minutes: int,
 ) -> None:
-
     if duration_minutes <= 0:
-        raise ValueError(
-            "Appointment duration must be greater than zero."
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Duration must be greater than zero.",
         )
 
 
@@ -95,454 +73,537 @@ def _check_overlap(
     db: Session,
     tenant_id: int,
     appointment_date,
-    new_start: datetime,
-    new_duration: int,
+    appointment_time,
+    duration_minutes: int,
     exclude_appointment_id: int | None = None,
 ) -> None:
-
-    new_end = (
-        new_start
-        + timedelta(
-            minutes=new_duration,
-        )
-    )
-
-    query = (
+    appointments = (
         db.query(Appointment)
         .filter(
             Appointment.tenant_id == tenant_id,
             Appointment.appointment_date == appointment_date,
-            Appointment.status == AppointmentStatus.SCHEDULED,
         )
+        .all()
     )
 
-    if exclude_appointment_id is not None:
-        query = query.filter(
-            Appointment.id != exclude_appointment_id,
-        )
+    new_start = datetime.combine(
+        appointment_date,
+        appointment_time,
+    )
 
-    existing_appointments = query.all()
+    new_end = new_start + timedelta(
+        minutes=duration_minutes
+    )
 
-    for existing in existing_appointments:
+    for appointment in appointments:
+        if (
+            exclude_appointment_id is not None
+            and appointment.id == exclude_appointment_id
+        ):
+            continue
+
+        # Cancelled and no-show appointments should not
+        # block a new appointment time.
+        if appointment.status in (
+            AppointmentStatus.CANCELLED,
+            AppointmentStatus.NO_SHOW,
+        ):
+            continue
 
         existing_start = datetime.combine(
-            existing.appointment_date,
-            existing.appointment_time,
+            appointment.appointment_date,
+            appointment.appointment_time,
         )
 
-        existing_end = (
-            existing_start
-            + timedelta(
-                minutes=existing.duration_minutes,
-            )
+        existing_end = existing_start + timedelta(
+            minutes=appointment.duration_minutes
         )
 
         if (
             new_start < existing_end
             and new_end > existing_start
         ):
-            raise ValueError(
-                "The clinic already has an overlapping appointment."
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Another appointment already exists during this time.",
             )
 
 
 def _has_previous_appointment(
     db: Session,
-    patient_id: int,
     tenant_id: int,
+    patient_id: int,
+    appointment_date,
+    exclude_appointment_id: int | None = None,
 ) -> bool:
-    """
-    Check whether this patient has had a previous
-    appointment in the same clinic.
-
-    Tenant filtering is mandatory here so an appointment
-    from another clinic can never make this appointment
-    a follow-up.
-    """
-
-    previous_appointment = (
+    query = (
         db.query(Appointment)
         .filter(
-            Appointment.patient_id == patient_id,
             Appointment.tenant_id == tenant_id,
+            Appointment.patient_id == patient_id,
+            Appointment.appointment_date < appointment_date,
         )
-        .first()
     )
 
-    return previous_appointment is not None
+    if exclude_appointment_id is not None:
+        query = query.filter(
+            Appointment.id != exclude_appointment_id
+        )
+
+    return query.first() is not None
 
 
 def _determine_follow_up(
     db: Session,
-    patient_id: int,
     tenant_id: int,
+    patient_id: int,
+    appointment_date,
     requested_value: bool | None,
+    exclude_appointment_id: int | None = None,
 ) -> bool:
-    """
-    Determine the final follow-up value.
-
-    Rules:
-
-    requested_value is True
-        -> staff explicitly selected follow-up
-        -> return True
-
-    requested_value is False
-        -> staff explicitly removed follow-up
-        -> return False
-
-    requested_value is None
-        -> no manual decision
-        -> automatically detect from patient history
-    """
-
-    if requested_value is True:
-        return True
-
-    if requested_value is False:
-        return False
-
-    return _has_previous_appointment(
+    previous_appointment = _has_previous_appointment(
         db=db,
-        patient_id=patient_id,
         tenant_id=tenant_id,
+        patient_id=patient_id,
+        appointment_date=appointment_date,
+        exclude_appointment_id=exclude_appointment_id,
     )
+
+    if requested_value is None:
+        return previous_appointment
+
+    return bool(requested_value)
+
+
+def _get_patient_display_data(
+    db: Session,
+    appointment: Appointment,
+) -> dict:
+    patient = (
+        db.query(Patient)
+        .filter(
+            Patient.id == appointment.patient_id,
+            Patient.tenant_id == appointment.tenant_id,
+        )
+        .first()
+    )
+
+    if patient is None:
+        return {
+            "patient_name": None,
+            "medical_record_number": None,
+        }
+
+    patient_name = " ".join(
+        part
+        for part in [
+            patient.first_name,
+            patient.last_name,
+        ]
+        if part
+    ).strip()
+
+    return {
+        "patient_name": patient_name or None,
+        "medical_record_number": patient.medical_record_number,
+    }
+
+
+def _attach_patient_data(
+    db: Session,
+    appointment: Appointment,
+) -> Appointment:
+    patient_data = _get_patient_display_data(
+        db,
+        appointment,
+    )
+
+    appointment.patient_name = patient_data["patient_name"]
+    appointment.medical_record_number = (
+        patient_data["medical_record_number"]
+    )
+
+    return appointment
+
+
+def _attach_patient_data_to_list(
+    db: Session,
+    appointments: list[Appointment],
+) -> list[Appointment]:
+    for appointment in appointments:
+        _attach_patient_data(
+            db,
+            appointment,
+        )
+
+    return appointments
 
 
 # =========================================================
-# CREATE APPOINTMENT
+# STATUS VALIDATION
+# =========================================================
+
+def _validate_status_change(
+    current_status: AppointmentStatus,
+    new_status: AppointmentStatus,
+) -> None:
+    """
+    Validate allowed appointment status transitions.
+
+    Normal appointment lifecycle:
+
+        SCHEDULED
+            ├── COMPLETED
+            ├── CANCELLED
+            └── NO_SHOW
+
+    Once an appointment reaches a final state, it cannot
+    be changed to another final state through the normal
+    appointment update endpoint.
+    """
+
+    if current_status == new_status:
+        return
+
+    if current_status == AppointmentStatus.SCHEDULED:
+        allowed_statuses = {
+            AppointmentStatus.COMPLETED,
+            AppointmentStatus.CANCELLED,
+            AppointmentStatus.NO_SHOW,
+        }
+
+        if new_status not in allowed_statuses:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Appointment cannot be changed from "
+                    f"{current_status.value} to {new_status.value}."
+                ),
+            )
+
+        return
+
+    if current_status == AppointmentStatus.COMPLETED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A completed appointment cannot be changed to another status.",
+        )
+
+    if current_status == AppointmentStatus.CANCELLED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A cancelled appointment cannot be changed to another status.",
+        )
+
+    if current_status == AppointmentStatus.NO_SHOW:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A no-show appointment cannot be changed to another status.",
+        )
+
+
+# =========================================================
+# CREATE
 # =========================================================
 
 def create_appointment_service(
     db: Session,
     appointment_data: AppointmentCreate,
     current_user: User,
+    tenant_id: int,
 ) -> Appointment:
-
-    # -----------------------------------------------------
-    # 1. Get clinic from logged-in user
-    # -----------------------------------------------------
-
-    tenant_id = _get_tenant_id(
-        current_user,
-    )
-
-    # -----------------------------------------------------
-    # 2. Validate patient belongs to this clinic
-    # -----------------------------------------------------
-
     _validate_patient(
         db=db,
         patient_id=appointment_data.patient_id,
         tenant_id=tenant_id,
     )
 
-    # -----------------------------------------------------
-    # 3. Validate future date/time
-    # -----------------------------------------------------
-
-    appointment_datetime = _validate_future_datetime(
+    _validate_future_datetime(
         appointment_data.appointment_date,
         appointment_data.appointment_time,
     )
 
-    # -----------------------------------------------------
-    # 4. Validate duration
-    # -----------------------------------------------------
-
     _validate_duration(
-        appointment_data.duration_minutes,
+        appointment_data.duration_minutes
     )
-
-    # -----------------------------------------------------
-    # 5. Prevent overlapping clinic appointments
-    # -----------------------------------------------------
 
     _check_overlap(
         db=db,
         tenant_id=tenant_id,
         appointment_date=appointment_data.appointment_date,
-        new_start=appointment_datetime,
-        new_duration=appointment_data.duration_minutes,
+        appointment_time=appointment_data.appointment_time,
+        duration_minutes=appointment_data.duration_minutes,
     )
 
-    # -----------------------------------------------------
-    # 6. Automatically determine follow-up
-    #
-    # None = automatic
-    # True = force follow-up
-    # False = force new appointment
-    # -----------------------------------------------------
-
-    final_is_follow_up = _determine_follow_up(
+    follow_up = _determine_follow_up(
         db=db,
-        patient_id=appointment_data.patient_id,
         tenant_id=tenant_id,
+        patient_id=appointment_data.patient_id,
+        appointment_date=appointment_data.appointment_date,
         requested_value=appointment_data.is_follow_up,
     )
 
-    # -----------------------------------------------------
-    # 7. Build final appointment data
-    # -----------------------------------------------------
-
-    final_appointment_data = appointment_data.model_copy(
+    data = appointment_data.model_copy(
         update={
-            "is_follow_up": final_is_follow_up,
+            "is_follow_up": follow_up,
         }
     )
 
-    # -----------------------------------------------------
-    # 8. Create appointment
-    # -----------------------------------------------------
-
-    return create_appointment(
+    appointment = create_appointment(
         db=db,
-        appointment_data=final_appointment_data,
+        appointment_data=data,
         tenant_id=tenant_id,
+    )
+
+    return _attach_patient_data(
+        db,
+        appointment,
     )
 
 
 # =========================================================
-# GET APPOINTMENT
+# GET
 # =========================================================
 
 def get_appointment_service(
     db: Session,
     appointment_id: int,
     current_user: User,
+    tenant_id: int,
 ) -> Appointment:
-
-    # -----------------------------------------------------
-    # SUPER ADMIN
-    # -----------------------------------------------------
-
-    if current_user.role == "SUPER_ADMIN" or (
-        getattr(current_user.role, "name", None)
-        == "SUPER_ADMIN"
-    ):
-        appointment = get_appointment_by_id(
-            db=db,
-            appointment_id=appointment_id,
-        )
-
-        if appointment is None:
-            raise ValueError(
-                "Appointment not found."
-            )
-
-        return appointment
-
-    # -----------------------------------------------------
-    # NORMAL CLINIC USER
-    # -----------------------------------------------------
-
-    tenant_id = _get_tenant_id(
-        current_user,
-    )
-
-    appointment = (
-        db.query(Appointment)
-        .filter(
-            Appointment.id == appointment_id,
-            Appointment.tenant_id == tenant_id,
-        )
-        .first()
+    appointment = get_appointment_by_id(
+        db=db,
+        appointment_id=appointment_id,
     )
 
     if appointment is None:
-        raise ValueError(
-            "Appointment not found."
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Appointment not found.",
         )
 
-    return appointment
+    if appointment.tenant_id != tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Appointment not found in the selected clinic.",
+        )
+
+    return _attach_patient_data(
+        db,
+        appointment,
+    )
 
 
 # =========================================================
-# LIST APPOINTMENTS
+# LIST
 # =========================================================
 
 def list_appointments_service(
     db: Session,
     current_user: User,
+    tenant_id: int,
 ) -> list[Appointment]:
-
-    # -----------------------------------------------------
-    # SUPER ADMIN
-    # -----------------------------------------------------
-
-    if current_user.role == "SUPER_ADMIN" or (
-        getattr(current_user.role, "name", None)
-        == "SUPER_ADMIN"
-    ):
-        return (
-            db.query(Appointment)
-            .order_by(
-                Appointment.appointment_date,
-                Appointment.appointment_time,
-            )
-            .all()
-        )
-
-    # -----------------------------------------------------
-    # CLINIC USER
-    # -----------------------------------------------------
-
-    tenant_id = _get_tenant_id(
-        current_user,
-    )
-
-    return get_appointments(
+    appointments = get_appointments(
         db=db,
         tenant_id=tenant_id,
     )
 
+    return _attach_patient_data_to_list(
+        db,
+        appointments,
+    )
+
 
 # =========================================================
-# UPDATE APPOINTMENT
+# UPDATE
 # =========================================================
 
 def update_appointment_service(
     db: Session,
-    appointment: Appointment,
+    appointment_id: int,
     appointment_data: AppointmentUpdate,
     current_user: User,
+    tenant_id: int,
 ) -> Appointment:
+    appointment = get_appointment_by_id(
+        db=db,
+        appointment_id=appointment_id,
+    )
 
-    # -----------------------------------------------------
-    # Make sure appointment belongs to user's clinic
-    # -----------------------------------------------------
-
-    if current_user.role != "SUPER_ADMIN" and (
-        getattr(current_user.role, "name", None)
-        != "SUPER_ADMIN"
-    ):
-
-        tenant_id = _get_tenant_id(
-            current_user,
+    if appointment is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Appointment not found.",
         )
 
-        if appointment.tenant_id != tenant_id:
-            raise ValueError(
-                "Appointment not found."
-            )
-
-    # -----------------------------------------------------
-    # Values after update
-    # -----------------------------------------------------
+    if appointment.tenant_id != tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Appointment not found in the selected clinic.",
+        )
 
     update_data = appointment_data.model_dump(
         exclude_unset=True,
     )
 
-    new_patient_id = update_data.get(
+    # -----------------------------------------------------
+    # STATUS UPDATE
+    # -----------------------------------------------------
+
+    if "status" in update_data:
+        new_status = update_data["status"]
+
+        _validate_status_change(
+            current_status=appointment.status,
+            new_status=new_status,
+        )
+
+    # -----------------------------------------------------
+    # PATIENT
+    # -----------------------------------------------------
+
+    patient_id = update_data.get(
         "patient_id",
         appointment.patient_id,
     )
 
-    new_date = update_data.get(
+    _validate_patient(
+        db=db,
+        patient_id=patient_id,
+        tenant_id=tenant_id,
+    )
+
+    # -----------------------------------------------------
+    # DATE / TIME / DURATION
+    # -----------------------------------------------------
+
+    appointment_date = update_data.get(
         "appointment_date",
         appointment.appointment_date,
     )
 
-    new_time = update_data.get(
+    appointment_time = update_data.get(
         "appointment_time",
         appointment.appointment_time,
     )
 
-    new_duration = update_data.get(
+    duration_minutes = update_data.get(
         "duration_minutes",
         appointment.duration_minutes,
     )
 
-    new_status = update_data.get(
-        "status",
-        appointment.status,
-    )
-
-    # -----------------------------------------------------
-    # Validate patient
-    # -----------------------------------------------------
-
-    _validate_patient(
-        db=db,
-        patient_id=new_patient_id,
-        tenant_id=appointment.tenant_id,
-    )
-
-    # -----------------------------------------------------
-    # Validate duration
-    # -----------------------------------------------------
+    # IMPORTANT:
+    # Only validate future date/time when the appointment
+    # date or time is actually being changed.
+    #
+    # This allows an old appointment to be marked:
+    #   - NO_SHOW
+    #   - CANCELLED
+    #   - COMPLETED
+    #
+    # without triggering the "must be in the future" error.
+    if (
+        "appointment_date" in update_data
+        or "appointment_time" in update_data
+    ):
+        _validate_future_datetime(
+            appointment_date,
+            appointment_time,
+        )
 
     _validate_duration(
-        new_duration,
+        duration_minutes
     )
 
     # -----------------------------------------------------
-    # Validate future schedule
+    # OVERLAP
     # -----------------------------------------------------
 
-    new_start = _validate_future_datetime(
-        new_date,
-        new_time,
-    )
-
-    # -----------------------------------------------------
-    # Check overlap only for scheduled appointments
-    # -----------------------------------------------------
-
-    if new_status == AppointmentStatus.SCHEDULED:
-
+    # Only check overlap when scheduling information changes.
+    if (
+        "appointment_date" in update_data
+        or "appointment_time" in update_data
+        or "duration_minutes" in update_data
+        or "patient_id" in update_data
+    ):
         _check_overlap(
             db=db,
-            tenant_id=appointment.tenant_id,
-            appointment_date=new_date,
-            new_start=new_start,
-            new_duration=new_duration,
+            tenant_id=tenant_id,
+            appointment_date=appointment_date,
+            appointment_time=appointment_time,
+            duration_minutes=duration_minutes,
             exclude_appointment_id=appointment.id,
         )
 
     # -----------------------------------------------------
-    # Update
+    # FOLLOW-UP
     # -----------------------------------------------------
 
-    return update_appointment(
+    if (
+        "patient_id" in update_data
+        or "appointment_date" in update_data
+        or "is_follow_up" in update_data
+    ):
+        requested_follow_up = update_data.get(
+            "is_follow_up",
+            appointment.is_follow_up,
+        )
+
+        update_data["is_follow_up"] = _determine_follow_up(
+            db=db,
+            tenant_id=tenant_id,
+            patient_id=patient_id,
+            appointment_date=appointment_date,
+            requested_value=requested_follow_up,
+            exclude_appointment_id=appointment.id,
+        )
+
+    # -----------------------------------------------------
+    # APPLY UPDATE
+    # -----------------------------------------------------
+
+    updated_data = AppointmentUpdate(
+        **update_data
+    )
+
+    appointment = update_appointment(
         db=db,
         appointment=appointment,
-        appointment_data=appointment_data,
+        appointment_data=updated_data,
+    )
+
+    return _attach_patient_data(
+        db,
+        appointment,
     )
 
 
 # =========================================================
-# DELETE APPOINTMENT
+# DELETE
 # =========================================================
 
 def delete_appointment_service(
     db: Session,
-    appointment: Appointment,
+    appointment_id: int,
     current_user: User,
+    tenant_id: int,
 ) -> None:
+    appointment = get_appointment_by_id(
+        db=db,
+        appointment_id=appointment_id,
+    )
 
-    # -----------------------------------------------------
-    # Verify tenant access
-    # -----------------------------------------------------
-
-    if current_user.role != "SUPER_ADMIN" and (
-        getattr(current_user.role, "name", None)
-        != "SUPER_ADMIN"
-    ):
-
-        tenant_id = _get_tenant_id(
-            current_user,
+    if appointment is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Appointment not found.",
         )
 
-        if appointment.tenant_id != tenant_id:
-            raise ValueError(
-                "Appointment not found."
-            )
-
-    # -----------------------------------------------------
-    # Delete
-    # -----------------------------------------------------
+    if appointment.tenant_id != tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Appointment not found in the selected clinic.",
+        )
 
     delete_appointment(
         db=db,

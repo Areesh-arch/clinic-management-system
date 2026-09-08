@@ -1,30 +1,27 @@
 function TreatmentStatusBadge({
   status,
 }) {
-
   const styles = {
     COMPLETED:
       "bg-green-100 text-green-700",
 
-    SCHEDULED:
-      "bg-blue-100 text-blue-700",
-
     IN_PROGRESS:
       "bg-yellow-100 text-yellow-700",
-  };
 
+    CANCELLED:
+      "bg-red-100 text-red-700",
+  };
 
   const labels = {
     COMPLETED:
       "Completed",
 
-    SCHEDULED:
-      "Scheduled",
-
     IN_PROGRESS:
       "In Progress",
-  };
 
+    CANCELLED:
+      "Cancelled",
+  };
 
   return (
     <span
@@ -37,6 +34,5 @@ function TreatmentStatusBadge({
     </span>
   );
 }
-
 
 export default TreatmentStatusBadge;

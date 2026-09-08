@@ -1,3 +1,4 @@
+
 function AppointmentFilters({
   status,
   setStatus,
@@ -32,17 +33,39 @@ function AppointmentFilters({
       return "Cancelled";
     }
 
+    if (
+      normalized === "NO_SHOW" ||
+      normalized === "NO-SHOW" ||
+      normalized === "NOSHOW"
+    ) {
+      return "No Show";
+    }
+
     return value;
   };
 
+  // ==========================================
+  // FIXED STATUS OPTIONS
+  // ==========================================
+
+  const defaultStatuses = [
+    "PENDING",
+    "COMPLETED",
+    "CANCELLED",
+    "NO_SHOW",
+  ];
+
+  // Combine backend statuses with our fixed statuses
+  const allStatuses = [
+    ...new Set([
+      ...defaultStatuses,
+      ...statuses,
+    ]),
+  ];
+
   return (
-    <div
-      className="
-        flex
-        flex-wrap
-        gap-4
-      "
-    >
+    <div className="flex flex-wrap gap-4">
+
       {/* ====================================
           STATUS
       ==================================== */}
@@ -70,7 +93,7 @@ function AppointmentFilters({
           All Status
         </option>
 
-        {statuses.map((statusValue) => (
+        {allStatuses.map((statusValue) => (
           <option
             key={statusValue}
             value={statusValue}
@@ -115,6 +138,7 @@ function AppointmentFilters({
           Tomorrow
         </option>
       </select>
+
     </div>
   );
 }

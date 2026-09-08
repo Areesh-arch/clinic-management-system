@@ -64,6 +64,13 @@ class AppointmentResponse(BaseModel):
 
     patient_id: int
 
+    # Patient information is returned directly
+    # with the appointment so Super Admin can see
+    # patients belonging to different tenants.
+    patient_name: str | None = None
+
+    medical_record_number: str | None = None
+
     appointment_date: date
 
     appointment_time: time

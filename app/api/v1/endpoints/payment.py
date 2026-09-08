@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.api.permissions import require_roles
+from app.api.tenant_context import get_effective_tenant_id
 
 from app.models.enums import UserRole
 from app.models.user import User
@@ -54,12 +55,15 @@ def create_payment(
             UserRole.SUPER_ADMIN,
         )
     ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
 ):
     try:
         return create_payment_service(
             db=db,
             payment_data=payment_data,
-            tenant_id=current_user.tenant_id,
+            tenant_id=tenant_id,
         )
 
     except ValueError as e:
@@ -87,10 +91,13 @@ def list_payments(
             UserRole.SUPER_ADMIN,
         )
     ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
 ):
     return list_payments_service(
         db=db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=tenant_id,
     )
 
 
@@ -113,12 +120,15 @@ def get_payment(
             UserRole.SUPER_ADMIN,
         )
     ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
 ):
     try:
         return get_payment_service(
             db=db,
             payment_id=payment_id,
-            tenant_id=current_user.tenant_id,
+            tenant_id=tenant_id,
         )
 
     except ValueError as e:
@@ -148,19 +158,22 @@ def update_payment(
             UserRole.SUPER_ADMIN,
         )
     ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
 ):
     try:
         payment = get_payment_service(
             db=db,
             payment_id=payment_id,
-            tenant_id=current_user.tenant_id,
+            tenant_id=tenant_id,
         )
 
         return update_payment_service(
             db=db,
             payment=payment,
             payment_data=payment_data,
-            tenant_id=current_user.tenant_id,
+            tenant_id=tenant_id,
         )
 
     except ValueError as e:
@@ -189,18 +202,21 @@ def delete_payment(
             UserRole.SUPER_ADMIN,
         )
     ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
 ):
     try:
         payment = get_payment_service(
             db=db,
             payment_id=payment_id,
-            tenant_id=current_user.tenant_id,
+            tenant_id=tenant_id,
         )
 
         delete_payment_service(
             db=db,
             payment=payment,
-            tenant_id=current_user.tenant_id,
+            tenant_id=tenant_id,
         )
 
         return None

@@ -44,7 +44,6 @@ const roundTimeToNextFiveMinutes = (date = new Date()) => {
   rounded.setMilliseconds(0);
 
   const minutes = rounded.getMinutes();
-
   const nextFive = Math.ceil((minutes + 1) / 5) * 5;
 
   if (nextFive >= 60) {
@@ -58,6 +57,43 @@ const roundTimeToNextFiveMinutes = (date = new Date()) => {
 };
 
 // ======================================================
+// STATUS HELPERS
+// ======================================================
+
+const normalizeStatus = (value) => {
+  if (!value) {
+    return "";
+  }
+
+  return String(value).trim().toLowerCase();
+};
+
+const backendStatusToFormStatus = (value) => {
+  const normalized = normalizeStatus(value);
+
+  switch (normalized) {
+    case "scheduled":
+    case "pending":
+      return "scheduled";
+
+    case "completed":
+      return "completed";
+
+    case "cancelled":
+    case "canceled":
+      return "cancelled";
+
+    case "no_show":
+    case "no-show":
+    case "noshow":
+      return "no_show";
+
+    default:
+      return "scheduled";
+  }
+};
+
+// ======================================================
 // INITIAL FORM DATA
 // ======================================================
 
@@ -66,18 +102,9 @@ const getInitialFormData = () => ({
   appointment_date: getLocalDateString(),
   appointment_time: roundTimeToNextFiveMinutes(),
   duration_minutes: 30,
+  status: "scheduled",
   reason: "",
-
-  // null means:
-  // "let the software determine whether this is a follow-up"
-  //
-  // true means:
-  // "staff explicitly selected follow-up"
-  //
-  // false means:
-  // "staff explicitly removed follow-up"
   is_follow_up: null,
-
   notes: "",
 });
 
@@ -94,16 +121,27 @@ function AppointmentForm({
   onSuccess,
   onCancel,
 }) {
-  const isEditMode = mode === "edit" || Boolean(appointment);
+  const isEditMode =
+    mode === "edit" || Boolean(appointment);
 
-  const [formData, setFormData] = useState(getInitialFormData);
+  const [formData, setFormData] = useState(
+    getInitialFormData
+  );
 
-  const [patientSearch, setPatientSearch] = useState("");
-  const [showPatientList, setShowPatientList] = useState(false);
+  const [patientSearch, setPatientSearch] =
+    useState("");
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [showPatientList, setShowPatientList] =
+    useState(false);
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
+
+  const [success, setSuccess] =
+    useState("");
 
   // ====================================================
   // NORMALIZE PATIENT LIST
@@ -153,7 +191,10 @@ function AppointmentForm({
           Number(formData.patient_id)
       ) || null
     );
-  }, [patientList, formData.patient_id]);
+  }, [
+    patientList,
+    formData.patient_id,
+  ]);
 
   // ====================================================
   // PATIENT NAME
@@ -192,17 +233,17 @@ function AppointmentForm({
 
     return appointmentList.some((item) => {
       if (
-        Number(item?.patient_id) !== selectedId
+        Number(item?.patient_id) !==
+        selectedId
       ) {
         return false;
       }
 
-      // When editing an existing appointment,
-      // don't count the appointment itself.
       if (
         appointment?.id !== null &&
         appointment?.id !== undefined &&
-        Number(item.id) === Number(appointment.id)
+        Number(item.id) ===
+          Number(appointment.id)
       ) {
         return false;
       }
@@ -216,9 +257,10 @@ function AppointmentForm({
   // ====================================================
 
   const filteredPatients = useMemo(() => {
-    const searchValue = patientSearch
-      .toLowerCase()
-      .trim();
+    const searchValue =
+      patientSearch
+        .toLowerCase()
+        .trim();
 
     if (!searchValue) {
       return patientList;
@@ -239,7 +281,10 @@ function AppointmentForm({
         mrn.includes(searchValue)
       );
     });
-  }, [patientList, patientSearch]);
+  }, [
+    patientList,
+    patientSearch,
+  ]);
 
   // ====================================================
   // POPULATE FORM
@@ -251,7 +296,8 @@ function AppointmentForm({
     // --------------------------------------------------
 
     if (!appointment) {
-      const initialData = getInitialFormData();
+      const initialData =
+        getInitialFormData();
 
       if (initialPatientId) {
         const numericPatientId =
@@ -260,8 +306,6 @@ function AppointmentForm({
         initialData.patient_id =
           numericPatientId;
 
-        // Automatically determine follow-up status
-        // from the current tenant's appointments.
         initialData.is_follow_up =
           hasPreviousAppointment(
             numericPatientId
@@ -279,7 +323,9 @@ function AppointmentForm({
 
       if (preselectedPatient) {
         setPatientSearch(
-          getPatientName(preselectedPatient)
+          getPatientName(
+            preselectedPatient
+          )
         );
       } else {
         setPatientSearch("");
@@ -300,7 +346,8 @@ function AppointmentForm({
       appointment.patient_id ?? "";
 
     setFormData({
-      patient_id: appointmentPatientId,
+      patient_id:
+        appointmentPatientId,
 
       appointment_date:
         appointment.appointment_date ?? "",
@@ -314,6 +361,13 @@ function AppointmentForm({
 
       duration_minutes:
         appointment.duration_minutes ?? 30,
+
+      // IMPORTANT:
+      // Preserve the existing appointment status.
+      status:
+        backendStatusToFormStatus(
+          appointment.status
+        ),
 
       reason:
         appointment.reason ?? "",
@@ -406,10 +460,9 @@ function AppointmentForm({
   // ====================================================
 
   const handlePatientSelect = (patient) => {
-    const patientId = Number(patient.id);
+    const patientId =
+      Number(patient.id);
 
-    // Automatically determine whether this patient
-    // already has an appointment.
     const automaticallyFollowUp =
       hasPreviousAppointment(patientId);
 
@@ -435,11 +488,13 @@ function AppointmentForm({
   // PATIENT SEARCH
   // ====================================================
 
-  const handlePatientSearchChange = (event) => {
-    const value = event.target.value;
+  const handlePatientSearchChange = (
+    event
+  ) => {
+    const value =
+      event.target.value;
 
     setPatientSearch(value);
-
     setShowPatientList(true);
 
     setFormData((previous) => ({
@@ -495,32 +550,36 @@ function AppointmentForm({
       return "Please enter the reason for the appointment.";
     }
 
-    const selectedDateTime = new Date(
-      `${formData.appointment_date}T${formData.appointment_time}:00`
-    );
+    const selectedDateTime =
+      new Date(
+        `${formData.appointment_date}T${formData.appointment_time}:00`
+      );
 
     if (
       Number.isNaN(
         selectedDateTime.getTime()
       )
     ) {
-      return (
-        "Please enter a valid appointment date and time."
-      );
+      return "Please enter a valid appointment date and time.";
     }
 
-    const now = new Date();
+    // Only enforce future time for NEW appointments.
+    // Existing appointments may be edited after their
+    // scheduled time.
+    if (!isEditMode) {
+      const now = new Date();
 
-    const minimumAllowed = new Date(
-      now.getTime() + 60 * 1000
-    );
+      const minimumAllowed =
+        new Date(
+          now.getTime() + 60 * 1000
+        );
 
-    if (
-      selectedDateTime <= minimumAllowed
-    ) {
-      return (
-        "Please select a future appointment date and time."
-      );
+      if (
+        selectedDateTime <=
+        minimumAllowed
+      ) {
+        return "Please select a future appointment date and time.";
+      }
     }
 
     const duration = Number(
@@ -531,9 +590,7 @@ function AppointmentForm({
       !Number.isFinite(duration) ||
       duration <= 0
     ) {
-      return (
-        "Please select a valid appointment duration."
-      );
+      return "Please select a valid appointment duration.";
     }
 
     return null;
@@ -579,11 +636,6 @@ function AppointmentForm({
         reason:
           formData.reason.trim(),
 
-        // IMPORTANT:
-        // We preserve true/false.
-        //
-        // null is also allowed so backend can
-        // automatically determine the status.
         is_follow_up:
           formData.is_follow_up,
 
@@ -591,6 +643,21 @@ function AppointmentForm({
           formData.notes.trim() ||
           null,
       };
+
+      // ------------------------------------------------
+      // IMPORTANT:
+      // Status is sent ONLY when editing.
+      //
+      // New appointments automatically receive
+      // "scheduled" from the backend.
+      // ------------------------------------------------
+
+      if (isEditMode) {
+        payload.status =
+          backendStatusToFormStatus(
+            formData.status
+          );
+      }
 
       console.log(
         isEditMode
@@ -874,7 +941,9 @@ function AppointmentForm({
               {patientSearch && (
                 <button
                   type="button"
-                  onClick={handleClearPatient}
+                  onClick={
+                    handleClearPatient
+                  }
                   disabled={loading}
                   className="
                     absolute right-3 top-1/2
@@ -1145,7 +1214,7 @@ function AppointmentForm({
                 mt-1 text-sm text-slate-500
               "
             >
-              Choose a future date and appointment time.
+              Choose a date and appointment time.
             </p>
           </div>
 
@@ -1155,7 +1224,6 @@ function AppointmentForm({
               md:grid-cols-2
             "
           >
-
             {/* DATE */}
 
             <div>
@@ -1181,7 +1249,11 @@ function AppointmentForm({
                   id="appointment_date"
                   name="appointment_date"
                   type="date"
-                  min={minimumDate}
+                  min={
+                    isEditMode
+                      ? undefined
+                      : minimumDate
+                  }
                   value={
                     formData.appointment_date
                   }
@@ -1217,7 +1289,11 @@ function AppointmentForm({
                   id="appointment_time"
                   name="appointment_time"
                   type="time"
-                  min={minimumTime}
+                  min={
+                    isEditMode
+                      ? undefined
+                      : minimumTime
+                  }
                   value={
                     formData.appointment_time
                   }
@@ -1232,7 +1308,9 @@ function AppointmentForm({
                   mt-1.5 text-xs text-slate-400
                 "
               >
-                Past appointment times cannot be selected.
+                {isEditMode
+                  ? "Update the appointment time if needed."
+                  : "Past appointment times cannot be selected."}
               </p>
             </div>
           </div>
@@ -1294,6 +1372,76 @@ function AppointmentForm({
             </select>
           </div>
         </div>
+
+        {/* STATUS */}
+
+        {isEditMode && (
+          <div className={sectionClass}>
+            <div className="mb-5">
+              <h3
+                className="
+                  text-base font-bold
+                  text-[#294C60]
+                "
+              >
+                Appointment Status
+              </h3>
+
+              <p
+                className="
+                  mt-1 text-sm text-slate-500
+                "
+              >
+                Update the current status of this appointment.
+              </p>
+            </div>
+
+            <div className="max-w-md">
+              <label
+                htmlFor="status"
+                className={labelClass}
+              >
+                Status
+              </label>
+
+              <select
+                id="status"
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                disabled={loading}
+                className="
+                  w-full rounded-2xl
+                  border border-slate-200
+                  bg-white px-4 py-3.5
+                  text-slate-700 outline-none
+                  transition
+                  focus:border-[#789078]
+                  focus:ring-4
+                  focus:ring-[#A3B18A]/15
+                  disabled:cursor-not-allowed
+                  disabled:bg-slate-50
+                "
+              >
+                <option value="scheduled">
+                  Pending
+                </option>
+
+                <option value="completed">
+                  Completed
+                </option>
+
+                <option value="cancelled">
+                  Cancelled
+                </option>
+
+                <option value="no_show">
+                  No Show
+                </option>
+              </select>
+            </div>
+          </div>
+        )}
 
         {/* DETAILS */}
 

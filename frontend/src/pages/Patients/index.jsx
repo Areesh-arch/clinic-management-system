@@ -648,7 +648,7 @@ setAppointments(appointmentList);
           search={search}
           status={status}
           gender={gender}
-          refreshKey={patients.length}
+          refreshKey={patients}
           onView={handleViewPatient}
           onEdit={handleEditPatient}
           onDelete={loadPatients}

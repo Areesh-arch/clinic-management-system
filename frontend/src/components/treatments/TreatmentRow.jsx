@@ -12,6 +12,10 @@ function TreatmentRow({
   onDelete,
 }) {
 
+  // =====================================================
+  // DATE
+  // =====================================================
+
   const formattedDate =
     treatment.date
       ? new Date(
@@ -27,40 +31,134 @@ function TreatmentRow({
       : "—";
 
 
+  // =====================================================
+  // PATIENT NAME
+  // =====================================================
+
+  const patientName =
+    treatment.patient_name ||
+    treatment.patient?.name ||
+    [
+      treatment.patient?.first_name,
+      treatment.patient?.last_name,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .trim() ||
+    "Unknown patient";
+
+
+  // =====================================================
+  // PATIENT MRN
+  // =====================================================
+
+  const patientMrn =
+    treatment.medical_record_number ||
+    treatment.patient_mrn ||
+    treatment.patient?.medical_record_number ||
+    treatment.patient?.mrn ||
+    "";
+
+
+  // =====================================================
+  // TREATMENT NAME
+  // =====================================================
+
+  const treatmentName =
+    treatment.treatment ||
+    treatment.diagnosis ||
+    "—";
+
+
+  // =====================================================
+  // COST
+  // =====================================================
+  // Pakistani currency uses whole PKR amounts here.
+  // No .00 will be displayed.
+  //
+  // Example:
+  // 5000.00 -> PKR 5,000
+  // 4999.00 -> PKR 4,999
+  // 4999.85 -> PKR 5,000
+  // =====================================================
+
+  const cost =
+    Math.round(
+      Number(
+        treatment.cost || 0
+      )
+    );
+
+
+  // =====================================================
+  // UI
+  // =====================================================
+
   return (
 
     <tr className="border-b hover:bg-gray-50">
 
+      {/* =================================================
+          PATIENT
+          ================================================= */}
+
       <td className="p-4">
-        {treatment.patient_name ||
-          "—"}
+
+        <div className="font-medium text-gray-900">
+          {patientName}
+        </div>
+
+        {patientMrn && (
+
+          <div className="text-sm text-gray-500 mt-1">
+            {patientMrn}
+          </div>
+
+        )}
+
       </td>
 
 
+      {/* =================================================
+          TREATMENT
+          ================================================= */}
+
       <td className="p-4">
-        {treatment.doctor_name ||
-          "—"}
+
+        {treatmentName}
+
       </td>
 
 
-      <td className="p-4">
-        {treatment.treatment ||
-          "—"}
-      </td>
-
+      {/* =================================================
+          DATE
+          ================================================= */}
 
       <td className="p-4">
+
         {formattedDate}
+
       </td>
 
 
-      <td className="p-4">
-        £
-        {Number(
-          treatment.cost || 0
-        ).toFixed(2)}
+      {/* =================================================
+          COST
+          ================================================= */}
+
+      <td className="p-4 font-medium">
+
+        PKR{" "}
+
+        {cost.toLocaleString(
+          "en-PK"
+        )}
+
       </td>
 
+
+      {/* =================================================
+          STATUS
+          ================================================= */}
 
       <td className="p-4">
 
@@ -72,6 +170,10 @@ function TreatmentRow({
 
       </td>
 
+
+      {/* =================================================
+          ACTIONS
+          ================================================= */}
 
       <td className="p-4">
 
@@ -115,6 +217,7 @@ function TreatmentRow({
       </td>
 
     </tr>
+
   );
 }
 

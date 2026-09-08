@@ -10,8 +10,8 @@ from sqlalchemy.orm import Session
 from app.api.features import require_feature
 from app.models.feature import Feature
 
-from app.api.dependencies import get_current_user
 from app.api.permissions import require_roles
+from app.api.tenant_context import get_effective_tenant_id
 from app.database.session import get_db
 
 from app.models.enums import UserRole
@@ -61,10 +61,13 @@ def list_visits(
     _: User = Depends(
         require_feature(Feature.VISITS)
     ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
 ):
     return list_visits_service(
         db=db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=tenant_id,
     )
 
 
@@ -89,12 +92,15 @@ def get_visit(
     _: User = Depends(
         require_feature(Feature.VISITS)
     ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
 ):
     visit = (
         db.query(Visit)
         .filter(
             Visit.id == visit_id,
-            Visit.tenant_id == current_user.tenant_id,
+            Visit.tenant_id == tenant_id,
         )
         .first()
     )
@@ -105,10 +111,18 @@ def get_visit(
             detail="Visit not found.",
         )
 
-    return get_visit_service(
-        db=db,
-        visit_id=visit_id,
-    )
+    try:
+        return get_visit_service(
+            db=db,
+            visit_id=visit_id,
+            tenant_id=tenant_id,
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
 
 
 # =========================================================
@@ -139,12 +153,15 @@ def create_visit(
     _: User = Depends(
         require_feature(Feature.VISITS)
     ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
 ):
     try:
         return create_visit_service(
             db=db,
             visit_data=visit,
-            tenant_id=current_user.tenant_id,
+            tenant_id=tenant_id,
         )
 
     except ValueError as e:
@@ -176,12 +193,15 @@ def update_visit(
     _: User = Depends(
         require_feature(Feature.VISITS)
     ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
 ):
     visit = (
         db.query(Visit)
         .filter(
             Visit.id == visit_id,
-            Visit.tenant_id == current_user.tenant_id,
+            Visit.tenant_id == tenant_id,
         )
         .first()
     )
@@ -192,11 +212,19 @@ def update_visit(
             detail="Visit not found.",
         )
 
-    return update_visit_service(
-        db=db,
-        visit=visit,
-        visit_data=visit_data,
-    )
+    try:
+        return update_visit_service(
+            db=db,
+            visit=visit,
+            visit_data=visit_data,
+            tenant_id=tenant_id,
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
 
 
 # =========================================================
@@ -220,12 +248,15 @@ def delete_visit(
     _: User = Depends(
         require_feature(Feature.VISITS)
     ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
 ):
     visit = (
         db.query(Visit)
         .filter(
             Visit.id == visit_id,
-            Visit.tenant_id == current_user.tenant_id,
+            Visit.tenant_id == tenant_id,
         )
         .first()
     )
@@ -236,9 +267,17 @@ def delete_visit(
             detail="Visit not found.",
         )
 
-    delete_visit_service(
-        db=db,
-        visit=visit,
-    )
+    try:
+        delete_visit_service(
+            db=db,
+            visit=visit,
+            tenant_id=tenant_id,
+        )
 
-    return None
+        return None
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )

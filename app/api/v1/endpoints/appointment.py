@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.features import require_feature
-from app.models.feature import Feature
-
 from app.database.session import get_db
+from app.api.features import require_feature
+from app.api.tenant_context import get_effective_tenant_id
 from app.api.permissions import require_roles
 
 from app.models.enums import UserRole
 from app.models.user import User
+from app.models.feature import Feature
 
 from app.schemas.appointment import (
     AppointmentCreate,
@@ -34,8 +34,6 @@ router = APIRouter(
 # =========================================================
 # CREATE APPOINTMENT
 # OWNER + STAFF
-#
-# Doctor is automatically determined by backend.
 # =========================================================
 
 @router.post(
@@ -55,18 +53,20 @@ def create_appointment(
     _: User = Depends(
         require_feature(Feature.APPOINTMENTS)
     ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
 ):
 
     try:
-
         return create_appointment_service(
             db=db,
             appointment_data=appointment,
             current_user=current_user,
+            tenant_id=tenant_id,
         )
 
     except ValueError as e:
-
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
@@ -98,11 +98,15 @@ def list_appointments(
     _: User = Depends(
         require_feature(Feature.APPOINTMENTS)
     ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
 ):
 
     return list_appointments_service(
         db=db,
         current_user=current_user,
+        tenant_id=tenant_id,
     )
 
 
@@ -127,18 +131,20 @@ def get_appointment(
     _: User = Depends(
         require_feature(Feature.APPOINTMENTS)
     ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
 ):
 
     try:
-
         return get_appointment_service(
             db=db,
             appointment_id=appointment_id,
             current_user=current_user,
+            tenant_id=tenant_id,
         )
 
     except ValueError as e:
-
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
@@ -167,25 +173,21 @@ def update_appointment(
     _: User = Depends(
         require_feature(Feature.APPOINTMENTS)
     ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
 ):
 
     try:
-
-        appointment = get_appointment_service(
-            db=db,
-            appointment_id=appointment_id,
-            current_user=current_user,
-        )
-
         return update_appointment_service(
             db=db,
-            appointment=appointment,
+            appointment_id=appointment_id,
             appointment_data=appointment_data,
             current_user=current_user,
+            tenant_id=tenant_id,
         )
 
     except ValueError as e:
-
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
@@ -213,26 +215,22 @@ def delete_appointment(
     _: User = Depends(
         require_feature(Feature.APPOINTMENTS)
     ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
 ):
 
     try:
-
-        appointment = get_appointment_service(
+        delete_appointment_service(
             db=db,
             appointment_id=appointment_id,
             current_user=current_user,
-        )
-
-        delete_appointment_service(
-            db=db,
-            appointment=appointment,
-            current_user=current_user,
+            tenant_id=tenant_id,
         )
 
         return None
 
     except ValueError as e:
-
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),

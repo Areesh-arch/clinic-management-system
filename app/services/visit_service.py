@@ -12,12 +12,111 @@ from app.models.visit import Visit
 from app.models.patient import Patient
 from app.models.appointment import Appointment
 
-from app.models.enums import AppointmentStatus
+from app.models.enums import (
+    AppointmentStatus,
+    VisitStatus,
+)
 
 from app.schemas.visit import (
     VisitCreate,
     VisitUpdate,
 )
+
+
+# =========================================================
+# SYNC APPOINTMENT STATUS
+# =========================================================
+
+def sync_appointment_status(
+    db: Session,
+    visit: Visit,
+    tenant_id: int,
+):
+    """
+    Synchronize the appointment status with the visit.
+
+    Appointment workflow:
+
+        SCHEDULED
+            |
+            | patient attends / visit is completed
+            v
+        COMPLETED
+
+    Payment is NOT required for an appointment to become
+    COMPLETED.
+
+    Payment belongs to billing/financial workflow and should
+    not determine whether the appointment happened.
+    """
+
+    # -----------------------------------------------------
+    # Visit must belong to an appointment
+    # -----------------------------------------------------
+
+    if visit.appointment_id is None:
+        return
+
+    # -----------------------------------------------------
+    # Find appointment
+    # -----------------------------------------------------
+
+    appointment = (
+        db.query(Appointment)
+        .filter(
+            Appointment.id == visit.appointment_id,
+            Appointment.tenant_id == tenant_id,
+        )
+        .first()
+    )
+
+    if appointment is None:
+        return
+
+    # -----------------------------------------------------
+    # Do not overwrite final appointment statuses
+    # -----------------------------------------------------
+    #
+    # If an appointment was explicitly marked:
+    #
+    #   CANCELLED
+    #   NO_SHOW
+    #
+    # a visit update should not automatically change it
+    # back to SCHEDULED or COMPLETED.
+    #
+    # This protects the appointment workflow.
+    # -----------------------------------------------------
+
+    if appointment.status in (
+        AppointmentStatus.CANCELLED,
+        AppointmentStatus.NO_SHOW,
+    ):
+        db.commit()
+        db.refresh(appointment)
+        return
+
+    # -----------------------------------------------------
+    # COMPLETED VISIT = COMPLETED APPOINTMENT
+    # -----------------------------------------------------
+
+    if visit.status == VisitStatus.COMPLETED:
+        appointment.status = AppointmentStatus.COMPLETED
+
+    # -----------------------------------------------------
+    # Other visit statuses
+    # -----------------------------------------------------
+    #
+    # If visit is IN_PROGRESS, appointment remains
+    # SCHEDULED because the appointment has happened but
+    # the visit has not been completed yet.
+    #
+    # We intentionally do NOT change a completed appointment
+    # back to scheduled here.
+    # -----------------------------------------------------
+
+    db.commit()
+    db.refresh(appointment)
 
 
 # =========================================================
@@ -31,17 +130,6 @@ def create_visit_service(
 ):
     """
     Create a visit from an existing appointment.
-
-    Architecture:
-        OWNER = DOCTOR
-
-    Therefore:
-        - no doctor_id is accepted
-        - no Staff record is required
-        - no doctor profile is required
-
-    The appointment already belongs to the current tenant,
-    and the patient is taken directly from that appointment.
     """
 
     # -----------------------------------------------------
@@ -118,6 +206,23 @@ def create_visit_service(
         patient_id=appointment.patient_id,
     )
 
+    # -----------------------------------------------------
+    # Synchronize appointment status
+    # -----------------------------------------------------
+    #
+    # Normally a newly created visit will be IN_PROGRESS.
+    #
+    # If the VisitCreate data creates it directly as
+    # COMPLETED, the appointment should immediately become
+    # COMPLETED as well.
+    # -----------------------------------------------------
+
+    sync_appointment_status(
+        db=db,
+        visit=visit,
+        tenant_id=tenant_id,
+    )
+
     return visit
 
 
@@ -128,6 +233,7 @@ def create_visit_service(
 def get_visit_service(
     db: Session,
     visit_id: int,
+    tenant_id: int,
 ):
     visit = get_visit_by_id(
         db=db,
@@ -137,6 +243,11 @@ def get_visit_service(
     if visit is None:
         raise ValueError(
             "Visit not found."
+        )
+
+    if visit.tenant_id != tenant_id:
+        raise ValueError(
+            "Visit does not belong to this clinic."
         )
 
     return visit
@@ -164,12 +275,43 @@ def update_visit_service(
     db: Session,
     visit: Visit,
     visit_data: VisitUpdate,
+    tenant_id: int,
 ):
-    return update_visit(
+    """
+    Update visit and automatically synchronize
+    the connected appointment.
+    """
+
+    # -----------------------------------------------------
+    # Tenant validation
+    # -----------------------------------------------------
+
+    if visit.tenant_id != tenant_id:
+        raise ValueError(
+            "Visit does not belong to this clinic."
+        )
+
+    # -----------------------------------------------------
+    # Update visit
+    # -----------------------------------------------------
+
+    updated_visit = update_visit(
         db=db,
         visit=visit,
         visit_data=visit_data,
     )
+
+    # -----------------------------------------------------
+    # Synchronize appointment
+    # -----------------------------------------------------
+
+    sync_appointment_status(
+        db=db,
+        visit=updated_visit,
+        tenant_id=tenant_id,
+    )
+
+    return updated_visit
 
 
 # =========================================================
@@ -179,7 +321,21 @@ def update_visit_service(
 def delete_visit_service(
     db: Session,
     visit: Visit,
+    tenant_id: int,
 ):
+    # -----------------------------------------------------
+    # Tenant validation
+    # -----------------------------------------------------
+
+    if visit.tenant_id != tenant_id:
+        raise ValueError(
+            "Visit does not belong to this clinic."
+        )
+
+    # -----------------------------------------------------
+    # Delete visit
+    # -----------------------------------------------------
+
     delete_visit(
         db=db,
         visit=visit,

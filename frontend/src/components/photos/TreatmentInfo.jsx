@@ -50,9 +50,7 @@ export default function TreatmentInfo({
           patientList = response.items;
         } else if (Array.isArray(response?.results)) {
           patientList = response.results;
-        } else if (
-          Array.isArray(response?.data)
-        ) {
+        } else if (Array.isArray(response?.data)) {
           patientList = response.data;
         }
 
@@ -76,7 +74,7 @@ export default function TreatmentInfo({
   }, []);
 
   // =====================================================
-  // LOAD VISITS
+  // LOAD VISITS / TREATMENTS
   // =====================================================
 
   useEffect(() => {
@@ -84,8 +82,7 @@ export default function TreatmentInfo({
       try {
         setLoadingVisits(true);
 
-        const response =
-          await getTreatments();
+        const response = await getTreatments();
 
         console.log(
           "Visits received by TreatmentInfo:",
@@ -100,9 +97,7 @@ export default function TreatmentInfo({
           visitList = response.items;
         } else if (Array.isArray(response?.results)) {
           visitList = response.results;
-        } else if (
-          Array.isArray(response?.data)
-        ) {
+        } else if (Array.isArray(response?.data)) {
           visitList = response.data;
         }
 
@@ -151,22 +146,18 @@ export default function TreatmentInfo({
     const selectedId =
       String(selectedPatientId);
 
-    const matchingVisits = visits.filter(
-      (visit) => {
-        const patientId =
-          getVisitPatientId(visit);
+    return visits.filter((visit) => {
+      const patientId =
+        getVisitPatientId(visit);
 
-        if (!patientId) {
-          return false;
-        }
-
-        return (
-          String(patientId) === selectedId
-        );
+      if (!patientId) {
+        return false;
       }
-    );
 
-    return matchingVisits;
+      return (
+        String(patientId) === selectedId
+      );
+    });
   }, [
     visits,
     selectedPatientId,
@@ -182,7 +173,7 @@ export default function TreatmentInfo({
 
     setSelectedPatientId(patientId);
 
-    // Reset selected visit
+    // Reset selected visit when patient changes
     setVisitId("");
 
     console.log(
@@ -229,37 +220,73 @@ export default function TreatmentInfo({
   };
 
   // =====================================================
-  // VISIT LABEL
+  // VISIT / TREATMENT LABEL
   // =====================================================
 
   const getVisitLabel = (visit) => {
-    const id =
-      visit?.id ??
-      visit?.visit_id;
+    const diagnosis =
+      visit?.diagnosis?.trim();
 
     const date =
+      visit?.visit_time ??
       visit?.visit_date ??
       visit?.date ??
       visit?.created_at;
 
-    const diagnosis =
-      visit?.diagnosis;
-
-    let label = `Visit #${id}`;
+    let formattedDate = "";
 
     if (date) {
-      const formattedDate =
-        String(date).split("T")[0];
+      const parsedDate = new Date(date);
 
-      label += ` — ${formattedDate}`;
+      if (!Number.isNaN(parsedDate.getTime())) {
+        formattedDate =
+          parsedDate.toLocaleDateString(
+            "en-GB",
+            {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            }
+          );
+      }
     }
 
+    // Primary display:
+    // Treatment / Diagnosis + Date
+    if (diagnosis && formattedDate) {
+      return `${diagnosis} — ${formattedDate}`;
+    }
+
+    // If only treatment exists
     if (diagnosis) {
-      label += ` — ${diagnosis}`;
+      return diagnosis;
     }
 
-    return label;
+    // If only date exists
+    if (formattedDate) {
+      return `Visit — ${formattedDate}`;
+    }
+
+    // Final fallback
+    return "Visit";
   };
+
+  // =====================================================
+  // SELECTED VISIT
+  // =====================================================
+
+  const selectedVisit = useMemo(() => {
+    if (!visitId) {
+      return null;
+    }
+
+    return visits.find(
+      (visit) =>
+        String(
+          visit?.id ?? visit?.visit_id
+        ) === String(visitId)
+    );
+  }, [visits, visitId]);
 
   // =====================================================
   // UI
@@ -296,8 +323,8 @@ export default function TreatmentInfo({
             text-[#60738F]
           "
         >
-          Select the patient and visit for
-          these treatment photos.
+          Select the patient and treatment
+          for these treatment photos.
         </p>
       </div>
 
@@ -402,7 +429,7 @@ export default function TreatmentInfo({
         </div>
 
         {/* =================================================
-            VISIT
+            TREATMENT
         ================================================= */}
 
         <div>
@@ -415,7 +442,7 @@ export default function TreatmentInfo({
               text-[#1E2D45]
             "
           >
-            Visit
+            Treatment
           </label>
 
           <select
@@ -448,8 +475,8 @@ export default function TreatmentInfo({
               {!selectedPatientId
                 ? "Select patient first"
                 : loadingVisits
-                ? "Loading visits..."
-                : "Select Visit"}
+                ? "Loading treatments..."
+                : "Select Treatment"}
             </option>
 
             {filteredVisits.map((visit) => {
@@ -472,15 +499,17 @@ export default function TreatmentInfo({
             !loadingVisits &&
             filteredVisits.length === 0 && (
               <p className="mt-2 text-sm text-[#60738F]">
-                No visits found for this patient.
+                No treatments found for this patient.
               </p>
             )}
         </div>
       </div>
 
-      {/* SELECTED VISIT INFO */}
+      {/* =================================================
+          SELECTED TREATMENT INFO
+      ================================================= */}
 
-      {visitId && (
+      {visitId && selectedVisit && (
         <div
           className="
             mt-6
@@ -495,9 +524,10 @@ export default function TreatmentInfo({
           "
         >
           <span className="font-semibold">
-            Selected Visit:
+            Selected Treatment:
           </span>{" "}
-          #{visitId}
+          {selectedVisit.diagnosis?.trim() ||
+            "Treatment details not available"}
         </div>
       )}
     </div>
