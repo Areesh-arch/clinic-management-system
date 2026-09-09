@@ -5,12 +5,14 @@
 
 .contact-section {
   background: #f6f1e8;
-  padding: 110px 7%;
+  padding: 68px 7% 78px;
   position: relative;
   overflow: hidden;
 }
 
-/* Subtle background detail */
+/* =====================================================
+   SUBTLE BACKGROUND DETAIL
+   ===================================================== */
 
 .contact-section::before {
   content: "";
@@ -41,14 +43,13 @@
   z-index: 1;
 }
 
-
 /* =====================================================
    HEADING
    ===================================================== */
 
 .contact-heading {
   max-width: 700px;
-  margin-bottom: 65px;
+  margin-bottom: 42px;
 }
 
 .contact-label {
@@ -57,7 +58,7 @@
   letter-spacing: 3px;
   font-weight: 600;
   color: #b5975b;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 .contact-heading h2 {
@@ -74,13 +75,12 @@
 }
 
 .contact-heading p {
-  margin-top: 22px;
+  margin-top: 18px;
   max-width: 570px;
   color: #69736a;
   font-size: 15px;
   line-height: 1.8;
 }
-
 
 /* =====================================================
    MAIN CONTENT
@@ -93,7 +93,6 @@
   align-items: start;
 }
 
-
 /* =====================================================
    CONTACT INFORMATION
    ===================================================== */
@@ -101,7 +100,7 @@
 .contact-info {
   display: flex;
   flex-direction: column;
-  gap: 34px;
+  gap: 28px;
   padding-top: 8px;
 }
 
@@ -111,61 +110,152 @@
   gap: 18px;
 }
 
+/* =====================================================
+   CONTACT ICON
+   ===================================================== */
+
 .contact-icon {
   width: 42px;
   height: 42px;
   flex-shrink: 0;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   border-radius: 50%;
-
   background: #e2eadf;
   color: #183d2b;
-
   font-size: 15px;
 
   transition:
-    transform 0.3s ease,
-    background 0.3s ease;
+    transform 0.35s ease,
+    background 0.35s ease,
+    color 0.35s ease,
+    box-shadow 0.35s ease;
 }
 
 .contact-item:hover .contact-icon {
-  transform: translateY(-3px);
+  transform: translateY(-4px);
   background: #d2dfd0;
+  color: #b5975b;
+  box-shadow:
+    0 8px 18px rgba(24, 61, 43, 0.08);
+}
+
+/* =====================================================
+   CONTACT ITEM TEXT
+   ===================================================== */
+
+.contact-item > div:last-child {
+  position: relative;
 }
 
 .contact-item h3 {
-  margin: 0 0 7px;
+  position: relative;
+  width: fit-content;
+  margin: 0 0 8px;
 
   color: #183d2b;
-
   font-size: 15px;
   font-weight: 600;
+
+  transition:
+    color 0.3s ease;
 }
+
+/* =====================================================
+   GOLD UNDERLINE
+   Hidden normally.
+   Appears and grows on hover.
+   ===================================================== */
+
+.contact-item h3::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -6px;
+
+  width: 0;
+  height: 1px;
+
+  background: #b5975b;
+
+  opacity: 0;
+
+  transition:
+    width 0.35s ease,
+    opacity 0.25s ease;
+}
+
+.contact-item h3 {
+  position: relative;
+  width: fit-content;
+}
+
+/* Golden underline */
+.contact-item h3::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -5px;
+  width: 0;
+  height: 1px;
+  background: #b5975b;
+  transition: width 0.3s ease;
+}
+
+/* Text stays black + very subtle pop */
+.contact-item:hover h3 {
+  color: #183d2b;
+  transform: translateY(-2px);
+  transition: transform 0.3s ease;
+}
+
+/* Underline appears */
+.contact-item:hover h3::after {
+  width: 100%;
+}
+/* =====================================================
+   HOVER TEXT ANIMATION
+   ===================================================== */
+
+.contact-item:hover h3 {
+  color: #b5975b;
+}
+
+.contact-item:hover h3::after {
+  width: 100%;
+  opacity: 1;
+}
+
+/* =====================================================
+   CONTACT TEXT / LINKS
+   ===================================================== */
 
 .contact-item p,
 .contact-item a {
   margin: 0;
-
   color: #707970;
-
   font-size: 14px;
   line-height: 1.7;
-
   text-decoration: none;
+
+  transition:
+    color 0.3s ease,
+    transform 0.3s ease;
 }
 
-.contact-item a {
-  transition: color 0.25s ease;
+.contact-item:hover p,
+.contact-item:hover a {
+  color: #5f6c61;
 }
+
+/* =====================================================
+   LINK HOVER
+   ===================================================== */
 
 .contact-item a:hover {
   color: #b5975b;
 }
-
 
 /* =====================================================
    FORM CARD
@@ -173,19 +263,28 @@
 
 .contact-form-wrapper {
   background: #fffdf8;
-
   border-radius: 22px;
-
-  padding: 42px;
+  padding: 38px;
 
   box-shadow:
     0 18px 50px rgba(24, 61, 43, 0.07);
+
+  transition:
+    transform 0.35s ease,
+    box-shadow 0.35s ease;
+}
+
+.contact-form-wrapper:hover {
+  transform: translateY(-3px);
+
+  box-shadow:
+    0 22px 55px rgba(24, 61, 43, 0.10);
 }
 
 .contact-form {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 20px;
 }
 
 .form-row {
@@ -202,10 +301,8 @@
 
 .form-group label {
   color: #35543f;
-
   font-size: 12px;
   font-weight: 600;
-
   letter-spacing: 0.4px;
 }
 
@@ -215,18 +312,15 @@
   box-sizing: border-box;
 
   border: 1px solid #dfe4dc;
-
   border-radius: 10px;
 
   background: #faf8f2;
-
   color: #183d2b;
 
   font-family: inherit;
   font-size: 14px;
 
   padding: 13px 15px;
-
   outline: none;
 
   transition:
@@ -248,13 +342,34 @@
 .form-group input:focus,
 .form-group textarea:focus {
   border-color: #78977c;
-
   background: #fffdf8;
 
   box-shadow:
     0 0 0 3px rgba(120, 151, 124, 0.10);
 }
 
+/* =====================================================
+   FORM STATUS
+   ===================================================== */
+
+.contact-form-status {
+  padding: 12px 14px;
+  border-radius: 9px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.contact-form-status.success {
+  background: #e7f0e4;
+  color: #31563d;
+  border: 1px solid #cfdfcc;
+}
+
+.contact-form-status.error {
+  background: #f8e9e5;
+  color: #8a4b40;
+  border: 1px solid #ebd0ca;
+}
 
 /* =====================================================
    SUBMIT BUTTON
@@ -266,6 +381,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+
   gap: 18px;
 
   border: none;
@@ -278,7 +394,6 @@
 
   font-size: 13px;
   font-weight: 600;
-
   letter-spacing: 0.3px;
 
   cursor: pointer;
@@ -289,58 +404,47 @@
     box-shadow 0.3s ease;
 }
 
-.contact-submit span {
-  font-size: 18px;
-  line-height: 1;
-  transition: transform 0.3s ease;
-}
-
-.contact-submit:hover {
+.contact-submit:hover:not(:disabled) {
   background: #244e38;
-
   transform: translateY(-2px);
 
   box-shadow:
     0 10px 25px rgba(24, 61, 43, 0.18);
 }
 
-.contact-submit:hover span {
-  transform: translateX(4px);
+.contact-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
-
 
 /* =====================================================
    RESPONSIVE
    ===================================================== */
 
 @media (max-width: 900px) {
-
   .contact-section {
-    padding: 85px 6%;
+    padding: 58px 6% 68px;
   }
 
   .contact-content {
     grid-template-columns: 1fr;
-    gap: 55px;
+    gap: 48px;
   }
 
   .contact-info {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 30px;
+    gap: 26px;
   }
-
 }
 
-
 @media (max-width: 600px) {
-
   .contact-section {
-    padding: 70px 5%;
+    padding: 52px 5% 60px;
   }
 
   .contact-heading {
-    margin-bottom: 45px;
+    margin-bottom: 36px;
   }
 
   .contact-heading h2 {
@@ -363,5 +467,4 @@
   .contact-submit {
     width: 100%;
   }
-
 }

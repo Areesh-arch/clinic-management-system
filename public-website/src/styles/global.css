@@ -1,3 +1,4 @@
+
 @import "./variables.css";
 
 * {
@@ -81,6 +82,215 @@ h4 {
   padding: 110px 0;
 }
 
+/* =====================================================
+   WEBSITE SECTION FLOW
+   ===================================================== */
+
+.website {
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.website-main {
+  width: 100%;
+  overflow: hidden;
+}
+
+/*
+  Each wrapper contains one complete website section.
+
+  The transition is created by a soft gradient overlay
+  near the bottom of each section. It does not move,
+  animate, or affect CMS/API content.
+*/
+
+.website-section {
+  position: relative;
+  width: 100%;
+  isolation: isolate;
+}
+
+/* =====================================================
+   PREMIUM SECTION TRANSITIONS
+   ===================================================== */
+
+/*
+  ABOUT → SERVICES
+
+  Very gentle because this is the first visual change
+  after the main introductory section.
+*/
+
+.website-section-about::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 76px;
+  z-index: 20;
+  pointer-events: none;
+
+  background: linear-gradient(
+    to bottom,
+    rgba(247, 243, 235, 0) 0%,
+    rgba(247, 243, 235, 0.05) 25%,
+    rgba(247, 243, 235, 0.16) 55%,
+    rgba(247, 243, 235, 0.38) 78%,
+    rgba(247, 243, 235, 0.62) 100%
+  );
+}
+
+/*
+  SERVICES → RESULTS
+
+  Slightly stronger blend because the Results section
+  has a more visual/photo-oriented presentation.
+*/
+
+.website-section-services::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 88px;
+  z-index: 20;
+  pointer-events: none;
+
+  background: linear-gradient(
+    to bottom,
+    rgba(247, 243, 235, 0) 0%,
+    rgba(247, 243, 235, 0.06) 20%,
+    rgba(247, 243, 235, 0.18) 45%,
+    rgba(247, 243, 235, 0.42) 72%,
+    rgba(247, 243, 235, 0.68) 100%
+  );
+}
+
+/*
+  RESULTS → TESTIMONIALS
+
+  Softer again so the Testimonials section can feel
+  calm and elegant.
+*/
+
+.website-section-results::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 82px;
+  z-index: 20;
+  pointer-events: none;
+
+  background: linear-gradient(
+    to bottom,
+    rgba(247, 243, 235, 0) 0%,
+    rgba(247, 243, 235, 0.04) 24%,
+    rgba(247, 243, 235, 0.14) 50%,
+    rgba(247, 243, 235, 0.34) 76%,
+    rgba(247, 243, 235, 0.56) 100%
+  );
+}
+
+/*
+  TESTIMONIALS → SKIN QUIZ
+
+  The most subtle transition. Testimonials should
+  remain visually calm instead of looking like a
+  heavy graphic section.
+*/
+
+.website-section-testimonials::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 72px;
+  z-index: 20;
+  pointer-events: none;
+
+  background: linear-gradient(
+    to bottom,
+    rgba(247, 243, 235, 0) 0%,
+    rgba(247, 243, 235, 0.04) 28%,
+    rgba(247, 243, 235, 0.12) 56%,
+    rgba(247, 243, 235, 0.28) 78%,
+    rgba(247, 243, 235, 0.48) 100%
+  );
+}
+
+/*
+  SKIN QUIZ → NEWS
+
+  Medium-soft transition.
+*/
+
+.website-section-quiz::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 82px;
+  z-index: 20;
+  pointer-events: none;
+
+  background: linear-gradient(
+    to bottom,
+    rgba(247, 243, 235, 0) 0%,
+    rgba(247, 243, 235, 0.05) 22%,
+    rgba(247, 243, 235, 0.15) 48%,
+    rgba(247, 243, 235, 0.36) 74%,
+    rgba(247, 243, 235, 0.58) 100%
+  );
+}
+
+/*
+  NEWS → CONTACT
+
+  Soft and slightly shorter because Contact is near
+  the end of the page and should feel like a natural
+  closing section.
+*/
+
+.website-section-news::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 74px;
+  z-index: 20;
+  pointer-events: none;
+
+  background: linear-gradient(
+    to bottom,
+    rgba(247, 243, 235, 0) 0%,
+    rgba(247, 243, 235, 0.04) 25%,
+    rgba(247, 243, 235, 0.12) 52%,
+    rgba(247, 243, 235, 0.30) 78%,
+    rgba(247, 243, 235, 0.50) 100%
+  );
+}
+
+/*
+  CONTACT is the final main section, so there is no
+  transition underneath it.
+*/
+
+.website-section-contact {
+  z-index: 1;
+}
+
+/* =====================================================
+   MOBILE
+   ===================================================== */
+
 @media (max-width: 768px) {
   .container {
     width: min(100% - 32px, var(--container-width));
@@ -88,5 +298,29 @@ h4 {
 
   .section {
     padding: 80px 0;
+  }
+
+  .website-section-about::after {
+    height: 58px;
+  }
+
+  .website-section-services::after {
+    height: 64px;
+  }
+
+  .website-section-results::after {
+    height: 60px;
+  }
+
+  .website-section-testimonials::after {
+    height: 52px;
+  }
+
+  .website-section-quiz::after {
+    height: 60px;
+  }
+
+  .website-section-news::after {
+    height: 54px;
   }
 }

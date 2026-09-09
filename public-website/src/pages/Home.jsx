@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 
 import About from "../components/About";
@@ -106,34 +107,48 @@ export default function Home() {
     <div className="website">
       <Navbar />
 
-      <main>
-        <About
-          siteSettings={siteSettings}
-        />
+      <main className="website-main">
+        <div className="website-section website-section-about">
+          <About
+            siteSettings={siteSettings}
+          />
+        </div>
 
-        <Services
-          services={services}
-        />
+        <div className="website-section website-section-services">
+          <Services
+            services={services}
+          />
+        </div>
 
-        <Results
-          results={results}
-        />
+        <div className="website-section website-section-results">
+          <Results
+            results={results}
+          />
+        </div>
 
-        <Testimonials
-          testimonials={testimonials}
-        />
+        <div className="website-section website-section-testimonials">
+          <Testimonials
+            testimonials={testimonials}
+          />
+        </div>
 
-        <SkinQuiz
-          questions={quizQuestions}
-        />
+        <div className="website-section website-section-quiz">
+          <SkinQuiz
+            questions={quizQuestions}
+          />
+        </div>
 
-        <News
-          blogs={blogs}
-        />
+        <div className="website-section website-section-news">
+          <News
+            blogs={blogs}
+          />
+        </div>
 
-        <Contact 
-        siteSettings={siteSettings} 
-        />
+        <div className="website-section website-section-contact">
+          <Contact
+            siteSettings={siteSettings}
+          />
+        </div>
       </main>
 
       <Footer siteSettings={siteSettings} />

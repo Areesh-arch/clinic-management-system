@@ -1,114 +1,274 @@
-
 /* =====================================================
    RESULTS SECTION
    ===================================================== */
 
 .results-section {
-  padding: 100px 0;
-  background: #f7f3eb;
+  position: relative;
+  overflow: hidden;
+  padding: 55px 0 58px;
+  background: #173f35;
 }
 
+.results-background {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(
+      rgba(23, 63, 53, 0.84),
+      rgba(23, 63, 53, 0.88)
+    ),
+    url("https://images.unsplash.com/photo-1556228578-8c89e6adf883?auto=format&fit=crop&w=1800&q=85");
+  background-size: cover;
+  background-position: center;
+}
+
+/* =====================================================
+   CONTAINER
+   ===================================================== */
+
 .results-container {
+  position: relative;
+  z-index: 2;
   width: min(1120px, 90%);
   margin: 0 auto;
 }
-
 
 /* =====================================================
    HEADER
    ===================================================== */
 
 .results-header {
+  max-width: 760px;
+  margin: 0 auto 42px;
   text-align: center;
-  margin-bottom: 68px;
 }
 
 .results-label {
   display: block;
-  margin-bottom: 18px;
-
+  margin-bottom: 16px;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.22em;
-
-  color: #b4935a;
+  color: #d3b779;
 }
 
 .results-header h2 {
   margin: 0;
-
-  font-family: Georgia, "Times New Roman", serif;
+  font-family:
+    Georgia,
+    "Times New Roman",
+    serif;
   font-size: clamp(34px, 4vw, 46px);
   font-weight: 400;
   line-height: 1.15;
-
-  color: #173f35;
+  color: #fffdf9;
 }
 
 .results-header p {
-  margin: 22px 0 0;
-
-  font-size: 16px;
+  max-width: 620px;
+  margin: 18px auto 0;
+  font-size: 15px;
   line-height: 1.7;
-
-  color: #71847d;
+  color: rgba(
+    255,
+    253,
+    249,
+    0.76
+  );
 }
 
-
 /* =====================================================
-   RESULTS GRID
+   CAROUSEL
    ===================================================== */
 
-.results-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 30px;
+.results-carousel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
 }
 
+/*
+ * IMPORTANT:
+ *
+ * We do NOT use overflow:hidden here.
+ *
+ * The previous and next cards need to remain
+ * visible on the left and right sides.
+ */
+
+.results-stage {
+  position: relative;
+  width: 100%;
+  height: 455px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1200px;
+}
 
 /* =====================================================
-   CARD
+   RESULT CARD
    ===================================================== */
 
 .result-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+
+  width: 560px;
+  max-width: 560px;
+
   overflow: hidden;
 
   background: #fffdf9;
 
-  border: 1px solid rgba(23, 63, 53, 0.12);
+  border: 1px solid
+    rgba(23, 63, 53, 0.12);
+
   border-radius: 20px;
 
-  box-shadow: 0 8px 24px rgba(23, 63, 53, 0.04);
+  box-shadow:
+    0 18px 38px
+      rgba(0, 0, 0, 0.16);
+
+  transform-origin: center center;
 
   transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease;
+    transform 0.65s
+      cubic-bezier(
+        0.22,
+        0.61,
+        0.36,
+        1
+      ),
+    opacity 0.65s ease,
+    filter 0.65s ease,
+    box-shadow 0.65s ease;
+
+  will-change:
+    transform,
+    opacity,
+    filter;
+
+  pointer-events: none;
 }
-
-.result-card:hover {
-  transform: translateY(-7px);
-
-  box-shadow:
-    0 18px 38px rgba(23, 63, 53, 0.10);
-}
-
 
 /* =====================================================
-   BEFORE / AFTER AREA
+   CENTER CARD
+   ===================================================== */
+
+.result-card-active {
+  z-index: 5;
+
+  opacity: 1;
+
+  transform:
+    translate3d(
+      -50%,
+      -50%,
+      0
+    )
+    scale(1);
+
+  filter: none;
+
+  box-shadow:
+    0 22px 48px
+      rgba(0, 0, 0, 0.22);
+}
+
+/* =====================================================
+   LEFT CARD
+   ===================================================== */
+
+.result-card-previous {
+  z-index: 2;
+
+  opacity: 0.42;
+
+  transform:
+    translate3d(
+      calc(-50% - 355px),
+      -50%,
+      0
+    )
+    scale(0.82);
+
+  filter: saturate(0.72)
+    brightness(0.88);
+
+}
+
+/* =====================================================
+   RIGHT CARD
+   ===================================================== */
+
+.result-card-next {
+  z-index: 2;
+
+  opacity: 0.42;
+
+  transform:
+    translate3d(
+      calc(-50% + 355px),
+      -50%,
+      0
+    )
+    scale(0.82);
+
+  filter: saturate(0.72)
+    brightness(0.88);
+}
+
+/* =====================================================
+   HIDDEN CARDS
+   ===================================================== */
+
+.result-card-hidden {
+  z-index: 1;
+
+  opacity: 0;
+
+  transform:
+    translate3d(
+      -50%,
+      -50%,
+      0
+    )
+    scale(0.7);
+
+  filter: blur(2px);
+
+  pointer-events: none;
+}
+
+/* =====================================================
+   ACTIVE CARD INTERACTION
+   ===================================================== */
+
+.result-card-active:hover {
+  box-shadow:
+    0 28px 55px
+      rgba(0, 0, 0, 0.25);
+}
+
+/* =====================================================
+   BEFORE / AFTER IMAGES
    ===================================================== */
 
 .result-images {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+
+  grid-template-columns:
+    1fr 1fr;
 
   width: 100%;
-  height: 300px;
+  height: 250px;
+
+  overflow: hidden;
 }
-
-
-/* =====================================================
-   INDIVIDUAL IMAGE SIDE
-   ===================================================== */
 
 .result-side {
   position: relative;
@@ -130,25 +290,23 @@
   object-fit: cover;
   object-position: center;
 
-  transition: transform 0.5s ease;
+  transition:
+    transform 0.5s ease;
 }
 
-
-/* Slight zoom on card hover */
-
-.result-card:hover .result-side img {
-  transform: scale(1.03);
+.result-card-active:hover
+.result-side img {
+  transform: scale(1.02);
 }
-
 
 /* =====================================================
-   IMAGE DIVIDER
+   DIVIDER
    ===================================================== */
 
 .result-after {
-  border-left: 1px solid rgba(255, 255, 255, 0.75);
+  border-left: 1px solid
+    rgba(255, 255, 255, 0.85);
 }
-
 
 /* =====================================================
    BEFORE / AFTER LABEL
@@ -156,6 +314,7 @@
 
 .result-side span {
   position: absolute;
+
   left: 12px;
   bottom: 12px;
 
@@ -165,21 +324,24 @@
 
   font-size: 10px;
   font-weight: 700;
+
   letter-spacing: 0.14em;
 
   color: #ffffff;
 
-  background: rgba(23, 63, 53, 0.78);
+  background:
+    rgba(23, 63, 53, 0.78);
 
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: 1px solid
+    rgba(255, 255, 255, 0.25);
+
   border-radius: 4px;
 
   backdrop-filter: blur(5px);
 }
 
-
 /* =====================================================
-   SUBTLE IMAGE OVERLAY
+   IMAGE OVERLAY
    ===================================================== */
 
 .result-side::after {
@@ -192,16 +354,16 @@
 
   pointer-events: none;
 
-  background: linear-gradient(
-    to top,
-    rgba(0, 0, 0, 0.16),
-    rgba(0, 0, 0, 0) 45%
-  );
+  background:
+    linear-gradient(
+      to top,
+      rgba(0, 0, 0, 0.16),
+      rgba(0, 0, 0, 0) 45%
+    );
 }
 
-
 /* =====================================================
-   CARD CONTENT
+   CONTENT
    ===================================================== */
 
 .result-content {
@@ -209,6 +371,10 @@
 }
 
 .result-content h3 {
+  position: relative;
+
+  width: fit-content;
+
   margin: 0 0 10px;
 
   font-family:
@@ -224,6 +390,44 @@
   color: #173f35;
 }
 
+/* =====================================================
+   GOLD UNDERLINE
+   ===================================================== */
+
+.result-content h3::after {
+  content: "";
+
+  position: absolute;
+
+  left: 0;
+  bottom: -7px;
+
+  width: 100%;
+  height: 1px;
+
+  background: #c8a96b;
+
+  opacity: 0.75;
+
+  transition:
+    width 0.3s ease,
+    opacity 0.3s ease,
+    background 0.3s ease;
+}
+
+.result-card-active:hover
+.result-content h3::after {
+  width: 115%;
+
+  opacity: 1;
+
+  background: #b89452;
+}
+
+/* =====================================================
+   DESCRIPTION
+   ===================================================== */
+
 .result-content p {
   margin: 0;
 
@@ -233,51 +437,278 @@
   color: #71847d;
 }
 
-
 /* =====================================================
-   RESPONSIVE
+   ARROWS
    ===================================================== */
 
-@media (max-width: 900px) {
-  .results-grid {
-    grid-template-columns: repeat(2, 1fr);
+.results-arrow {
+  position: absolute;
+
+  top: 50%;
+
+  z-index: 20;
+
+  width: 42px;
+  height: 42px;
+
+  padding: 0;
+
+  border: 1px solid
+    rgba(255, 255, 255, 0.28);
+
+  border-radius: 50%;
+
+  background:
+    rgba(255, 253, 249, 0.10);
+
+  color: #fffdf9;
+
+  font-family:
+    Georgia,
+    "Times New Roman",
+    serif;
+
+  font-size: 29px;
+  line-height: 1;
+
+  cursor: pointer;
+
+  transform:
+    translateY(-50%);
+
+  transition:
+    background 0.3s ease,
+    border-color 0.3s ease,
+    color 0.3s ease,
+    transform 0.3s ease;
+
+  backdrop-filter: blur(7px);
+}
+
+.results-arrow-left {
+  left: calc(50% - 400px);
+}
+
+.results-arrow-right {
+  right: calc(50% - 400px);
+}
+
+.results-arrow:hover {
+  background: #c8a96b;
+
+  border-color: #c8a96b;
+
+  color: #173f35;
+
+  transform:
+    translateY(-50%)
+    scale(1.05);
+}
+
+/* =====================================================
+   DOTS
+   ===================================================== */
+
+.results-dots {
+  display: flex;
+
+  justify-content: center;
+  align-items: center;
+
+  gap: 8px;
+
+  margin-top: 20px;
+}
+
+.results-dot {
+  width: 7px;
+  height: 7px;
+
+  padding: 0;
+
+  border: 0;
+
+  border-radius: 50%;
+
+  background:
+    rgba(255, 255, 255, 0.35);
+
+  cursor: pointer;
+
+  transition:
+    width 0.3s ease,
+    background 0.3s ease;
+}
+
+.results-dot.active {
+  width: 23px;
+
+  border-radius: 10px;
+
+  background: #c8a96b;
+}
+
+/* =====================================================
+   TABLET
+   ===================================================== */
+
+@media (max-width: 1000px) {
+  .results-stage {
+    height: 430px;
   }
 
-  .result-images {
-    height: 280px;
+  .result-card {
+    width: 520px;
+    max-width: 520px;
+  }
+
+  .result-card-previous {
+    transform:
+      translate3d(
+        calc(-50% - 300px),
+        -50%,
+        0
+      )
+      scale(0.78);
+  }
+
+  .result-card-next {
+    transform:
+      translate3d(
+        calc(-50% + 300px),
+        -50%,
+        0
+      )
+      scale(0.78);
+  }
+
+  .results-arrow-left {
+    left: 18px;
+  }
+
+  .results-arrow-right {
+    right: 18px;
   }
 }
 
+/* =====================================================
+   TABLET / SMALL LAPTOP
+   ===================================================== */
+
+@media (max-width: 800px) {
+  .results-stage {
+    height: 410px;
+  }
+
+  .result-card {
+    width: 500px;
+    max-width: 500px;
+  }
+
+  .result-card-previous {
+    transform:
+      translate3d(
+        calc(-50% - 245px),
+        -50%,
+        0
+      )
+      scale(0.72);
+  }
+
+  .result-card-next {
+    transform:
+      translate3d(
+        calc(-50% + 245px),
+        -50%,
+        0
+      )
+      scale(0.72);
+  }
+
+  .result-card-previous,
+  .result-card-next {
+    opacity: 0.30;
+  }
+
+  .results-arrow {
+    width: 40px;
+    height: 40px;
+  }
+
+  .results-arrow-left {
+    left: 10px;
+  }
+
+  .results-arrow-right {
+    right: 10px;
+  }
+}
+
+/* =====================================================
+   MOBILE
+   ===================================================== */
 
 @media (max-width: 620px) {
   .results-section {
-    padding: 75px 0;
+    padding: 55px 0 58px;
+  }
+
+  .results-container {
+    width: 92%;
   }
 
   .results-header {
-    margin-bottom: 48px;
+    margin-bottom: 30px;
   }
 
   .results-header h2 {
     font-size: 32px;
   }
 
-  .results-grid {
-    grid-template-columns: 1fr;
-    gap: 22px;
+  .results-header p {
+    font-size: 14px;
   }
 
-  .result-images {
-    height: 260px;
+  .results-stage {
+    height: 390px;
   }
-}
 
+  .result-card {
+    width: 88%;
+    max-width: 430px;
 
-/* =====================================================
-   VERY SMALL SCREENS
-   ===================================================== */
+    border-radius: 18px;
+  }
 
-@media (max-width: 400px) {
+  /*
+   * On mobile the side cards stay visible,
+   * but are pushed farther toward the edges.
+   */
+
+  .result-card-previous {
+    transform:
+      translate3d(
+        calc(-50% - 170px),
+        -50%,
+        0
+      )
+      scale(0.72);
+
+    opacity: 0.24;
+  }
+
+  .result-card-next {
+    transform:
+      translate3d(
+        calc(-50% + 170px),
+        -50%,
+        0
+      )
+      scale(0.72);
+
+    opacity: 0.24;
+  }
+
   .result-images {
     height: 230px;
   }
@@ -285,5 +716,81 @@
   .result-content {
     padding: 22px;
   }
+
+  .result-content h3 {
+    font-size: 19px;
+  }
+
+  .result-content p {
+    font-size: 14px;
+  }
+
+  .results-arrow {
+    width: 36px;
+    height: 36px;
+
+    font-size: 25px;
+
+    background:
+      rgba(23, 63, 53, 0.76);
+  }
+
+  .results-arrow-left {
+    left: 5px;
+  }
+
+  .results-arrow-right {
+    right: 5px;
+  }
+
+  .result-side span {
+    left: 11px;
+    bottom: 11px;
+
+    padding: 6px 8px;
+
+    font-size: 9px;
+  }
+
+  .results-dots {
+    margin-top: 16px;
+  }
 }
 
+/* =====================================================
+   VERY SMALL SCREENS
+   ===================================================== */
+
+@media (max-width: 400px) {
+  .results-stage {
+    height: 370px;
+  }
+
+  .result-card {
+    width: 90%;
+  }
+
+  .result-card-previous {
+    transform:
+      translate3d(
+        calc(-50% - 145px),
+        -50%,
+        0
+      )
+      scale(0.68);
+  }
+
+  .result-card-next {
+    transform:
+      translate3d(
+        calc(-50% + 145px),
+        -50%,
+        0
+      )
+      scale(0.68);
+  }
+
+  .result-images {
+    height: 215px;
+  }
+}

@@ -1,6 +1,55 @@
-
 import { useEffect, useState } from "react";
+
 import "../styles/skinQuiz.css";
+
+/* =========================================================
+   DEFAULT QUIZ
+   Shown only when CMS has no quiz questions.
+   CMS questions automatically override these.
+   ========================================================= */
+
+const DEFAULT_QUESTIONS = [
+  {
+    id: "default-question-1",
+    question: "What is your main skin concern?",
+    option_a: "Acne & breakouts",
+    option_b: "Pigmentation & dark spots",
+    option_c: "Fine lines & ageing",
+    option_d: "Dryness & sensitivity",
+  },
+  {
+    id: "default-question-2",
+    question: "How would you describe your skin?",
+    option_a: "Oily",
+    option_b: "Dry",
+    option_c: "Combination",
+    option_d: "Sensitive",
+  },
+  {
+    id: "default-question-3",
+    question: "What would you most like to improve?",
+    option_a: "Skin clarity",
+    option_b: "Skin tone",
+    option_c: "Skin texture",
+    option_d: "Overall radiance",
+  },
+  {
+    id: "default-question-4",
+    question: "How often do you currently follow a skincare routine?",
+    option_a: "Every day",
+    option_b: "A few times a week",
+    option_c: "Occasionally",
+    option_d: "I do not have a routine",
+  },
+  {
+    id: "default-question-5",
+    question: "What would you prefer from your consultation?",
+    option_a: "A treatment plan",
+    option_b: "Skincare guidance",
+    option_c: "Aesthetic recommendations",
+    option_d: "A complete skin assessment",
+  },
+];
 
 function normalizeQuestion(question, index) {
   return {
@@ -17,6 +66,7 @@ function normalizeQuestion(question, index) {
 
 function getRecommendation(answers, questions) {
   const firstQuestion = questions[0];
+
   const firstAnswer = firstQuestion
     ? answers[firstQuestion.id]
     : "";
@@ -77,7 +127,21 @@ function getRecommendation(answers, questions) {
 }
 
 export default function SkinQuiz({ questions = [] }) {
-  const normalizedQuestions = questions
+  /*
+   * CMS has priority.
+   * If CMS has questions, use them.
+   * Otherwise use the built-in default quiz.
+   */
+  const cmsQuestions = Array.isArray(questions)
+    ? questions
+    : [];
+
+  const sourceQuestions =
+    cmsQuestions.length > 0
+      ? cmsQuestions
+      : DEFAULT_QUESTIONS;
+
+  const normalizedQuestions = sourceQuestions
     .map(normalizeQuestion)
     .filter(
       (question) =>
@@ -85,9 +149,13 @@ export default function SkinQuiz({ questions = [] }) {
         question.options.length > 0
     );
 
-  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [currentQuestion, setCurrentQuestion] =
+    useState(0);
+
   const [answers, setAnswers] = useState({});
-  const [showResult, setShowResult] = useState(false);
+
+  const [showResult, setShowResult] =
+    useState(false);
 
   useEffect(() => {
     setCurrentQuestion(0);
@@ -97,7 +165,10 @@ export default function SkinQuiz({ questions = [] }) {
 
   if (normalizedQuestions.length === 0) {
     return (
-      <section className="skin-quiz" id="skin-quiz">
+      <section
+        className="skin-quiz"
+        id="skin-quiz"
+      >
         <div className="skin-quiz-container">
           <div className="skin-quiz-heading">
             <span className="skin-quiz-eyebrow">
@@ -110,7 +181,9 @@ export default function SkinQuiz({ questions = [] }) {
             </h2>
 
             <p>
-              Our skin quiz will be available here soon.
+              Take a short quiz to better understand
+              your skin concerns and discover where
+              to begin.
             </p>
           </div>
         </div>
@@ -118,9 +191,11 @@ export default function SkinQuiz({ questions = [] }) {
     );
   }
 
-  const question = normalizedQuestions[currentQuestion];
+  const question =
+    normalizedQuestions[currentQuestion];
 
-  const selectedAnswer = answers[question.id];
+  const selectedAnswer =
+    answers[question.id];
 
   const handleAnswer = (answer) => {
     setAnswers((previous) => ({
@@ -141,6 +216,7 @@ export default function SkinQuiz({ questions = [] }) {
       setCurrentQuestion(
         (previous) => previous + 1
       );
+
       return;
     }
 
@@ -167,10 +243,11 @@ export default function SkinQuiz({ questions = [] }) {
     100;
 
   if (showResult) {
-    const recommendation = getRecommendation(
-      answers,
-      normalizedQuestions
-    );
+    const recommendation =
+      getRecommendation(
+        answers,
+        normalizedQuestions
+      );
 
     return (
       <section
@@ -204,9 +281,13 @@ export default function SkinQuiz({ questions = [] }) {
               OUR RECOMMENDATION
             </span>
 
-            <h3>{recommendation.title}</h3>
+            <h3>
+              {recommendation.title}
+            </h3>
 
-            <p>{recommendation.text}</p>
+            <p>
+              {recommendation.text}
+            </p>
 
             <div className="quiz-result-actions">
               <a
@@ -278,13 +359,14 @@ export default function SkinQuiz({ questions = [] }) {
 
           <div className="quiz-question">
             <span className="quiz-question-number">
-              {String(currentQuestion + 1).padStart(
-                2,
-                "0"
-              )}
+              {String(
+                currentQuestion + 1
+              ).padStart(2, "0")}
             </span>
 
-            <h3>{question.question}</h3>
+            <h3>
+              {question.question}
+            </h3>
 
             <div className="quiz-options">
               {question.options.map(

@@ -1,10 +1,28 @@
-
 import { useState } from "react";
+
 import "../styles/contact.css";
 
 const API_URL =
   import.meta.env.VITE_API_URL ||
   "http://127.0.0.1:8000/api/v1";
+
+/*
+=========================================================
+DEFAULT CONTACT DATA
+=========================================================
+
+These values are shown when CMS does not have a value.
+
+CMS values automatically override these defaults.
+*/
+
+const DEFAULT_CONTACT = {
+  phone: "+92 300 7399150",
+  email: "hello@elitedermacare.com",
+  address: "Main Boulevard, Lahore, Pakistan",
+  whatsapp: "+92 300 7399150",
+  openingHours: "Monday – Saturday · 10:00 AM – 7:00 PM",
+};
 
 export default function Contact({ siteSettings }) {
   const [formData, setFormData] = useState({
@@ -19,41 +37,51 @@ export default function Contact({ siteSettings }) {
     message: "",
   });
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] =
+    useState(false);
 
-  /* =========================================================
-     CMS CONTACT INFORMATION
-     ========================================================= */
+  /*
+  =========================================================
+  CMS CONTACT INFORMATION
+  =========================================================
+
+  CMS value has priority.
+
+  If CMS value is empty / missing,
+  DEFAULT_CONTACT value is used automatically.
+  */
 
   const phone =
     siteSettings?.phone ||
     siteSettings?.contact_phone ||
-    "";
+    DEFAULT_CONTACT.phone;
 
   const email =
     siteSettings?.email ||
     siteSettings?.contact_email ||
-    "";
+    DEFAULT_CONTACT.email;
 
   const address =
     siteSettings?.address ||
     siteSettings?.contact_address ||
-    "";
+    DEFAULT_CONTACT.address;
 
   const whatsapp =
     siteSettings?.whatsapp ||
     siteSettings?.whatsapp_number ||
     siteSettings?.contact_whatsapp ||
-    "";
+    DEFAULT_CONTACT.whatsapp;
 
   const openingHours =
     siteSettings?.opening_hours ||
     siteSettings?.contact_opening_hours ||
-    "";
+    DEFAULT_CONTACT.openingHours;
 
-  /* =========================================================
-     FORM
-     ========================================================= */
+  /*
+  =========================================================
+  FORM
+  =========================================================
+  */
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -174,9 +202,11 @@ export default function Contact({ siteSettings }) {
     }
   };
 
-  /* =========================================================
-     HELPERS
-     ========================================================= */
+  /*
+  =========================================================
+  HELPERS
+  =========================================================
+  */
 
   const cleanPhoneForLink = phone
     ? phone.replace(/[^\d+]/g, "")
@@ -192,13 +222,11 @@ export default function Contact({ siteSettings }) {
       className="contact-section"
     >
       <div className="contact-container">
-
-        {/* ===================================================
+        {/* =================================================
             HEADING
-            =================================================== */}
+            ================================================= */}
 
         <div className="contact-heading">
-
           <span className="contact-label">
             GET IN TOUCH
           </span>
@@ -213,168 +241,115 @@ export default function Contact({ siteSettings }) {
             your consultation? Our clinic team
             is here to help you take the next step.
           </p>
-
         </div>
 
-        {/* ===================================================
+        {/* =================================================
             CONTENT
-            =================================================== */}
+            ================================================= */}
 
         <div className="contact-content">
-
           {/* =================================================
               CONTACT INFORMATION
               ================================================= */}
 
           <div className="contact-info">
-
             {/* ADDRESS */}
 
-            {address && (
-              <div className="contact-item">
-
-                <div className="contact-icon">
-                  ✦
-                </div>
-
-                <div>
-                  <h3>
-                    Visit Our Clinic
-                  </h3>
-
-                  <p>
-                    {address}
-                  </p>
-                </div>
-
+            <div className="contact-item">
+              <div className="contact-icon">
+                ✦
               </div>
-            )}
+
+              <div>
+                <h3>
+                  Visit Our Clinic
+                </h3>
+
+                <p>
+                  {address}
+                </p>
+              </div>
+            </div>
 
             {/* PHONE */}
 
-            {phone && (
-              <div className="contact-item">
-
-                <div className="contact-icon">
-                  ✆
-                </div>
-
-                <div>
-                  <h3>
-                    Call Us
-                  </h3>
-
-                  <a
-                    href={`tel:${cleanPhoneForLink}`}
-                  >
-                    {phone}
-                  </a>
-                </div>
-
+            <div className="contact-item">
+              <div className="contact-icon">
+                ✆
               </div>
-            )}
+
+              <div>
+                <h3>
+                  Call Us
+                </h3>
+
+                <a
+                  href={`tel:${cleanPhoneForLink}`}
+                >
+                  {phone}
+                </a>
+              </div>
+            </div>
 
             {/* EMAIL */}
 
-            {email && (
-              <div className="contact-item">
-
-                <div className="contact-icon">
-                  ✉
-                </div>
-
-                <div>
-                  <h3>
-                    Email
-                  </h3>
-
-                  <a
-                    href={`mailto:${email}`}
-                  >
-                    {email}
-                  </a>
-                </div>
-
+            <div className="contact-item">
+              <div className="contact-icon">
+                ✉
               </div>
-            )}
+
+              <div>
+                <h3>
+                  Email
+                </h3>
+
+                <a
+                  href={`mailto:${email}`}
+                >
+                  {email}
+                </a>
+              </div>
+            </div>
 
             {/* WHATSAPP */}
 
-            {whatsapp && (
-              <div className="contact-item">
-
-                <div className="contact-icon">
-                  ◷
-                </div>
-
-                <div>
-                  <h3>
-                    WhatsApp
-                  </h3>
-
-                  <a
-                    href={`https://wa.me/${cleanWhatsAppForLink}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {whatsapp}
-                  </a>
-                </div>
-
+            <div className="contact-item">
+              <div className="contact-icon">
+                ◷
               </div>
-            )}
+
+              <div>
+                <h3>
+                  WhatsApp
+                </h3>
+
+                <a
+                  href={`https://wa.me/${cleanWhatsAppForLink}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {whatsapp}
+                </a>
+              </div>
+            </div>
 
             {/* OPENING HOURS */}
 
-            {openingHours && (
-              <div className="contact-item">
-
-                <div className="contact-icon">
-                  ◷
-                </div>
-
-                <div>
-                  <h3>
-                    Opening Hours
-                  </h3>
-
-                  <p>
-                    {openingHours}
-                  </p>
-                </div>
-
+            <div className="contact-item">
+              <div className="contact-icon">
+                ◷
               </div>
-            )}
 
-            {/* FALLBACK */}
+              <div>
+                <h3>
+                  Opening Hours
+                </h3>
 
-            {!address &&
-              !phone &&
-              !email &&
-              !whatsapp &&
-              !openingHours && (
-                <div className="contact-item">
-
-                  <div className="contact-icon">
-                    ✦
-                  </div>
-
-                  <div>
-                    <h3>
-                      Contact Our Clinic
-                    </h3>
-
-                    <p>
-                      Please contact us to
-                      learn more about our
-                      clinic and available
-                      consultations.
-                    </p>
-                  </div>
-
-                </div>
-              )}
-
+                <p>
+                  {openingHours}
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* =================================================
@@ -382,14 +357,11 @@ export default function Contact({ siteSettings }) {
               ================================================= */}
 
           <div className="contact-form-wrapper">
-
             <form
               className="contact-form"
               onSubmit={handleSubmit}
             >
-
               <div className="form-group">
-
                 <label htmlFor="name">
                   Your Name
                 </label>
@@ -403,11 +375,9 @@ export default function Contact({ siteSettings }) {
                   onChange={handleChange}
                   required
                 />
-
               </div>
 
               <div className="form-group">
-
                 <label htmlFor="phone">
                   Phone Number
                 </label>
@@ -421,11 +391,9 @@ export default function Contact({ siteSettings }) {
                   onChange={handleChange}
                   required
                 />
-
               </div>
 
               <div className="form-group">
-
                 <label htmlFor="email">
                   Email Address
                 </label>
@@ -438,11 +406,9 @@ export default function Contact({ siteSettings }) {
                   value={formData.email}
                   onChange={handleChange}
                 />
-
               </div>
 
               <div className="form-group">
-
                 <label htmlFor="message">
                   How Can We Help?
                 </label>
@@ -455,7 +421,6 @@ export default function Contact({ siteSettings }) {
                   value={formData.message}
                   onChange={handleChange}
                 />
-
               </div>
 
               {/* STATUS */}
@@ -483,11 +448,8 @@ export default function Contact({ siteSettings }) {
                   ? "Sending..."
                   : "Request Consultation"}
               </button>
-
             </form>
-
           </div>
-
         </div>
       </div>
     </section>

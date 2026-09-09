@@ -1,7 +1,7 @@
-/* =========================================================
-   SERVICES
-   Luxury Dermatology / Aesthetic Clinic
-   ========================================================= */
+ /* =========================================================
+    SERVICES
+    Luxury Dermatology / Aesthetic Clinic
+    ========================================================= */
 
 .services {
   position: relative;
@@ -16,6 +16,7 @@
 
 .services::before {
   content: "";
+
   position: absolute;
 
   width: 720px;
@@ -25,7 +26,8 @@
   right: -300px;
 
   border:
-    11px solid rgba(142, 175, 156, 0.20);
+    11px solid
+    rgba(142, 175, 156, 0.20);
 
   border-radius:
     48% 52% 55% 45%;
@@ -38,6 +40,7 @@
 
 .services::after {
   content: "";
+
   position: absolute;
 
   width: 560px;
@@ -47,7 +50,8 @@
   left: -270px;
 
   border:
-    9px solid rgba(18, 63, 53, 0.12);
+    9px solid
+    rgba(18, 63, 53, 0.12);
 
   border-radius:
     52% 48% 45% 55%;
@@ -64,9 +68,11 @@
 
 .services-container {
   width: min(100% - 80px, 1240px);
+
   margin: 0 auto;
 
   position: relative;
+
   z-index: 2;
 }
 
@@ -74,6 +80,7 @@
 
 .services-container::before {
   content: "";
+
   position: absolute;
 
   width: 900px;
@@ -87,14 +94,17 @@
     rotate(-8deg);
 
   border-top:
-    7px solid rgba(194, 155, 85, 0.12);
+    7px solid
+    rgba(194, 155, 85, 0.12);
 
   border-bottom:
-    7px solid rgba(142, 175, 156, 0.14);
+    7px solid
+    rgba(142, 175, 156, 0.14);
 
   border-radius: 50%;
 
   pointer-events: none;
+
   z-index: -1;
 }
 
@@ -121,7 +131,9 @@
   color: #708b77;
 
   font-size: 10px;
+
   font-weight: 600;
+
   letter-spacing: 3px;
 }
 
@@ -147,50 +159,132 @@
 
 .services-heading h2 em {
   color: #6f8d77;
+
   font-style: italic;
 }
 
 .services-intro {
+  position: relative;
   max-width: 390px;
-
   margin: 0 0 4px;
+  padding-bottom: 14px;
 
   color: #69736d;
-
   font-size: 14px;
-
   line-height: 1.8;
+
+  overflow: hidden;
+
+  animation: servicesIntroReveal 1s
+    cubic-bezier(0.22, 0.61, 0.36, 1)
+    both;
+}
+
+@keyframes servicesIntroReveal {
+  from {
+    opacity: 0;
+    transform: translateX(70px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.services-intro::after {
+  content: "";
+
+  position: absolute;
+
+  left: 0;
+  bottom: 0;
+
+  width: 85px;
+  height: 1px;
+
+  background: #c8a96b;
+
+  opacity: 0.8;
+
+  transition:
+    width 0.3s ease,
+    opacity 0.3s ease;
+}
+
+.services-intro:hover::after {
+  width: 125px;
+  opacity: 1;
 }
 
 /* =========================================================
-   CARDS
+   SERVICES CAROUSEL
    ========================================================= */
 
-.services-grid {
-  display: grid;
+.services-carousel {
+  position: relative;
 
-  grid-template-columns:
-    repeat(4, 1fr);
+  display: flex;
 
-  gap: 16px;
+  align-items: center;
+
+  justify-content: center;
+
+  width: 100%;
 }
 
-.service-card {
+/*
+ * We intentionally do NOT use overflow:hidden.
+ *
+ * This allows the previous and next cards
+ * to remain visible on both sides.
+ */
+
+.services-stage {
   position: relative;
+
+  width: 100%;
+
+  height: 355px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  perspective: 1200px;
+}
+
+/* =========================================================
+   SERVICE CARD
+   ========================================================= */
+
+.service-card {
+  position: absolute;
+
+  top: 50%;
+  left: 50%;
+
+  width: 300px;
 
   min-height: 300px;
 
   padding:
     25px 24px 22px;
 
+  box-sizing: border-box;
+
   display: flex;
+
   flex-direction: column;
 
   background:
     rgba(251, 248, 241, 0.94);
 
   border:
-    1px solid rgba(24, 57, 47, 0.045);
+    1px solid
+    rgba(24, 57, 47, 0.045);
 
   border-radius: 12px;
 
@@ -198,15 +292,136 @@
     0 5px 18px
     rgba(24, 57, 47, 0.035);
 
+  transform-origin:
+    center center;
+
   transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease,
+    transform 0.65s
+      cubic-bezier(
+        0.22,
+        0.61,
+        0.36,
+        1
+      ),
+    opacity 0.65s ease,
+    filter 0.65s ease,
+    box-shadow 0.65s ease,
     border-color 0.3s ease;
+
+  will-change:
+    transform,
+    opacity,
+    filter;
 }
 
-.service-card:hover {
+/* =========================================================
+   CENTER CARD
+   ========================================================= */
+
+.service-card-active {
+  z-index: 5;
+
+  opacity: 1;
+
   transform:
-    translateY(-7px);
+    translate3d(
+      -50%,
+      -50%,
+      0
+    )
+    scale(1);
+
+  filter: none;
+
+  box-shadow:
+    0 18px 35px
+    rgba(24, 57, 47, 0.10);
+
+  pointer-events: auto;
+}
+
+/* =========================================================
+   LEFT CARD
+   ========================================================= */
+
+.service-card-previous {
+  z-index: 2;
+
+  opacity: 0.42;
+
+  transform:
+    translate3d(
+      calc(-50% - 335px),
+      -50%,
+      0
+    )
+    scale(0.82);
+
+  filter:
+    saturate(0.72)
+    brightness(0.88);
+
+  pointer-events: none;
+}
+
+/* =========================================================
+   RIGHT CARD
+   ========================================================= */
+
+.service-card-next {
+  z-index: 2;
+
+  opacity: 0.42;
+
+  transform:
+    translate3d(
+      calc(-50% + 335px),
+      -50%,
+      0
+    )
+    scale(0.82);
+
+  filter:
+    saturate(0.72)
+    brightness(0.88);
+
+  pointer-events: none;
+}
+
+/* =========================================================
+   HIDDEN CARDS
+   ========================================================= */
+
+.service-card-hidden {
+  z-index: 1;
+
+  opacity: 0;
+
+  transform:
+    translate3d(
+      -50%,
+      -50%,
+      0
+    )
+    scale(0.70);
+
+  filter: blur(2px);
+
+  pointer-events: none;
+}
+
+/* =========================================================
+   CENTER CARD HOVER
+   ========================================================= */
+
+.service-card-active:hover {
+  transform:
+    translate3d(
+      -50%,
+      calc(-50% - 7px),
+      0
+    )
+    scale(1);
 
   border-color:
     rgba(112, 141, 119, 0.18);
@@ -259,7 +474,8 @@
     transform 0.45s ease;
 }
 
-.service-card:hover .service-image {
+.service-card-active:hover
+.service-image {
   transform:
     scale(1.04);
 }
@@ -270,6 +486,7 @@
 
 .service-content {
   margin-top: auto;
+
   margin-bottom: 0;
 }
 
@@ -325,7 +542,8 @@
 
 /* Slightly longer + brighter on card hover */
 
-.service-card:hover .service-content h3::after {
+.service-card-active:hover
+.service-content h3::after {
   width: 115%;
 
   opacity: 1;
@@ -341,6 +559,120 @@
   font-size: 12px;
 
   line-height: 1.7;
+}
+
+/* =========================================================
+   ARROWS
+   ========================================================= */
+
+.services-arrow {
+  position: absolute;
+
+  top: 50%;
+
+  z-index: 20;
+
+  width: 42px;
+  height: 42px;
+
+  padding: 0;
+
+  border:
+    1px solid
+    rgba(24, 57, 47, 0.18);
+
+  border-radius: 50%;
+
+  background:
+    rgba(251, 248, 241, 0.78);
+
+  color: #18392f;
+
+  font-family:
+    Georgia,
+    "Times New Roman",
+    serif;
+
+  font-size: 29px;
+
+  line-height: 1;
+
+  cursor: pointer;
+
+  transform:
+    translateY(-50%);
+
+  transition:
+    background 0.3s ease,
+    border-color 0.3s ease,
+    color 0.3s ease,
+    transform 0.3s ease;
+
+  backdrop-filter: blur(7px);
+}
+
+.services-arrow-left {
+  left: calc(50% - 400px);
+}
+
+.services-arrow-right {
+  right: calc(50% - 400px);
+}
+
+.services-arrow:hover {
+  background: #c8a96b;
+
+  border-color: #c8a96b;
+
+  color: #18392f;
+
+  transform:
+    translateY(-50%)
+    scale(1.05);
+}
+
+/* =========================================================
+   DOTS
+   ========================================================= */
+
+.services-dots {
+  display: flex;
+
+  justify-content: center;
+
+  align-items: center;
+
+  gap: 8px;
+
+  margin-top: 18px;
+}
+
+.services-dot {
+  width: 7px;
+  height: 7px;
+
+  padding: 0;
+
+  border: 0;
+
+  border-radius: 50%;
+
+  background:
+    rgba(24, 57, 47, 0.22);
+
+  cursor: pointer;
+
+  transition:
+    width 0.3s ease,
+    background 0.3s ease;
+}
+
+.services-dot.active {
+  width: 23px;
+
+  border-radius: 10px;
+
+  background: #c8a96b;
 }
 
 /* =========================================================
@@ -367,11 +699,6 @@
    ========================================================= */
 
 @media (max-width: 1000px) {
-  .services-grid {
-    grid-template-columns:
-      repeat(2, 1fr);
-  }
-
   .services-heading {
     grid-template-columns: 1fr;
 
@@ -380,6 +707,46 @@
 
   .services-intro {
     max-width: 550px;
+  }
+
+  .services-stage {
+    height: 350px;
+  }
+
+  .service-card {
+    width: 290px;
+  }
+
+  .service-card-previous {
+    transform:
+      translate3d(
+        calc(-50% - 270px),
+        -50%,
+        0
+      )
+      scale(0.78);
+
+    opacity: 0.30;
+  }
+
+  .service-card-next {
+    transform:
+      translate3d(
+        calc(-50% + 270px),
+        -50%,
+        0
+      )
+      scale(0.78);
+
+    opacity: 0.30;
+  }
+
+  .services-arrow-left {
+    left: 8px;
+  }
+
+  .services-arrow-right {
+    right: 8px;
   }
 }
 
@@ -406,14 +773,41 @@
     font-size: 42px;
   }
 
-  .services-grid {
-    grid-template-columns: 1fr;
-
-    gap: 14px;
+  .services-stage {
+    height: 360px;
   }
 
   .service-card {
+    width: 280px;
+
     min-height: 270px;
+
+    padding:
+      23px 22px 20px;
+  }
+
+  .service-card-previous {
+    transform:
+      translate3d(
+        calc(-50% - 155px),
+        -50%,
+        0
+      )
+      scale(0.70);
+
+    opacity: 0.24;
+  }
+
+  .service-card-next {
+    transform:
+      translate3d(
+        calc(-50% + 155px),
+        -50%,
+        0
+      )
+      scale(0.70);
+
+    opacity: 0.24;
   }
 
   .service-image-wrapper {
@@ -429,4 +823,95 @@
   .service-content h3 {
     font-size: 22px;
   }
+
+  .services-arrow {
+    width: 36px;
+    height: 36px;
+
+    font-size: 25px;
+
+    background:
+      rgba(245, 241, 232, 0.88);
+  }
+
+  .services-arrow-left {
+    left: 0;
+  }
+
+  .services-arrow-right {
+    right: 0;
+  }
+}
+
+/* =========================================================
+   VERY SMALL SCREENS
+   ========================================================= */
+
+@media (max-width: 400px) {
+  .services-stage {
+    height: 350px;
+  }
+
+  .service-card {
+    width: 270px;
+  }
+
+  .service-card-previous {
+    transform:
+      translate3d(
+        calc(-50% - 135px),
+        -50%,
+        0
+      )
+      scale(0.66);
+  }
+
+  .service-card-next {
+    transform:
+      translate3d(
+        calc(-50% + 135px),
+        -50%,
+        0
+      )
+      scale(0.66);
+  }
+}
+.services-intro {
+  position: relative;
+  max-width: 390px;
+
+  margin: 0 0 4px;
+
+  padding-bottom: 14px;
+
+  color: #69736d;
+
+  font-size: 14px;
+
+  line-height: 1.8;
+}
+
+.services-intro::after {
+  content: "";
+
+  position: absolute;
+
+  left: 0;
+  bottom: 0;
+
+  width: 85px;
+  height: 1px;
+
+  background: #c8a96b;
+
+  opacity: 0.8;
+
+  transition:
+    width 0.3s ease,
+    opacity 0.3s ease;
+}
+
+.services-intro:hover::after {
+  width: 125px;
+  opacity: 1;
 }

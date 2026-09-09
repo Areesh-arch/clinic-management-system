@@ -25,7 +25,7 @@ export default function Navbar() {
           <a href="#about">About</a>
           <a href="#treatments">Treatments</a>
           <a href="#results">Results</a>
-          <a href="#testimonials">Testimonials</a>
+          <a href="#feedback">Testimonials</a>
           <a href="#skin-quiz">Skin Quiz</a>
           <a href="#news">News</a>
           <a href="#contact">Contact</a>

@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 
 import "../styles/article.css";
@@ -14,21 +13,126 @@ const API_ORIGIN = API_BASE_URL.replace(
   ""
 );
 
+const DEFAULT_NEWS_IMAGES = [
+  "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=1400&q=85",
+  "https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?auto=format&fit=crop&w=1400&q=85",
+  "https://images.unsplash.com/photo-1515377905703-c4788e51af15?auto=format&fit=crop&w=1400&q=85",
+];
+
+const DEFAULT_ARTICLES = [
+  {
+    id: "default-blog-1",
+    title:
+      "Understanding Your Skin: A Guide to Healthy Skin",
+
+    category: "SKIN HEALTH",
+
+    excerpt:
+      "Discover simple, dermatologist-backed ways to understand and care for your skin every day.",
+
+    content:
+      "Healthy skin begins with understanding what your skin needs. Factors such as hydration, sun exposure, lifestyle, and your individual skin type can all influence how your skin looks and feels.\n\nA simple routine built around gentle cleansing, regular moisturization, and daily sun protection can create a strong foundation for healthy-looking skin.\n\nProfessional guidance can also help identify concerns early and create a routine that is appropriate for your individual skin needs.",
+
+    published_at: "2026-09-08",
+
+    slug:
+      "understanding-your-skin-a-guide-to-healthy-skin",
+
+    is_published: true,
+
+    featured_image_url:
+      DEFAULT_NEWS_IMAGES[0],
+  },
+
+  {
+    id: "default-blog-2",
+
+    title:
+      "The Science Behind Modern Aesthetic Treatments",
+
+    category: "AESTHETIC CARE",
+
+    excerpt:
+      "Learn how modern aesthetic treatments can enhance natural features while keeping results refined.",
+
+    content:
+      "Modern aesthetic care is increasingly focused on subtle, balanced results rather than changing the way someone naturally looks.\n\nA thoughtful consultation is the starting point. It allows treatment choices to be considered according to skin condition, individual concerns, and the desired outcome.\n\nWhen treatments are carefully planned and performed appropriately, the goal is to support natural-looking results while maintaining healthy-looking skin.",
+
+    published_at: "2026-09-08",
+
+    slug:
+      "the-science-behind-modern-aesthetic-treatments",
+
+    is_published: true,
+
+    featured_image_url:
+      DEFAULT_NEWS_IMAGES[1],
+  },
+
+  {
+    id: "default-blog-3",
+
+    title:
+      "Why Professional Skin Consultation Matters",
+
+    category: "EXPERT ADVICE",
+
+    excerpt:
+      "Every skin journey is different. Here's why professional assessment is an important first step.",
+
+    content:
+      "No two skin journeys are exactly alike. The same concern can have different causes and may require a different approach from one person to another.\n\nA professional consultation provides an opportunity to understand your concerns, discuss your goals, and consider an appropriate treatment or skincare plan.\n\nTaking the time to assess your skin before beginning treatment can help make your care more focused, informed, and personal.",
+
+    published_at: "2026-09-08",
+
+    slug:
+      "why-professional-skin-consultation-matters",
+
+    is_published: true,
+
+    featured_image_url:
+      DEFAULT_NEWS_IMAGES[2],
+  },
+];
+
 function getImageUrl(rawImageUrl) {
   if (!rawImageUrl) {
     return "";
   }
 
+  const imageUrl = String(rawImageUrl).trim();
+
+  if (!imageUrl) {
+    return "";
+  }
+
   if (
-    rawImageUrl.startsWith("http://") ||
-    rawImageUrl.startsWith("https://")
+    imageUrl.startsWith("http://") ||
+    imageUrl.startsWith("https://")
   ) {
-    return rawImageUrl;
+    return imageUrl;
   }
 
   return `${API_ORIGIN}${
-    rawImageUrl.startsWith("/") ? "" : "/"
-  }${rawImageUrl}`;
+    imageUrl.startsWith("/") ? "" : "/"
+  }${imageUrl}`;
+}
+
+function getArticleImage(article) {
+  /*
+   * CMS image has priority.
+   *
+   * featured_image_url is the field used by the CMS.
+   * The other fields are included as safe fallbacks
+   * in case the backend response uses a different
+   * image property.
+   */
+  return (
+    article?.featured_image_url ||
+    article?.image_url ||
+    article?.featured_image ||
+    ""
+  );
 }
 
 function formatDate(dateValue) {
@@ -59,9 +163,11 @@ function renderContent(content) {
     .map((paragraph) => paragraph.trim())
     .filter(Boolean);
 
-  return paragraphs.map((paragraph, index) => (
-    <p key={index}>{paragraph}</p>
-  ));
+  return paragraphs.map(
+    (paragraph, index) => (
+      <p key={index}>{paragraph}</p>
+    )
+  );
 }
 
 export default function ArticlePage() {
@@ -81,14 +187,78 @@ export default function ArticlePage() {
         setLoading(true);
         setError("");
 
-        const data =
-          await publicWebsiteService.getBlogBySlug(slug);
+        /*
+         * =====================================================
+         * 1. ALWAYS TRY CMS FIRST
+         * =====================================================
+         *
+         * This is important.
+         *
+         * Previously we checked DEFAULT_ARTICLES first.
+         * That prevented CMS articles with the same slug
+         * from ever being loaded.
+         *
+         * Now CMS gets first priority.
+         */
 
-        if (!mounted) {
+        try {
+          const cmsArticle =
+            await publicWebsiteService.getBlogBySlug(
+              slug
+            );
+
+          if (
+            mounted &&
+            cmsArticle &&
+            typeof cmsArticle === "object"
+          ) {
+            setArticle(cmsArticle);
+            return;
+          }
+        } catch (cmsError) {
+          /*
+           * CMS article was not available.
+           *
+           * We do not immediately show an error because
+           * this may simply mean that this is one of our
+           * built-in default articles.
+           */
+
+          console.warn(
+            "CMS article unavailable, checking default article:",
+            cmsError
+          );
+        }
+
+        /*
+         * =====================================================
+         * 2. FALL BACK TO DEFAULT ARTICLE
+         * =====================================================
+         */
+
+        const defaultArticle =
+          DEFAULT_ARTICLES.find(
+            (item) => item.slug === slug
+          );
+
+        if (defaultArticle) {
+          if (mounted) {
+            setArticle(defaultArticle);
+          }
+
           return;
         }
 
-        setArticle(data);
+        /*
+         * =====================================================
+         * 3. NOTHING FOUND
+         * =====================================================
+         */
+
+        if (mounted) {
+          setArticle(null);
+          setError("Article could not be found.");
+        }
       } catch (requestError) {
         console.error(
           "Failed to load article:",
@@ -99,12 +269,26 @@ export default function ArticlePage() {
           return;
         }
 
-        setArticle(null);
+        /*
+         * Even if something unexpected happens,
+         * try the matching default article.
+         */
 
-        setError(
-          requestError?.message ||
-            "Article could not be loaded."
-        );
+        const defaultArticle =
+          DEFAULT_ARTICLES.find(
+            (item) => item.slug === slug
+          );
+
+        if (defaultArticle) {
+          setArticle(defaultArticle);
+          setError("");
+        } else {
+          setArticle(null);
+          setError(
+            requestError?.message ||
+              "Article could not be loaded."
+          );
+        }
       } finally {
         if (mounted) {
           setLoading(false);
@@ -136,7 +320,10 @@ export default function ArticlePage() {
         <section className="article-loading">
           <div className="article-loading-inner">
             <span className="article-loading-dot"></span>
-            <p>Loading article</p>
+
+            <p>
+              Loading article
+            </p>
           </div>
         </section>
       </main>
@@ -152,7 +339,9 @@ export default function ArticlePage() {
       <main className="article-page">
         <section className="article-not-found">
           <div className="article-not-found-inner">
-            <span>FROM THE CLINIC</span>
+            <span>
+              FROM THE CLINIC
+            </span>
 
             <h1>
               Article
@@ -160,7 +349,9 @@ export default function ArticlePage() {
               not found.
             </h1>
 
-            {error && <p>{error}</p>}
+            {error && (
+              <p>{error}</p>
+            )}
 
             <a href="/#news">
               ← Back to Insights
@@ -171,9 +362,39 @@ export default function ArticlePage() {
     );
   }
 
-  const imageUrl = getImageUrl(
-    article.featured_image_url
-  );
+  /*
+   * =========================================================
+   * IMAGE
+   * =========================================================
+   *
+   * CMS image wins.
+   *
+   * If CMS has no image, use the default article image.
+   */
+
+  const rawArticleImage =
+    getArticleImage(article);
+
+  let imageUrl =
+    getImageUrl(rawArticleImage);
+
+  /*
+   * If the article does not have an image at all,
+   * use the matching default article image.
+   */
+
+  if (!imageUrl) {
+    const defaultArticle =
+      DEFAULT_ARTICLES.find(
+        (item) => item.slug === slug
+      );
+
+    if (defaultArticle) {
+      imageUrl = getImageUrl(
+        defaultArticle.featured_image_url
+      );
+    }
+  }
 
   const formattedDate = formatDate(
     article.published_at ||
@@ -182,9 +403,8 @@ export default function ArticlePage() {
 
   return (
     <main className="article-page">
-
       {/* =====================================================
-          HERO / IMAGE BEHIND HEADING
+          HERO
           ===================================================== */}
 
       <section
@@ -194,23 +414,44 @@ export default function ArticlePage() {
             : "article-hero-no-image"
         }`}
       >
-
-        {/* BACKGROUND IMAGE */}
-
         {imageUrl && (
           <img
             src={imageUrl}
             alt=""
             className="article-hero-image"
             aria-hidden="true"
+            onError={(event) => {
+              /*
+               * If CMS image fails to load,
+               * fall back to the default image.
+               */
+
+              const defaultArticle =
+                DEFAULT_ARTICLES.find(
+                  (item) =>
+                    item.slug === slug
+                );
+
+              const fallbackImage =
+                defaultArticle
+                  ? getImageUrl(
+                      defaultArticle.featured_image_url
+                    )
+                  : "";
+
+              if (
+                fallbackImage &&
+                event.currentTarget.src !==
+                  fallbackImage
+              ) {
+                event.currentTarget.src =
+                  fallbackImage;
+              }
+            }}
           />
         )}
 
-        {/* DARK OVERLAY */}
-
         <div className="article-hero-overlay"></div>
-
-        {/* S PATTERN */}
 
         <div
           className="article-hero-pattern"
@@ -225,20 +466,17 @@ export default function ArticlePage() {
           </span>
         </div>
 
-        {/* HERO CONTENT */}
-
         <div className="article-hero-content">
-
           <a
             href="/#news"
             className="article-back"
           >
             <span>←</span>
+
             Back to Insights
           </a>
 
           <div className="article-hero-text">
-
             <div className="article-meta">
               {article.category && (
                 <span className="article-category">
@@ -269,14 +507,15 @@ export default function ArticlePage() {
                 {article.excerpt}
               </p>
             )}
-
           </div>
 
           <div className="article-scroll">
             <span></span>
-            <p>Read article</p>
-          </div>
 
+            <p>
+              Read article
+            </p>
+          </div>
         </div>
       </section>
 
@@ -285,17 +524,14 @@ export default function ArticlePage() {
           ===================================================== */}
 
       <section className="article-body-section">
-
         <div className="article-body-layout">
-
-          {/* SIDE INFORMATION */}
-
           <aside className="article-sidebar">
-
             <div className="article-sidebar-line"></div>
 
             <div className="article-sidebar-item">
-              <span>Category</span>
+              <span>
+                Category
+              </span>
 
               <strong>
                 {article.category ||
@@ -305,7 +541,9 @@ export default function ArticlePage() {
 
             {article.author_name && (
               <div className="article-sidebar-item">
-                <span>Written by</span>
+                <span>
+                  Written by
+                </span>
 
                 <strong>
                   {article.author_name}
@@ -315,23 +553,23 @@ export default function ArticlePage() {
 
             {formattedDate && (
               <div className="article-sidebar-item">
-                <span>Published</span>
+                <span>
+                  Published
+                </span>
 
                 <strong>
                   {formattedDate}
                 </strong>
               </div>
             )}
-
           </aside>
 
-          {/* ARTICLE */}
-
           <article className="article-content">
-
             {article.author_name && (
               <div className="article-mobile-author">
-                <span>Written by</span>
+                <span>
+                  Written by
+                </span>
 
                 <strong>
                   {article.author_name}
@@ -355,37 +593,37 @@ export default function ArticlePage() {
                 </p>
               )}
             </div>
-
           </article>
-
         </div>
       </section>
 
       {/* =====================================================
-          FOOTER
+          BOTTOM
           ===================================================== */}
 
       <section className="article-bottom">
-
         <div className="article-bottom-pattern">
-          <span className="bottom-s">S</span>
+          <span className="bottom-s">
+            S
+          </span>
         </div>
 
         <div className="article-bottom-inner">
-
           <span>
             Continue exploring
           </span>
 
           <a href="/#news">
-            <span>Back to Insights</span>
-            <strong>→</strong>
+            <span>
+              Back to Insights
+            </span>
+
+            <strong>
+              →
+            </strong>
           </a>
-
         </div>
-
       </section>
-
     </main>
   );
 }
