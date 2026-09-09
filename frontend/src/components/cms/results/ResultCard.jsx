@@ -4,15 +4,68 @@ import {
   FiImage,
 } from "react-icons/fi";
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  "http://127.0.0.1:8000/api/v1";
+
+const API_ORIGIN = API_BASE_URL.replace(
+  /\/api\/v1\/?$/,
+  ""
+);
+
+function getImageUrl(rawImageUrl) {
+  if (!rawImageUrl) {
+    return "";
+  }
+
+  if (
+    rawImageUrl.startsWith("http://") ||
+    rawImageUrl.startsWith("https://")
+  ) {
+    return rawImageUrl;
+  }
+
+  return `${API_ORIGIN}${
+    rawImageUrl.startsWith("/") ? "" : "/"
+  }${rawImageUrl}`;
+}
+
 function ResultCard({ result, onDelete }) {
+  const beforeImage = getImageUrl(
+    result?.beforeImage
+  );
+
+  const afterImage = getImageUrl(
+    result?.afterImage
+  );
+
+  const title =
+    result?.title || "Treatment Result";
+
+  const description =
+    result?.description ||
+    "No description added.";
+
+  const published =
+    result?.published ?? false;
+
   return (
     <article className="cms-result-card">
       <div className="cms-result-images">
         <div className="cms-result-image">
-          {result.beforeImage ? (
+          {beforeImage ? (
             <img
-              src={result.beforeImage}
-              alt={`${result.title} before`}
+              src={beforeImage}
+              alt={`${title} before`}
+              onError={(event) => {
+                console.error(
+                  "Failed to load before result image:",
+                  beforeImage
+                );
+
+                event.currentTarget.style.display =
+                  "none";
+              }}
             />
           ) : (
             <div className="cms-result-placeholder">
@@ -24,10 +77,19 @@ function ResultCard({ result, onDelete }) {
         </div>
 
         <div className="cms-result-image">
-          {result.afterImage ? (
+          {afterImage ? (
             <img
-              src={result.afterImage}
-              alt={`${result.title} after`}
+              src={afterImage}
+              alt={`${title} after`}
+              onError={(event) => {
+                console.error(
+                  "Failed to load after result image:",
+                  afterImage
+                );
+
+                event.currentTarget.style.display =
+                  "none";
+              }}
             />
           ) : (
             <div className="cms-result-placeholder">
@@ -45,23 +107,20 @@ function ResultCard({ result, onDelete }) {
             TREATMENT RESULT
           </span>
 
-          <h3>{result.title}</h3>
+          <h3>{title}</h3>
 
-          <p>
-            {result.description ||
-              "No description added."}
-          </p>
+          <p>{description}</p>
         </div>
 
         <div className="cms-result-actions">
           <span
             className={
-              result.published
+              published
                 ? "cms-published"
                 : "cms-unpublished"
             }
           >
-            {result.published
+            {published
               ? "Published"
               : "Draft"}
           </span>
@@ -78,7 +137,9 @@ function ResultCard({ result, onDelete }) {
             type="button"
             className="cms-icon-button danger"
             title="Delete"
-            onClick={() => onDelete(result.id)}
+            onClick={() =>
+              onDelete(result.id)
+            }
           >
             <FiTrash2 />
           </button>

@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.permissions import require_roles
+from app.api.v1.endpoints.lead import resolve_public_tenant
 from app.database.session import get_db
 from app.models.enums import UserRole
 from app.models.user import User
@@ -26,6 +27,33 @@ router = APIRouter(
     tags=["CMS / Skin Quiz"],
 )
 
+
+# ============================================================
+# PUBLIC WEBSITE
+# ============================================================
+
+@router.get(
+    "/public",
+    response_model=list[CMSQuizResponse],
+)
+def public_quizzes(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    tenant = resolve_public_tenant(
+        request=request,
+        db=db,
+    )
+
+    return get_cms_quizzes_service(
+        db=db,
+        tenant_id=tenant.id,
+    )
+
+
+# ============================================================
+# CMS / DASHBOARD
+# ============================================================
 
 @router.post(
     "/",

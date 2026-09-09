@@ -1,184 +1,390 @@
 
+import { useEffect, useState } from "react";
+
 import "../styles/article.css";
 
-const articles = {
-  "understanding-your-skin": {
-    title: "Understanding Your Skin: A Guide to Healthy Skin",
-    category: "Skin Health",
-    date: "August 20, 2026",
-    image:
-      "https://images.unsplash.com/photo-1556228578-8c89e6adf883?auto=format&fit=crop&w=1400&q=85",
+import publicWebsiteService from "../services/publicWebsiteService";
 
-    introduction:
-      "Healthy skin starts with understanding what your skin needs. Every person's skin is different, and factors such as environment, lifestyle, age and skincare habits can influence its condition.",
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  "http://127.0.0.1:8000/api/v1";
 
-    sections: [
-      {
-        heading: "Understanding your skin",
-        paragraphs: [
-          "Your skin is your body's largest organ and plays an important role in protecting you from the environment. Understanding your skin type and its individual needs is the first step toward building an effective skincare routine.",
-          "Rather than following every skincare trend, it is often better to focus on a simple and consistent routine that addresses your specific concerns.",
-        ],
-      },
-      {
-        heading: "Building a simple routine",
-        paragraphs: [
-          "A gentle cleanser, an appropriate moisturizer and daily sun protection form the foundation of a healthy skincare routine.",
-          "Additional products can be introduced according to concerns such as dryness, acne, pigmentation or uneven texture.",
-        ],
-      },
-      {
-        heading: "When professional advice helps",
-        paragraphs: [
-          "Persistent or changing skin concerns may benefit from professional assessment. A dermatologist can evaluate your skin and recommend treatments that are appropriate for your individual needs.",
-        ],
-      },
-    ],
-  },
+const API_ORIGIN = API_BASE_URL.replace(
+  /\/api\/v1\/?$/,
+  ""
+);
 
-  "science-behind-modern-aesthetic-treatments": {
-    title: "The Science Behind Modern Aesthetic Treatments",
-    category: "Aesthetic Care",
-    date: "August 12, 2026",
-    image:
-      "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=1400&q=85",
+function getImageUrl(rawImageUrl) {
+  if (!rawImageUrl) {
+    return "";
+  }
 
-    introduction:
-      "Modern aesthetic medicine has moved toward personalized treatments that focus on refined, natural-looking results rather than dramatic changes.",
+  if (
+    rawImageUrl.startsWith("http://") ||
+    rawImageUrl.startsWith("https://")
+  ) {
+    return rawImageUrl;
+  }
 
-    sections: [
-      {
-        heading: "Modern aesthetic care",
-        paragraphs: [
-          "Aesthetic medicine continues to evolve as new techniques and technologies become available. The focus is increasingly on understanding each patient's individual anatomy, skin condition and desired outcome.",
-        ],
-      },
-      {
-        heading: "Personalized treatment matters",
-        paragraphs: [
-          "There is no single treatment that is appropriate for everyone. Different concerns and goals require different approaches.",
-          "A professional consultation helps determine which treatment options may be suitable for an individual patient.",
-        ],
-      },
-      {
-        heading: "The goal: refined results",
-        paragraphs: [
-          "Thoughtful treatment planning, appropriate techniques and realistic expectations are important when working toward natural-looking aesthetic results.",
-        ],
-      },
-    ],
-  },
+  return `${API_ORIGIN}${
+    rawImageUrl.startsWith("/") ? "" : "/"
+  }${rawImageUrl}`;
+}
 
-  "why-professional-skin-consultation-matters": {
-    title: "Why Professional Skin Consultation Matters",
-    category: "Expert Advice",
-    date: "August 05, 2026",
-    image:
-      "https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?auto=format&fit=crop&w=1400&q=85",
+function formatDate(dateValue) {
+  if (!dateValue) {
+    return "";
+  }
 
-    introduction:
-      "Every skin journey is different. A professional consultation helps create a treatment and skincare plan based on your individual concerns and goals.",
+  const date = new Date(dateValue);
 
-    sections: [
-      {
-        heading: "Every skin journey is different",
-        paragraphs: [
-          "Two people can experience similar skin concerns while requiring completely different approaches. Skin type, lifestyle, previous treatments and individual goals can all influence the right plan.",
-        ],
-      },
-      {
-        heading: "Assessment comes first",
-        paragraphs: [
-          "A professional consultation allows your concerns to be discussed in detail and your skin to be assessed before recommendations are made.",
-          "This personalized approach can help create a clearer and more focused skincare strategy.",
-        ],
-      },
-      {
-        heading: "A long-term approach",
-        paragraphs: [
-          "Good skincare is rarely about a single product or treatment. Consistency, professional guidance and realistic expectations are important parts of maintaining healthy-looking skin over time.",
-        ],
-      },
-    ],
-  },
-};
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function renderContent(content) {
+  if (!content) {
+    return null;
+  }
+
+  const paragraphs = content
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+
+  return paragraphs.map((paragraph, index) => (
+    <p key={index}>{paragraph}</p>
+  ));
+}
 
 export default function ArticlePage() {
-  const slug = window.location.pathname.replace("/news/", "").replace(/\/$/, "");
+  const slug = window.location.pathname
+    .replace(/^\/news\//, "")
+    .replace(/\/$/, "");
 
-  const article = articles[slug];
+  const [article, setArticle] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  if (!article) {
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadArticle() {
+      try {
+        setLoading(true);
+        setError("");
+
+        const data =
+          await publicWebsiteService.getBlogBySlug(slug);
+
+        if (!mounted) {
+          return;
+        }
+
+        setArticle(data);
+      } catch (requestError) {
+        console.error(
+          "Failed to load article:",
+          requestError
+        );
+
+        if (!mounted) {
+          return;
+        }
+
+        setArticle(null);
+
+        setError(
+          requestError?.message ||
+            "Article could not be loaded."
+        );
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    if (slug) {
+      loadArticle();
+    } else {
+      setLoading(false);
+      setError(
+        "Article could not be identified."
+      );
+    }
+
+    return () => {
+      mounted = false;
+    };
+  }, [slug]);
+
+  /* =========================================================
+     LOADING
+     ========================================================= */
+
+  if (loading) {
     return (
-      <main className="article-not-found">
-        <div>
-          <span>ARTICLE NOT FOUND</span>
-
-          <h1>We couldn't find that article.</h1>
-
-          <a href="/#news">Back to Articles</a>
-        </div>
+      <main className="article-page">
+        <section className="article-loading">
+          <div className="article-loading-inner">
+            <span className="article-loading-dot"></span>
+            <p>Loading article</p>
+          </div>
+        </section>
       </main>
     );
   }
 
+  /* =========================================================
+     NOT FOUND
+     ========================================================= */
+
+  if (!article) {
+    return (
+      <main className="article-page">
+        <section className="article-not-found">
+          <div className="article-not-found-inner">
+            <span>FROM THE CLINIC</span>
+
+            <h1>
+              Article
+              <br />
+              not found.
+            </h1>
+
+            {error && <p>{error}</p>}
+
+            <a href="/#news">
+              ← Back to Insights
+            </a>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  const imageUrl = getImageUrl(
+    article.featured_image_url
+  );
+
+  const formattedDate = formatDate(
+    article.published_at ||
+      article.created_at
+  );
+
   return (
     <main className="article-page">
 
-      <section className="article-hero">
-        <div className="article-hero-inner">
+      {/* =====================================================
+          HERO / IMAGE BEHIND HEADING
+          ===================================================== */}
 
-          <a href="/#news" className="article-back">
-            ← Back to Articles
+      <section
+        className={`article-hero ${
+          imageUrl
+            ? "article-hero-with-image"
+            : "article-hero-no-image"
+        }`}
+      >
+
+        {/* BACKGROUND IMAGE */}
+
+        {imageUrl && (
+          <img
+            src={imageUrl}
+            alt=""
+            className="article-hero-image"
+            aria-hidden="true"
+          />
+        )}
+
+        {/* DARK OVERLAY */}
+
+        <div className="article-hero-overlay"></div>
+
+        {/* S PATTERN */}
+
+        <div
+          className="article-hero-pattern"
+          aria-hidden="true"
+        >
+          <span className="pattern-s pattern-s-one">
+            S
+          </span>
+
+          <span className="pattern-s pattern-s-two">
+            S
+          </span>
+        </div>
+
+        {/* HERO CONTENT */}
+
+        <div className="article-hero-content">
+
+          <a
+            href="/#news"
+            className="article-back"
+          >
+            <span>←</span>
+            Back to Insights
           </a>
 
-          <div className="article-meta">
-            <span>{article.category}</span>
-            <span>{article.date}</span>
+          <div className="article-hero-text">
+
+            <div className="article-meta">
+              {article.category && (
+                <span className="article-category">
+                  {article.category}
+                </span>
+              )}
+
+              {article.category &&
+                formattedDate && (
+                  <span className="article-meta-separator">
+                    •
+                  </span>
+                )}
+
+              {formattedDate && (
+                <span className="article-date">
+                  {formattedDate}
+                </span>
+              )}
+            </div>
+
+            <h1>
+              {article.title}
+            </h1>
+
+            {article.excerpt && (
+              <p className="article-excerpt">
+                {article.excerpt}
+              </p>
+            )}
+
           </div>
 
-          <h1>{article.title}</h1>
-
-          <p>{article.introduction}</p>
+          <div className="article-scroll">
+            <span></span>
+            <p>Read article</p>
+          </div>
 
         </div>
       </section>
 
-      <article className="article-body">
+      {/* =====================================================
+          ARTICLE BODY
+          ===================================================== */}
 
-        <div className="article-image">
-          <img
-            src={article.image}
-            alt={article.title}
-          />
-        </div>
+      <section className="article-body-section">
 
-        <div className="article-content">
+        <div className="article-body-layout">
 
-          {article.sections.map((section) => (
-            <section
-              className="article-section"
-              key={section.heading}
-            >
-              <h2>{section.heading}</h2>
+          {/* SIDE INFORMATION */}
 
-              {section.paragraphs.map((paragraph, index) => (
-                <p key={index}>
-                  {paragraph}
+          <aside className="article-sidebar">
+
+            <div className="article-sidebar-line"></div>
+
+            <div className="article-sidebar-item">
+              <span>Category</span>
+
+              <strong>
+                {article.category ||
+                  "Clinic Insights"}
+              </strong>
+            </div>
+
+            {article.author_name && (
+              <div className="article-sidebar-item">
+                <span>Written by</span>
+
+                <strong>
+                  {article.author_name}
+                </strong>
+              </div>
+            )}
+
+            {formattedDate && (
+              <div className="article-sidebar-item">
+                <span>Published</span>
+
+                <strong>
+                  {formattedDate}
+                </strong>
+              </div>
+            )}
+
+          </aside>
+
+          {/* ARTICLE */}
+
+          <article className="article-content">
+
+            {article.author_name && (
+              <div className="article-mobile-author">
+                <span>Written by</span>
+
+                <strong>
+                  {article.author_name}
+                </strong>
+              </div>
+            )}
+
+            <div className="article-text">
+              {article.content ? (
+                renderContent(
+                  article.content
+                )
+              ) : article.excerpt ? (
+                <p>
+                  {article.excerpt}
                 </p>
-              ))}
-            </section>
-          ))}
+              ) : (
+                <p>
+                  More information about this
+                  topic will be available soon.
+                </p>
+              )}
+            </div>
 
-          <div className="article-footer">
-            <a href="/#news">
-              ← Back to Latest Insights
-            </a>
-          </div>
+          </article>
+
+        </div>
+      </section>
+
+      {/* =====================================================
+          FOOTER
+          ===================================================== */}
+
+      <section className="article-bottom">
+
+        <div className="article-bottom-pattern">
+          <span className="bottom-s">S</span>
+        </div>
+
+        <div className="article-bottom-inner">
+
+          <span>
+            Continue exploring
+          </span>
+
+          <a href="/#news">
+            <span>Back to Insights</span>
+            <strong>→</strong>
+          </a>
 
         </div>
 
-      </article>
+      </section>
 
     </main>
   );

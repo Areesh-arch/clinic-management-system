@@ -41,6 +41,23 @@ def get_cms_blog(
     )
 
 
+def get_cms_blog_by_slug(
+    db: Session,
+    slug: str,
+    tenant_id: int,
+) -> CMSBlog | None:
+
+    return (
+        db.query(CMSBlog)
+        .filter(
+            CMSBlog.slug == slug,
+            CMSBlog.tenant_id == tenant_id,
+            CMSBlog.is_published.is_(True),
+        )
+        .first()
+    )
+
+
 def get_all_cms_blogs(
     db: Session,
     tenant_id: int,

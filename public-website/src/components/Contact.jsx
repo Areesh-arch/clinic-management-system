@@ -1,10 +1,12 @@
+
 import { useState } from "react";
 import "../styles/contact.css";
 
 const API_URL =
-  import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api/v1";
+  import.meta.env.VITE_API_URL ||
+  "http://127.0.0.1:8000/api/v1";
 
-export default function Contact() {
+export default function Contact({ siteSettings }) {
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -18,6 +20,40 @@ export default function Contact() {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  /* =========================================================
+     CMS CONTACT INFORMATION
+     ========================================================= */
+
+  const phone =
+    siteSettings?.phone ||
+    siteSettings?.contact_phone ||
+    "";
+
+  const email =
+    siteSettings?.email ||
+    siteSettings?.contact_email ||
+    "";
+
+  const address =
+    siteSettings?.address ||
+    siteSettings?.contact_address ||
+    "";
+
+  const whatsapp =
+    siteSettings?.whatsapp ||
+    siteSettings?.whatsapp_number ||
+    siteSettings?.contact_whatsapp ||
+    "";
+
+  const openingHours =
+    siteSettings?.opening_hours ||
+    siteSettings?.contact_opening_hours ||
+    "";
+
+  /* =========================================================
+     FORM
+     ========================================================= */
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -38,10 +74,14 @@ export default function Contact() {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (!formData.name.trim() || !formData.phone.trim()) {
+    if (
+      !formData.name.trim() ||
+      !formData.phone.trim()
+    ) {
       setStatus({
         type: "error",
-        message: "Please enter your name and phone number.",
+        message:
+          "Please enter your name and phone number.",
       });
 
       return;
@@ -55,18 +95,26 @@ export default function Contact() {
     });
 
     try {
-      const response = await fetch(`${API_URL}/crm/leads/public`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          full_name: formData.name.trim(),
-          phone: formData.phone.trim(),
-          source: "website",
-          status: "new",
-        }),
-      });
+      const response = await fetch(
+        `${API_URL}/crm/leads/public`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            full_name:
+              formData.name.trim(),
+
+            phone:
+              formData.phone.trim(),
+
+            source: "website",
+
+            status: "new",
+          }),
+        }
+      );
 
       let data = {};
 
@@ -82,9 +130,15 @@ export default function Contact() {
 
         if (Array.isArray(data?.detail)) {
           errorMessage = data.detail
-            .map((error) => error?.msg || "Invalid information.")
+            .map(
+              (error) =>
+                error?.msg ||
+                "Invalid information."
+            )
             .join(" ");
-        } else if (typeof data?.detail === "string") {
+        } else if (
+          typeof data?.detail === "string"
+        ) {
           errorMessage = data.detail;
         }
 
@@ -104,7 +158,10 @@ export default function Contact() {
         message: "",
       });
     } catch (error) {
-      console.error("Contact form submission failed:", error);
+      console.error(
+        "Contact form submission failed:",
+        error
+      );
 
       setStatus({
         type: "error",
@@ -117,11 +174,34 @@ export default function Contact() {
     }
   };
 
+  /* =========================================================
+     HELPERS
+     ========================================================= */
+
+  const cleanPhoneForLink = phone
+    ? phone.replace(/[^\d+]/g, "")
+    : "";
+
+  const cleanWhatsAppForLink = whatsapp
+    ? whatsapp.replace(/\D/g, "")
+    : "";
+
   return (
-    <section id="contact" className="contact-section">
+    <section
+      id="contact"
+      className="contact-section"
+    >
       <div className="contact-container">
+
+        {/* ===================================================
+            HEADING
+            =================================================== */}
+
         <div className="contact-heading">
-          <span className="contact-label">GET IN TOUCH</span>
+
+          <span className="contact-label">
+            GET IN TOUCH
+          </span>
 
           <h2>
             Begin Your Journey
@@ -129,73 +209,190 @@ export default function Contact() {
           </h2>
 
           <p>
-            Have a question or ready to book your consultation?
-            Our clinic team is here to help you take the next step.
+            Have a question or ready to book
+            your consultation? Our clinic team
+            is here to help you take the next step.
           </p>
+
         </div>
 
+        {/* ===================================================
+            CONTENT
+            =================================================== */}
+
         <div className="contact-content">
+
+          {/* =================================================
+              CONTACT INFORMATION
+              ================================================= */}
+
           <div className="contact-info">
-            <div className="contact-item">
-              <div className="contact-icon">✦</div>
 
-              <div>
-                <h3>Visit Our Clinic</h3>
+            {/* ADDRESS */}
 
-                <p>
-                  Your Clinic Address
-                  <br />
-                  City, Pakistan
-                </p>
+            {address && (
+              <div className="contact-item">
+
+                <div className="contact-icon">
+                  ✦
+                </div>
+
+                <div>
+                  <h3>
+                    Visit Our Clinic
+                  </h3>
+
+                  <p>
+                    {address}
+                  </p>
+                </div>
+
               </div>
-            </div>
+            )}
 
-            <div className="contact-item">
-              <div className="contact-icon">✆</div>
+            {/* PHONE */}
 
-              <div>
-                <h3>Call Us</h3>
+            {phone && (
+              <div className="contact-item">
 
-                <a href="tel:+923000000000">
-                  +92 300 0000000
-                </a>
+                <div className="contact-icon">
+                  ✆
+                </div>
+
+                <div>
+                  <h3>
+                    Call Us
+                  </h3>
+
+                  <a
+                    href={`tel:${cleanPhoneForLink}`}
+                  >
+                    {phone}
+                  </a>
+                </div>
+
               </div>
-            </div>
+            )}
 
-            <div className="contact-item">
-              <div className="contact-icon">✉</div>
+            {/* EMAIL */}
 
-              <div>
-                <h3>Email</h3>
+            {email && (
+              <div className="contact-item">
 
-                <a href="mailto:info@dermaclinic.com">
-                  info@dermaclinic.com
-                </a>
+                <div className="contact-icon">
+                  ✉
+                </div>
+
+                <div>
+                  <h3>
+                    Email
+                  </h3>
+
+                  <a
+                    href={`mailto:${email}`}
+                  >
+                    {email}
+                  </a>
+                </div>
+
               </div>
-            </div>
+            )}
 
-            <div className="contact-item">
-              <div className="contact-icon">◷</div>
+            {/* WHATSAPP */}
 
-              <div>
-                <h3>Opening Hours</h3>
+            {whatsapp && (
+              <div className="contact-item">
 
-                <p>
-                  Monday – Saturday
-                  <br />
-                  10:00 AM – 8:00 PM
-                </p>
+                <div className="contact-icon">
+                  ◷
+                </div>
+
+                <div>
+                  <h3>
+                    WhatsApp
+                  </h3>
+
+                  <a
+                    href={`https://wa.me/${cleanWhatsAppForLink}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {whatsapp}
+                  </a>
+                </div>
+
               </div>
-            </div>
+            )}
+
+            {/* OPENING HOURS */}
+
+            {openingHours && (
+              <div className="contact-item">
+
+                <div className="contact-icon">
+                  ◷
+                </div>
+
+                <div>
+                  <h3>
+                    Opening Hours
+                  </h3>
+
+                  <p>
+                    {openingHours}
+                  </p>
+                </div>
+
+              </div>
+            )}
+
+            {/* FALLBACK */}
+
+            {!address &&
+              !phone &&
+              !email &&
+              !whatsapp &&
+              !openingHours && (
+                <div className="contact-item">
+
+                  <div className="contact-icon">
+                    ✦
+                  </div>
+
+                  <div>
+                    <h3>
+                      Contact Our Clinic
+                    </h3>
+
+                    <p>
+                      Please contact us to
+                      learn more about our
+                      clinic and available
+                      consultations.
+                    </p>
+                  </div>
+
+                </div>
+              )}
+
           </div>
 
+          {/* =================================================
+              CONTACT FORM
+              ================================================= */}
+
           <div className="contact-form-wrapper">
+
             <form
               className="contact-form"
               onSubmit={handleSubmit}
             >
+
               <div className="form-group">
-                <label htmlFor="name">Your Name</label>
+
+                <label htmlFor="name">
+                  Your Name
+                </label>
 
                 <input
                   id="name"
@@ -206,10 +403,14 @@ export default function Contact() {
                   onChange={handleChange}
                   required
                 />
+
               </div>
 
               <div className="form-group">
-                <label htmlFor="phone">Phone Number</label>
+
+                <label htmlFor="phone">
+                  Phone Number
+                </label>
 
                 <input
                   id="phone"
@@ -220,10 +421,14 @@ export default function Contact() {
                   onChange={handleChange}
                   required
                 />
+
               </div>
 
               <div className="form-group">
-                <label htmlFor="email">Email Address</label>
+
+                <label htmlFor="email">
+                  Email Address
+                </label>
 
                 <input
                   id="email"
@@ -233,10 +438,14 @@ export default function Contact() {
                   value={formData.email}
                   onChange={handleChange}
                 />
+
               </div>
 
               <div className="form-group">
-                <label htmlFor="message">How Can We Help?</label>
+
+                <label htmlFor="message">
+                  How Can We Help?
+                </label>
 
                 <textarea
                   id="message"
@@ -246,7 +455,10 @@ export default function Contact() {
                   value={formData.message}
                   onChange={handleChange}
                 />
+
               </div>
+
+              {/* STATUS */}
 
               {status.message && (
                 <div
@@ -260,6 +472,8 @@ export default function Contact() {
                 </div>
               )}
 
+              {/* SUBMIT */}
+
               <button
                 type="submit"
                 className="contact-submit"
@@ -269,8 +483,11 @@ export default function Contact() {
                   ? "Sending..."
                   : "Request Consultation"}
               </button>
+
             </form>
+
           </div>
+
         </div>
       </div>
     </section>

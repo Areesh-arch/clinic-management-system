@@ -8,7 +8,6 @@
   padding: 80px 7% 25px;
 }
 
-
 /* =====================================================
    MAIN FOOTER
 ===================================================== */
@@ -22,7 +21,6 @@
   gap: 70px;
 }
 
-
 /* =====================================================
    BRAND
 ===================================================== */
@@ -34,10 +32,17 @@
 .footer-logo {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
-
   text-decoration: none;
   color: #f7f2e8;
+}
+
+/* Uploaded logo size */
+.footer-logo-image {
+  width: 125px;
+  height: 42px;
+  object-fit: contain;
+  object-position: left center;
+  display: block;
 }
 
 .footer-logo-mark {
@@ -70,23 +75,18 @@
 
 .footer-logo-text small {
   margin-top: 5px;
-
   font-size: 8px;
   letter-spacing: 4px;
-
   color: #a8bda9;
 }
 
 .footer-brand p {
   margin-top: 25px;
-
   color: #c8d4cc;
   font-size: 14px;
   line-height: 1.8;
-
   max-width: 300px;
 }
-
 
 /* =====================================================
    FOOTER COLUMNS
@@ -102,10 +102,8 @@
   margin: 0 0 12px;
 
   color: #c8a96b;
-
   font-size: 12px;
   font-weight: 500;
-
   letter-spacing: 2px;
   text-transform: uppercase;
 }
@@ -116,7 +114,6 @@
 
   color: #d8e0da;
   text-decoration: none;
-
   font-size: 14px;
 
   transition:
@@ -133,7 +130,6 @@
   color: #aebfb4;
 }
 
-
 /* =====================================================
    WHATSAPP
 ===================================================== */
@@ -142,14 +138,12 @@
   color: #b8d1bd !important;
 }
 
-
 /* =====================================================
    FOOTER BOTTOM
 ===================================================== */
 
 .footer-bottom {
   max-width: 1200px;
-
   margin: 65px auto 0;
   padding-top: 22px;
 
@@ -158,13 +152,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-
   gap: 20px;
 }
 
 .footer-bottom p {
   margin: 0;
-
   color: #9fb2a7;
   font-size: 12px;
 }
@@ -177,7 +169,6 @@
 .footer-bottom-links a {
   color: #9fb2a7;
   text-decoration: none;
-
   font-size: 12px;
 
   transition: color 0.2s ease;
@@ -186,7 +177,6 @@
 .footer-bottom-links a:hover {
   color: #c8a96b;
 }
-
 
 /* =====================================================
    RESPONSIVE
@@ -216,5 +206,10 @@
 
   .footer-bottom-links {
     gap: 18px;
+  }
+
+  .footer-logo-image {
+    width: 115px;
+    height: 38px;
   }
 }

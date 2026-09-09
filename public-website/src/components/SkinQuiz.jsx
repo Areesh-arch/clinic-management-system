@@ -1,56 +1,32 @@
-import { useState } from "react";
+
+import { useEffect, useState } from "react";
 import "../styles/skinQuiz.css";
 
-const questions = [
-  {
-    id: "concern",
-    question: "What is your main skin concern?",
+function normalizeQuestion(question, index) {
+  return {
+    id: question?.id ?? `question-${index + 1}`,
+    question: question?.question ?? "",
     options: [
-      "Acne & Breakouts",
-      "Pigmentation & Dark Spots",
-      "Fine Lines & Aging",
-      "Dryness & Sensitivity",
-      "Uneven Skin Texture",
-    ],
-  },
-  {
-    id: "skinType",
-    question: "How would you describe your skin?",
-    options: [
-      "Oily",
-      "Dry",
-      "Combination",
-      "Sensitive",
-      "Normal",
-      "Not Sure",
-    ],
-  },
-  {
-    id: "duration",
-    question: "How long have you experienced this concern?",
-    options: [
-      "Less than 3 months",
-      "3–6 months",
-      "6–12 months",
-      "More than a year",
-    ],
-  },
-  {
-    id: "experience",
-    question: "Have you tried treatments for this concern before?",
-    options: [
-      "No, this is my first time",
-      "Yes, with some improvement",
-      "Yes, but the results were limited",
-      "Yes, but the concern returned",
-    ],
-  },
-];
+      question?.option_a,
+      question?.option_b,
+      question?.option_c,
+      question?.option_d,
+    ].filter(Boolean),
+  };
+}
 
-function getRecommendation(answers) {
-  const concern = answers.concern;
+function getRecommendation(answers, questions) {
+  const firstQuestion = questions[0];
+  const firstAnswer = firstQuestion
+    ? answers[firstQuestion.id]
+    : "";
 
-  if (concern === "Acne & Breakouts") {
+  const answer = String(firstAnswer).toLowerCase();
+
+  if (
+    answer.includes("acne") ||
+    answer.includes("breakout")
+  ) {
     return {
       title: "Acne-Focused Consultation",
       text:
@@ -58,7 +34,10 @@ function getRecommendation(answers) {
     };
   }
 
-  if (concern === "Pigmentation & Dark Spots") {
+  if (
+    answer.includes("pigmentation") ||
+    answer.includes("dark spot")
+  ) {
     return {
       title: "Pigmentation Consultation",
       text:
@@ -66,7 +45,11 @@ function getRecommendation(answers) {
     };
   }
 
-  if (concern === "Fine Lines & Aging") {
+  if (
+    answer.includes("fine line") ||
+    answer.includes("aging") ||
+    answer.includes("ageing")
+  ) {
     return {
       title: "Skin Rejuvenation Consultation",
       text:
@@ -74,7 +57,11 @@ function getRecommendation(answers) {
     };
   }
 
-  if (concern === "Dryness & Sensitivity") {
+  if (
+    answer.includes("dryness") ||
+    answer.includes("sensitivity") ||
+    answer.includes("sensitive")
+  ) {
     return {
       title: "Skin Health Consultation",
       text:
@@ -89,12 +76,50 @@ function getRecommendation(answers) {
   };
 }
 
-export default function SkinQuiz() {
+export default function SkinQuiz({ questions = [] }) {
+  const normalizedQuestions = questions
+    .map(normalizeQuestion)
+    .filter(
+      (question) =>
+        question.question &&
+        question.options.length > 0
+    );
+
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState({});
   const [showResult, setShowResult] = useState(false);
 
-  const question = questions[currentQuestion];
+  useEffect(() => {
+    setCurrentQuestion(0);
+    setAnswers({});
+    setShowResult(false);
+  }, [questions]);
+
+  if (normalizedQuestions.length === 0) {
+    return (
+      <section className="skin-quiz" id="skin-quiz">
+        <div className="skin-quiz-container">
+          <div className="skin-quiz-heading">
+            <span className="skin-quiz-eyebrow">
+              SKIN QUIZ
+            </span>
+
+            <h2>
+              Discover What
+              <em> Your Skin Needs.</em>
+            </h2>
+
+            <p>
+              Our skin quiz will be available here soon.
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  const question = normalizedQuestions[currentQuestion];
+
   const selectedAnswer = answers[question.id];
 
   const handleAnswer = (answer) => {
@@ -105,10 +130,17 @@ export default function SkinQuiz() {
   };
 
   const handleNext = () => {
-    if (!selectedAnswer) return;
+    if (!selectedAnswer) {
+      return;
+    }
 
-    if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion((previous) => previous + 1);
+    if (
+      currentQuestion <
+      normalizedQuestions.length - 1
+    ) {
+      setCurrentQuestion(
+        (previous) => previous + 1
+      );
       return;
     }
 
@@ -117,7 +149,9 @@ export default function SkinQuiz() {
 
   const handleBack = () => {
     if (currentQuestion > 0) {
-      setCurrentQuestion((previous) => previous - 1);
+      setCurrentQuestion(
+        (previous) => previous - 1
+      );
     }
   };
 
@@ -128,13 +162,21 @@ export default function SkinQuiz() {
   };
 
   const progress =
-    ((currentQuestion + 1) / questions.length) * 100;
+    ((currentQuestion + 1) /
+      normalizedQuestions.length) *
+    100;
 
   if (showResult) {
-    const recommendation = getRecommendation(answers);
+    const recommendation = getRecommendation(
+      answers,
+      normalizedQuestions
+    );
 
     return (
-      <section className="skin-quiz" id="skin-quiz">
+      <section
+        className="skin-quiz"
+        id="skin-quiz"
+      >
         <div className="skin-quiz-container">
           <div className="skin-quiz-heading">
             <span className="skin-quiz-eyebrow">
@@ -147,13 +189,16 @@ export default function SkinQuiz() {
             </h2>
 
             <p>
-              Based on your answers, we recommend beginning
-              with a personalised consultation.
+              Based on your answers, we recommend
+              beginning with a personalised
+              consultation.
             </p>
           </div>
 
           <div className="quiz-result">
-            <div className="quiz-result-mark">✦</div>
+            <div className="quiz-result-mark">
+              ✦
+            </div>
 
             <span className="quiz-result-label">
               OUR RECOMMENDATION
@@ -164,7 +209,10 @@ export default function SkinQuiz() {
             <p>{recommendation.text}</p>
 
             <div className="quiz-result-actions">
-              <a href="#contact" className="quiz-primary-button">
+              <a
+                href="#contact"
+                className="quiz-primary-button"
+              >
                 Book Consultation
               </a>
 
@@ -183,9 +231,11 @@ export default function SkinQuiz() {
   }
 
   return (
-    <section className="skin-quiz" id="skin-quiz">
+    <section
+      className="skin-quiz"
+      id="skin-quiz"
+    >
       <div className="skin-quiz-container">
-
         <div className="skin-quiz-heading">
           <span className="skin-quiz-eyebrow">
             SKIN QUIZ
@@ -197,18 +247,18 @@ export default function SkinQuiz() {
           </h2>
 
           <p>
-            Take a short quiz to better understand your skin
-            concerns and discover where to begin.
+            Take a short quiz to better understand
+            your skin concerns and discover where
+            to begin.
           </p>
         </div>
 
         <div className="quiz-card">
-
           <div className="quiz-progress">
             <div className="quiz-progress-top">
               <span>
                 Question {currentQuestion + 1} of{" "}
-                {questions.length}
+                {normalizedQuestions.length}
               </span>
 
               <span>
@@ -219,37 +269,46 @@ export default function SkinQuiz() {
             <div className="quiz-progress-track">
               <div
                 className="quiz-progress-fill"
-                style={{ width: `${progress}%` }}
+                style={{
+                  width: `${progress}%`,
+                }}
               />
             </div>
           </div>
 
           <div className="quiz-question">
             <span className="quiz-question-number">
-              0{currentQuestion + 1}
+              {String(currentQuestion + 1).padStart(
+                2,
+                "0"
+              )}
             </span>
 
             <h3>{question.question}</h3>
 
             <div className="quiz-options">
-              {question.options.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  className={`quiz-option ${
-                    selectedAnswer === option
-                      ? "selected"
-                      : ""
-                  }`}
-                  onClick={() => handleAnswer(option)}
-                >
-                  <span>{option}</span>
+              {question.options.map(
+                (option, index) => (
+                  <button
+                    key={`${option}-${index}`}
+                    type="button"
+                    className={`quiz-option ${
+                      selectedAnswer === option
+                        ? "selected"
+                        : ""
+                    }`}
+                    onClick={() =>
+                      handleAnswer(option)
+                    }
+                  >
+                    <span>{option}</span>
 
-                  <span className="quiz-option-arrow">
-                    →
-                  </span>
-                </button>
-              ))}
+                    <span className="quiz-option-arrow">
+                      →
+                    </span>
+                  </button>
+                )
+              )}
             </div>
           </div>
 
@@ -269,12 +328,12 @@ export default function SkinQuiz() {
               disabled={!selectedAnswer}
               className="quiz-next-button"
             >
-              {currentQuestion === questions.length - 1
-                ? "See My Result"
-                : "Continue"}
+              {currentQuestion ===
+              normalizedQuestions.length - 1
+                ? "See Recommendation"
+                : "Next Question"}
             </button>
           </div>
-
         </div>
       </div>
     </section>

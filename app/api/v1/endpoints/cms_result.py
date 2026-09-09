@@ -11,6 +11,7 @@ from fastapi import (
 from sqlalchemy.orm import Session
 
 from app.api.permissions import require_roles
+from app.api.tenant_context import get_effective_tenant_id
 from app.database.session import get_db
 from app.models.enums import UserRole
 from app.models.user import User
@@ -76,6 +77,7 @@ async def create_result(
     before_image: UploadFile | None = File(None),
     after_image: UploadFile | None = File(None),
     db: Session = Depends(get_db),
+    tenant_id: int = Depends(get_effective_tenant_id),
     current_user: User = Depends(
         require_roles(
             UserRole.OWNER,
@@ -94,7 +96,7 @@ async def create_result(
         is_active=is_active,
         before_image=before_image,
         after_image=after_image,
-        tenant_id=current_user.tenant_id,
+        tenant_id=tenant_id,
     )
 
 
@@ -108,6 +110,7 @@ async def create_result(
 )
 def list_results(
     db: Session = Depends(get_db),
+    tenant_id: int = Depends(get_effective_tenant_id),
     current_user: User = Depends(
         require_roles(
             UserRole.OWNER,
@@ -118,7 +121,7 @@ def list_results(
 ):
     return get_cms_results_service(
         db=db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=tenant_id,
     )
 
 
@@ -133,6 +136,7 @@ def list_results(
 def get_result(
     result_id: int,
     db: Session = Depends(get_db),
+    tenant_id: int = Depends(get_effective_tenant_id),
     current_user: User = Depends(
         require_roles(
             UserRole.OWNER,
@@ -144,7 +148,7 @@ def get_result(
     result = get_cms_result_service(
         db=db,
         result_id=result_id,
-        tenant_id=current_user.tenant_id,
+        tenant_id=tenant_id,
     )
 
     if result is None:
@@ -175,6 +179,7 @@ async def update_result(
     before_image: UploadFile | None = File(None),
     after_image: UploadFile | None = File(None),
     db: Session = Depends(get_db),
+    tenant_id: int = Depends(get_effective_tenant_id),
     current_user: User = Depends(
         require_roles(
             UserRole.OWNER,
@@ -186,7 +191,7 @@ async def update_result(
     result = get_cms_result_service(
         db=db,
         result_id=result_id,
-        tenant_id=current_user.tenant_id,
+        tenant_id=tenant_id,
     )
 
     if result is None:
@@ -220,6 +225,7 @@ async def update_result(
 def delete_result(
     result_id: int,
     db: Session = Depends(get_db),
+    tenant_id: int = Depends(get_effective_tenant_id),
     current_user: User = Depends(
         require_roles(
             UserRole.OWNER,
@@ -231,7 +237,7 @@ def delete_result(
     result = get_cms_result_service(
         db=db,
         result_id=result_id,
-        tenant_id=current_user.tenant_id,
+        tenant_id=tenant_id,
     )
 
     if result is None:

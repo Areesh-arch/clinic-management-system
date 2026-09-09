@@ -13,10 +13,12 @@ import Footer from "../components/Footer";
 import publicWebsiteService from "../services/publicWebsiteService";
 
 export default function Home() {
+  const [siteSettings, setSiteSettings] = useState(null);
   const [services, setServices] = useState([]);
   const [results, setResults] = useState([]);
   const [testimonials, setTestimonials] = useState([]);
   const [quizQuestions, setQuizQuestions] = useState([]);
+  const [blogs, setBlogs] = useState([]);
 
   const [loading, setLoading] = useState(true);
 
@@ -26,20 +28,31 @@ export default function Home() {
     async function loadWebsiteContent() {
       try {
         const [
+          siteSettingsData,
           servicesData,
           resultsData,
           testimonialsData,
           quizData,
+          blogsData,
         ] = await Promise.all([
+          publicWebsiteService.getSiteSettings(),
           publicWebsiteService.getServices(),
           publicWebsiteService.getResults(),
           publicWebsiteService.getTestimonials(),
           publicWebsiteService.getQuizQuestions(),
+          publicWebsiteService.getBlogs(),
         ]);
 
         if (!mounted) {
           return;
         }
+
+        setSiteSettings(
+          siteSettingsData &&
+            typeof siteSettingsData === "object"
+            ? siteSettingsData
+            : null
+        );
 
         setServices(
           Array.isArray(servicesData)
@@ -64,6 +77,12 @@ export default function Home() {
             ? quizData
             : []
         );
+
+        setBlogs(
+          Array.isArray(blogsData)
+            ? blogsData
+            : []
+        );
       } catch (error) {
         console.error(
           "Failed to load public website CMS content:",
@@ -85,12 +104,12 @@ export default function Home() {
 
   return (
     <div className="website">
-
       <Navbar />
 
       <main>
-
-        <About />
+        <About
+          siteSettings={siteSettings}
+        />
 
         <Services
           services={services}
@@ -108,13 +127,16 @@ export default function Home() {
           questions={quizQuestions}
         />
 
-        <News />
+        <News
+          blogs={blogs}
+        />
 
-        <Contact />
-
+        <Contact 
+        siteSettings={siteSettings} 
+        />
       </main>
 
-      <Footer />
+      <Footer siteSettings={siteSettings} />
 
       {loading && (
         <div
@@ -130,7 +152,6 @@ export default function Home() {
           Loading clinic content...
         </div>
       )}
-
     </div>
   );
 }

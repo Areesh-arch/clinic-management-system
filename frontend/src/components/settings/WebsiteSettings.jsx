@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+
 import {
   FiGlobe,
   FiHome,
@@ -13,15 +14,17 @@ import {
   FiUpload,
   FiImage,
   FiX,
+  FiAward,
 } from "react-icons/fi";
+
 import cmsService from "../../services/cmsService";
 
 const EMPTY_SETTINGS = {
+  logo_url: "",
   homepage_eyebrow: "",
   homepage_title: "",
   homepage_description: "",
   homepage_image_url: "",
-
   clinic_name: "",
   phone: "",
   email: "",
@@ -36,25 +39,58 @@ function WebsiteSettings() {
 
   const [loading, setLoading] = useState(true);
 
+  const [savingBranding, setSavingBranding] = useState(false);
   const [savingHomepage, setSavingHomepage] = useState(false);
   const [savingContact, setSavingContact] = useState(false);
+
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingHomepageImage, setUploadingHomepageImage] =
     useState(false);
 
+  const [brandingMessage, setBrandingMessage] = useState("");
   const [homepageMessage, setHomepageMessage] = useState("");
   const [contactMessage, setContactMessage] = useState("");
 
+  const [brandingError, setBrandingError] = useState("");
   const [homepageError, setHomepageError] = useState("");
   const [contactError, setContactError] = useState("");
+
+  const [logoError, setLogoError] = useState("");
   const [homepageImageError, setHomepageImageError] = useState("");
+
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState("");
 
   const [homepageImageFile, setHomepageImageFile] = useState(null);
   const [homepageImagePreview, setHomepageImagePreview] =
     useState("");
 
+  // =====================================================
+  // LOAD SETTINGS
+  // =====================================================
+
   useEffect(() => {
     loadSettings();
   }, []);
+
+  // =====================================================
+  // CLEANUP LOGO PREVIEW
+  // =====================================================
+
+  useEffect(() => {
+    return () => {
+      if (
+        logoPreview &&
+        logoPreview.startsWith("blob:")
+      ) {
+        URL.revokeObjectURL(logoPreview);
+      }
+    };
+  }, [logoPreview]);
+
+  // =====================================================
+  // CLEANUP HOMEPAGE IMAGE PREVIEW
+  // =====================================================
 
   useEffect(() => {
     return () => {
@@ -67,33 +103,65 @@ function WebsiteSettings() {
     };
   }, [homepageImagePreview]);
 
+  // =====================================================
+  // LOAD SETTINGS
+  // =====================================================
+
   const loadSettings = async () => {
     try {
       setLoading(true);
+
+      setBrandingError("");
       setHomepageError("");
       setContactError("");
+
+      setLogoError("");
       setHomepageImageError("");
 
       const data = await cmsService.getSiteSettings();
 
       const loadedSettings = {
-        homepage_eyebrow: data?.homepage_eyebrow || "",
-        homepage_title: data?.homepage_title || "",
+        logo_url: data?.logo_url || "",
+
+        homepage_eyebrow:
+          data?.homepage_eyebrow || "",
+
+        homepage_title:
+          data?.homepage_title || "",
+
         homepage_description:
           data?.homepage_description || "",
+
         homepage_image_url:
           data?.homepage_image_url || "",
 
-        clinic_name: data?.clinic_name || "",
-        phone: data?.phone || "",
-        email: data?.email || "",
-        address: data?.address || "",
-        whatsapp: data?.whatsapp || "",
-        opening_hours: data?.opening_hours || "",
-        map_url: data?.map_url || "",
+        clinic_name:
+          data?.clinic_name || "",
+
+        phone:
+          data?.phone || "",
+
+        email:
+          data?.email || "",
+
+        address:
+          data?.address || "",
+
+        whatsapp:
+          data?.whatsapp || "",
+
+        opening_hours:
+          data?.opening_hours || "",
+
+        map_url:
+          data?.map_url || "",
       };
 
       setSettings(loadedSettings);
+
+      setLogoPreview(
+        loadedSettings.logo_url
+      );
 
       setHomepageImagePreview(
         loadedSettings.homepage_image_url
@@ -107,18 +175,29 @@ function WebsiteSettings() {
           err
         );
 
+        setBrandingError(
+          message ||
+            "Failed to load website settings."
+        );
+
         setHomepageError(
-          message || "Failed to load website settings."
+          message ||
+            "Failed to load website settings."
         );
 
         setContactError(
-          message || "Failed to load website settings."
+          message ||
+            "Failed to load website settings."
         );
       }
     } finally {
       setLoading(false);
     }
   };
+
+  // =====================================================
+  // COMMON CHANGE HANDLER
+  // =====================================================
 
   const handleChange = (field, value) => {
     setSettings((previous) => ({
@@ -127,16 +206,282 @@ function WebsiteSettings() {
     }));
   };
 
+  // =====================================================
+  // CLEAN VALUE
+  // =====================================================
+
   const cleanValue = (value) => {
     const trimmed = value?.trim?.() || "";
+
     return trimmed === "" ? null : trimmed;
+  };
+
+  // =====================================================
+  // IMAGE URL HELPER
+  // =====================================================
+
+  const getImageUrl = (rawImageUrl) => {
+    if (!rawImageUrl) {
+      return "";
+    }
+
+    if (
+      rawImageUrl.startsWith("http://") ||
+      rawImageUrl.startsWith("https://") ||
+      rawImageUrl.startsWith("blob:")
+    ) {
+      return rawImageUrl;
+    }
+
+    const apiBaseUrl =
+      import.meta.env.VITE_API_URL ||
+      "http://127.0.0.1:8000/api/v1";
+
+    const apiOrigin = apiBaseUrl.replace(
+      /\/api\/v1\/?$/,
+      ""
+    );
+
+    return `${apiOrigin}${
+      rawImageUrl.startsWith("/")
+        ? ""
+        : "/"
+    }${rawImageUrl}`;
+  };
+
+  // =====================================================
+  // GENERIC IMAGE UPLOAD RESPONSE
+  // =====================================================
+
+  const getUploadedImageUrl = (uploadedImage) => {
+    return (
+      uploadedImage?.url ||
+      uploadedImage?.image_url ||
+      uploadedImage?.file_url ||
+      uploadedImage?.image?.url ||
+      uploadedImage?.data?.url ||
+      uploadedImage?.data?.image_url ||
+      uploadedImage?.data?.file_url ||
+      ""
+    );
+  };
+
+  // =====================================================
+  // LOGO - SELECT FILE
+  // =====================================================
+
+  const handleLogoSelect = (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    setLogoError("");
+    setBrandingMessage("");
+
+    if (!file.type.startsWith("image/")) {
+      setLogoError(
+        "Please select a valid image file."
+      );
+
+      event.target.value = "";
+      return;
+    }
+
+    const maxSize = 10 * 1024 * 1024;
+
+    if (file.size > maxSize) {
+      setLogoError(
+        "Logo is too large. Please select an image smaller than 10 MB."
+      );
+
+      event.target.value = "";
+      return;
+    }
+
+    setLogoFile(file);
+
+    if (
+      logoPreview &&
+      logoPreview.startsWith("blob:")
+    ) {
+      URL.revokeObjectURL(logoPreview);
+    }
+
+    const previewUrl =
+      URL.createObjectURL(file);
+
+    setLogoPreview(previewUrl);
+  };
+
+  // =====================================================
+  // LOGO - REMOVE SELECTED IMAGE
+  // =====================================================
+
+  const handleRemoveLogo = () => {
+    setLogoFile(null);
+    setLogoError("");
+
+    if (
+      logoPreview &&
+      logoPreview.startsWith("blob:")
+    ) {
+      URL.revokeObjectURL(logoPreview);
+    }
+
+    setLogoPreview(
+      settings.logo_url || ""
+    );
+
+    const fileInput = document.getElementById(
+      "clinic-logo-upload"
+    );
+
+    if (fileInput) {
+      fileInput.value = "";
+    }
+  };
+
+  // =====================================================
+  // LOGO - UPLOAD
+  // =====================================================
+
+  const handleUploadLogo = async () => {
+    if (!logoFile) {
+      setLogoError(
+        "Please select a logo image first."
+      );
+
+      return;
+    }
+
+    try {
+      setUploadingLogo(true);
+
+      setLogoError("");
+      setBrandingMessage("");
+
+      const uploadedImage =
+        await cmsService.uploadImage(
+          logoFile
+        );
+
+      const uploadedImageUrl =
+        getUploadedImageUrl(
+          uploadedImage
+        );
+
+      if (!uploadedImageUrl) {
+        console.error(
+          "Logo upload response:",
+          uploadedImage
+        );
+
+        throw new Error(
+          "Logo was uploaded, but the server did not return an image URL."
+        );
+      }
+
+      setSettings((previous) => ({
+        ...previous,
+        logo_url: uploadedImageUrl,
+      }));
+
+      setLogoPreview(
+        getImageUrl(uploadedImageUrl)
+      );
+
+      setLogoFile(null);
+
+      const fileInput = document.getElementById(
+        "clinic-logo-upload"
+      );
+
+      if (fileInput) {
+        fileInput.value = "";
+      }
+
+      setBrandingMessage(
+        "Logo uploaded successfully. Click Save Branding to publish it."
+      );
+    } catch (err) {
+      console.error(
+        "Failed to upload clinic logo:",
+        err
+      );
+
+      setLogoError(
+        err?.message ||
+          "Failed to upload clinic logo."
+      );
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  // =====================================================
+  // SAVE BRANDING
+  // =====================================================
+
+  const handleSaveBranding = async () => {
+    try {
+      setSavingBranding(true);
+
+      setBrandingMessage("");
+      setBrandingError("");
+
+      const brandingPayload = {
+        logo_url: cleanValue(
+          settings.logo_url
+        ),
+      };
+
+      const savedSettings =
+        await cmsService.updateSiteSettings(
+          brandingPayload
+        );
+
+      setSettings((previous) => ({
+        ...previous,
+
+        logo_url:
+          savedSettings?.logo_url || "",
+      }));
+
+      setLogoPreview(
+        savedSettings?.logo_url
+          ? getImageUrl(
+              savedSettings.logo_url
+            )
+          : ""
+      );
+
+      setBrandingMessage(
+        "Branding changes saved successfully."
+      );
+    } catch (err) {
+      console.error(
+        "Failed to save branding:",
+        err
+      );
+
+      setBrandingError(
+        err?.message ||
+          "Failed to save branding changes."
+      );
+    } finally {
+      setSavingBranding(false);
+    }
   };
 
   // =====================================================
   // HOMEPAGE IMAGE - SELECT FILE
   // =====================================================
 
-  const handleHomepageImageSelect = (event) => {
+  const handleHomepageImageSelect = (
+    event
+  ) => {
     const file = event.target.files?.[0];
 
     if (!file) {
@@ -146,7 +491,6 @@ function WebsiteSettings() {
     setHomepageImageError("");
     setHomepageMessage("");
 
-    // Basic image validation
     if (!file.type.startsWith("image/")) {
       setHomepageImageError(
         "Please select a valid image file."
@@ -156,7 +500,6 @@ function WebsiteSettings() {
       return;
     }
 
-    // 10 MB frontend safety limit
     const maxSize = 10 * 1024 * 1024;
 
     if (file.size > maxSize) {
@@ -170,7 +513,19 @@ function WebsiteSettings() {
 
     setHomepageImageFile(file);
 
-    const previewUrl = URL.createObjectURL(file);
+    if (
+      homepageImagePreview &&
+      homepageImagePreview.startsWith(
+        "blob:"
+      )
+    ) {
+      URL.revokeObjectURL(
+        homepageImagePreview
+      );
+    }
+
+    const previewUrl =
+      URL.createObjectURL(file);
 
     setHomepageImagePreview(previewUrl);
   };
@@ -185,9 +540,13 @@ function WebsiteSettings() {
 
     if (
       homepageImagePreview &&
-      homepageImagePreview.startsWith("blob:")
+      homepageImagePreview.startsWith(
+        "blob:"
+      )
     ) {
-      URL.revokeObjectURL(homepageImagePreview);
+      URL.revokeObjectURL(
+        homepageImagePreview
+      );
     }
 
     setHomepageImagePreview(
@@ -207,105 +566,80 @@ function WebsiteSettings() {
   // HOMEPAGE IMAGE - UPLOAD
   // =====================================================
 
-  const handleUploadHomepageImage = async () => {
-    if (!homepageImageFile) {
-      setHomepageImageError(
-        "Please select an image first."
-      );
-      return;
-    }
-
-    try {
-      setUploadingHomepageImage(true);
-      setHomepageImageError("");
-      setHomepageMessage("");
-
-      /*
-       * Existing backend endpoint:
-       *
-       * POST /api/v1/cms/images/
-       *
-       * cmsService.uploadImage() already sends:
-       *
-       * FormData:
-       * image = selected file
-       */
-
-      const uploadedImage =
-        await cmsService.uploadImage(
-          homepageImageFile
+  const handleUploadHomepageImage =
+    async () => {
+      if (!homepageImageFile) {
+        setHomepageImageError(
+          "Please select an image first."
         );
 
-      /*
-       * Support common response formats.
-       *
-       * Examples:
-       * { url: "..." }
-       * { image_url: "..." }
-       * { file_url: "..." }
-       * { image: { url: "..." } }
-       */
+        return;
+      }
 
-      const uploadedImageUrl =
-        uploadedImage?.url ||
-        uploadedImage?.image_url ||
-        uploadedImage?.file_url ||
-        uploadedImage?.image?.url ||
-        uploadedImage?.data?.url ||
-        uploadedImage?.data?.image_url ||
-        uploadedImage?.data?.file_url ||
-        "";
+      try {
+        setUploadingHomepageImage(true);
 
-      if (!uploadedImageUrl) {
+        setHomepageImageError("");
+        setHomepageMessage("");
+
+        const uploadedImage =
+          await cmsService.uploadImage(
+            homepageImageFile
+          );
+
+        const uploadedImageUrl =
+          getUploadedImageUrl(
+            uploadedImage
+          );
+
+        if (!uploadedImageUrl) {
+          console.error(
+            "Image upload response:",
+            uploadedImage
+          );
+
+          throw new Error(
+            "Image was uploaded, but the server did not return an image URL."
+          );
+        }
+
+        setSettings((previous) => ({
+          ...previous,
+          homepage_image_url:
+            uploadedImageUrl,
+        }));
+
+        setHomepageImagePreview(
+          getImageUrl(uploadedImageUrl)
+        );
+
+        setHomepageImageFile(null);
+
+        const fileInput = document.getElementById(
+          "homepage-image-upload"
+        );
+
+        if (fileInput) {
+          fileInput.value = "";
+        }
+
+        setHomepageMessage(
+          "Homepage image uploaded successfully. Click Save Homepage Changes to publish it."
+        );
+      } catch (err) {
         console.error(
-          "Image upload response:",
-          uploadedImage
+          "Failed to upload homepage image:",
+          err
         );
 
-        throw new Error(
-          "Image was uploaded, but the server did not return an image URL."
+        setHomepageImageError(
+          err?.message ||
+            "Failed to upload homepage image."
         );
+      } finally {
+        setUploadingHomepageImage(false);
       }
-
-      // Put returned backend URL into homepage settings.
-      setSettings((previous) => ({
-        ...previous,
-        homepage_image_url: uploadedImageUrl,
-      }));
-
-      // Show uploaded image.
-      setHomepageImagePreview(
-        uploadedImageUrl
-      );
-
-      // Clear selected local file.
-      setHomepageImageFile(null);
-
-      const fileInput = document.getElementById(
-        "homepage-image-upload"
-      );
-
-      if (fileInput) {
-        fileInput.value = "";
-      }
-
-      setHomepageMessage(
-        "Homepage image uploaded successfully. Click Save Homepage Changes to publish it."
-      );
-    } catch (err) {
-      console.error(
-        "Failed to upload homepage image:",
-        err
-      );
-
-      setHomepageImageError(
-        err?.message ||
-          "Failed to upload homepage image."
-      );
-    } finally {
-      setUploadingHomepageImage(false);
-    }
-  };
+    };
 
   // =====================================================
   // SAVE HOMEPAGE
@@ -314,6 +648,7 @@ function WebsiteSettings() {
   const handleSaveHomepage = async () => {
     try {
       setSavingHomepage(true);
+
       setHomepageMessage("");
       setHomepageError("");
 
@@ -321,12 +656,15 @@ function WebsiteSettings() {
         homepage_eyebrow: cleanValue(
           settings.homepage_eyebrow
         ),
+
         homepage_title: cleanValue(
           settings.homepage_title
         ),
+
         homepage_description: cleanValue(
           settings.homepage_description
         ),
+
         homepage_image_url: cleanValue(
           settings.homepage_image_url
         ),
@@ -339,18 +677,30 @@ function WebsiteSettings() {
 
       setSettings((previous) => ({
         ...previous,
+
         homepage_eyebrow:
-          savedSettings?.homepage_eyebrow || "",
+          savedSettings?.homepage_eyebrow ||
+          "",
+
         homepage_title:
-          savedSettings?.homepage_title || "",
+          savedSettings?.homepage_title ||
+          "",
+
         homepage_description:
-          savedSettings?.homepage_description || "",
+          savedSettings?.homepage_description ||
+          "",
+
         homepage_image_url:
-          savedSettings?.homepage_image_url || "",
+          savedSettings?.homepage_image_url ||
+          "",
       }));
 
       setHomepageImagePreview(
-        savedSettings?.homepage_image_url || ""
+        savedSettings?.homepage_image_url
+          ? getImageUrl(
+              savedSettings.homepage_image_url
+            )
+          : ""
       );
 
       setHomepageMessage(
@@ -378,6 +728,7 @@ function WebsiteSettings() {
   const handleSaveContact = async () => {
     try {
       setSavingContact(true);
+
       setContactMessage("");
       setContactError("");
 
@@ -385,14 +736,30 @@ function WebsiteSettings() {
         clinic_name: cleanValue(
           settings.clinic_name
         ),
-        phone: cleanValue(settings.phone),
-        email: cleanValue(settings.email),
-        address: cleanValue(settings.address),
-        whatsapp: cleanValue(settings.whatsapp),
+
+        phone: cleanValue(
+          settings.phone
+        ),
+
+        email: cleanValue(
+          settings.email
+        ),
+
+        address: cleanValue(
+          settings.address
+        ),
+
+        whatsapp: cleanValue(
+          settings.whatsapp
+        ),
+
         opening_hours: cleanValue(
           settings.opening_hours
         ),
-        map_url: cleanValue(settings.map_url),
+
+        map_url: cleanValue(
+          settings.map_url
+        ),
       };
 
       const savedSettings =
@@ -402,16 +769,25 @@ function WebsiteSettings() {
 
       setSettings((previous) => ({
         ...previous,
+
         clinic_name:
           savedSettings?.clinic_name || "",
-        phone: savedSettings?.phone || "",
-        email: savedSettings?.email || "",
+
+        phone:
+          savedSettings?.phone || "",
+
+        email:
+          savedSettings?.email || "",
+
         address:
           savedSettings?.address || "",
+
         whatsapp:
           savedSettings?.whatsapp || "",
+
         opening_hours:
           savedSettings?.opening_hours || "",
+
         map_url:
           savedSettings?.map_url || "",
       }));
@@ -441,17 +817,35 @@ function WebsiteSettings() {
   const handleReset = async () => {
     await loadSettings();
 
+    setLogoFile(null);
     setHomepageImageFile(null);
+
+    setBrandingMessage("");
     setHomepageMessage("");
     setContactMessage("");
+
+    setBrandingError("");
+    setHomepageError("");
+    setContactError("");
+
+    setLogoError("");
     setHomepageImageError("");
 
-    const fileInput = document.getElementById(
-      "homepage-image-upload"
+    const logoInput = document.getElementById(
+      "clinic-logo-upload"
     );
 
-    if (fileInput) {
-      fileInput.value = "";
+    if (logoInput) {
+      logoInput.value = "";
+    }
+
+    const homepageInput =
+      document.getElementById(
+        "homepage-image-upload"
+      );
+
+    if (homepageInput) {
+      homepageInput.value = "";
     }
   };
 
@@ -467,13 +861,16 @@ function WebsiteSettings() {
 
           <div className="space-y-2">
             <div className="h-5 w-48 animate-pulse rounded bg-[#E5E1D5]" />
+
             <div className="h-3 w-72 animate-pulse rounded bg-[#E5E1D5]" />
           </div>
         </div>
 
         <div className="mt-8 space-y-4">
           <div className="h-12 animate-pulse rounded-xl bg-[#F0ECE1]" />
+
           <div className="h-12 animate-pulse rounded-xl bg-[#F0ECE1]" />
+
           <div className="h-28 animate-pulse rounded-xl bg-[#F0ECE1]" />
         </div>
       </section>
@@ -504,14 +901,265 @@ function WebsiteSettings() {
               </h2>
 
               <p className="mt-1 text-sm text-[#DDE6D8]">
-                Manage the content displayed on your clinic's
-                public website.
+                Manage the content displayed on
+                your clinic's public website.
               </p>
             </div>
           </div>
         </div>
       </section>
 
+      {/* =====================================================
+          BRANDING
+      ====================================================== */}
+
+      <section className="overflow-hidden rounded-2xl border border-[#D8C99B] bg-[#FBF8F0] shadow-[0_10px_35px_rgba(38,70,55,0.06)]">
+
+        <div className="border-b border-[#D8C99B]/60 bg-[#F5F1E7] px-6 py-5">
+          <div className="flex items-start gap-4">
+
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#DDE6D8] text-[#234D3C]">
+              <FiAward size={21} />
+            </div>
+
+            <div>
+              <p className="text-[10px] font-semibold tracking-[0.2em] text-[#9B8246]">
+                BRAND IDENTITY
+              </p>
+
+              <h3 className="mt-1 text-lg font-semibold text-[#234D3C]">
+                Clinic Branding
+              </h3>
+
+              <p className="mt-1 text-sm text-[#647267]">
+                Upload the clinic logo displayed
+                on the public website.
+              </p>
+            </div>
+
+          </div>
+        </div>
+
+        <div className="space-y-6 p-6">
+
+          {/* Logo Preview */}
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-[#234D3C]">
+              Clinic Logo
+            </label>
+
+            <div className="overflow-hidden rounded-2xl border border-[#C9D3C5] bg-[#F5F1E7]">
+
+              {logoPreview ? (
+                <div className="relative flex min-h-64 items-center justify-center p-8">
+
+                  <div className="flex min-h-48 w-full items-center justify-center rounded-xl border border-[#D8C99B]/50 bg-[#FFFDF8] p-8">
+
+                    <img
+                      src={getImageUrl(
+                        logoPreview
+                      )}
+                      alt="Clinic logo preview"
+                      className="max-h-40 max-w-full object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.display =
+                          "none";
+                      }}
+                    />
+
+                  </div>
+
+                  <div className="absolute right-4 top-4">
+
+                    <button
+                      type="button"
+                      onClick={
+                        handleRemoveLogo
+                      }
+                      disabled={
+                        uploadingLogo ||
+                        savingBranding
+                      }
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#234D3C]/90 text-[#FBF8F0] shadow-lg transition hover:bg-[#193D2F] disabled:cursor-not-allowed disabled:opacity-50"
+                      title="Remove selected logo"
+                    >
+                      <FiX size={17} />
+                    </button>
+
+                  </div>
+
+                </div>
+              ) : (
+                <div className="flex h-64 flex-col items-center justify-center px-6 text-center">
+
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#DDE6D8] text-[#234D3C]">
+                    <FiImage size={30} />
+                  </div>
+
+                  <p className="mt-4 text-sm font-semibold text-[#234D3C]">
+                    No clinic logo selected
+                  </p>
+
+                  <p className="mt-1 text-xs text-[#7A857C]">
+                    Upload the logo that should
+                    appear on the public website.
+                  </p>
+
+                </div>
+              )}
+
+            </div>
+
+            {/* Logo Controls */}
+
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+
+              <label
+                htmlFor="clinic-logo-upload"
+                className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#C9D3C5] bg-[#FFFDF8] px-4 py-3 text-sm font-semibold text-[#234D3C] transition hover:border-[#789681] hover:bg-[#F5F1E7]"
+              >
+                <FiImage size={17} />
+
+                {logoFile
+                  ? "Choose Different Logo"
+                  : "Choose Logo"}
+
+                <input
+                  id="clinic-logo-upload"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={
+                    handleLogoSelect
+                  }
+                  className="hidden"
+                />
+              </label>
+
+              <button
+                type="button"
+                onClick={handleUploadLogo}
+                disabled={
+                  !logoFile ||
+                  uploadingLogo
+                }
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#789681] px-5 py-3 text-sm font-semibold text-[#FBF8F0] transition hover:bg-[#5F7D69] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <FiUpload size={17} />
+
+                {uploadingLogo
+                  ? "Uploading Logo..."
+                  : "Upload Logo"}
+              </button>
+
+            </div>
+
+            {/* Selected Logo File */}
+
+            {logoFile && (
+              <div className="mt-3 rounded-xl border border-[#D8C99B]/60 bg-[#FBF8F0] px-4 py-3">
+
+                <div className="flex items-center justify-between gap-3">
+
+                  <div className="min-w-0">
+
+                    <p className="truncate text-sm font-medium text-[#234D3C]">
+                      {logoFile.name}
+                    </p>
+
+                    <p className="mt-1 text-xs text-[#7A857C]">
+                      {(
+                        logoFile.size /
+                        1024 /
+                        1024
+                      ).toFixed(2)}{" "}
+                      MB
+                    </p>
+
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={
+                      handleRemoveLogo
+                    }
+                    disabled={
+                      uploadingLogo
+                    }
+                    className="shrink-0 text-[#8C443C] transition hover:text-[#6F302A] disabled:opacity-50"
+                    title="Remove selected logo"
+                  >
+                    <FiX size={18} />
+                  </button>
+
+                </div>
+
+              </div>
+            )}
+
+            <p className="mt-2 text-xs leading-5 text-[#7A857C]">
+              Select a logo image from your
+              computer and click{" "}
+              <span className="font-semibold text-[#496253]">
+                Upload Logo
+              </span>
+              . The uploaded image will
+              automatically be connected to the
+              clinic website.
+            </p>
+
+          </div>
+
+          {/* Logo Error */}
+
+          {logoError && (
+            <div className="rounded-xl border border-[#D8A6A0] bg-[#FBF0EE] px-4 py-3 text-sm text-[#8C443C]">
+              {logoError}
+            </div>
+          )}
+
+          {/* Branding Error */}
+
+          {brandingError && (
+            <div className="rounded-xl border border-[#D8A6A0] bg-[#FBF0EE] px-4 py-3 text-sm text-[#8C443C]">
+              {brandingError}
+            </div>
+          )}
+
+          {/* Branding Success */}
+
+          {brandingMessage && (
+            <div className="rounded-xl border border-[#B7C9B5] bg-[#EEF4EB] px-4 py-3 text-sm text-[#315D4B]">
+              {brandingMessage}
+            </div>
+          )}
+
+          {/* Save Branding */}
+
+          <div className="flex justify-end border-t border-[#D8C99B]/50 pt-5">
+
+            <button
+              type="button"
+              onClick={
+                handleSaveBranding
+              }
+              disabled={
+                savingBranding ||
+                uploadingLogo
+              }
+              className="inline-flex items-center gap-2 rounded-xl bg-[#234D3C] px-5 py-3 text-sm font-semibold text-[#FBF8F0] shadow-[0_6px_18px_rgba(35,77,60,0.18)] transition hover:bg-[#193D2F] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <FiSave size={17} />
+
+              {savingBranding
+                ? "Saving Branding..."
+                : "Save Branding"}
+            </button>
+
+          </div>
+
+        </div>
+      </section>
 
       {/* =====================================================
           HOMEPAGE
@@ -520,12 +1168,15 @@ function WebsiteSettings() {
       <section className="overflow-hidden rounded-2xl border border-[#D8C99B] bg-[#FBF8F0] shadow-[0_10px_35px_rgba(38,70,55,0.06)]">
 
         <div className="border-b border-[#D8C99B]/60 bg-[#F5F1E7] px-6 py-5">
+
           <div className="flex items-start gap-4">
+
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#DDE6D8] text-[#234D3C]">
               <FiHome size={21} />
             </div>
 
             <div>
+
               <p className="text-[10px] font-semibold tracking-[0.2em] text-[#9B8246]">
                 PUBLIC WEBSITE
               </p>
@@ -535,28 +1186,32 @@ function WebsiteSettings() {
               </h3>
 
               <p className="mt-1 text-sm text-[#647267]">
-                Control the main content visitors see when they
-                open your clinic website.
+                Control the main content visitors
+                see when they open your clinic
+                website.
               </p>
+
             </div>
+
           </div>
+
         </div>
-
-
-        {/* Homepage Form */}
 
         <div className="space-y-6 p-6">
 
           {/* Eyebrow */}
 
           <div>
+
             <label className="mb-2 block text-sm font-semibold text-[#234D3C]">
               Homepage Eyebrow
             </label>
 
             <input
               type="text"
-              value={settings.homepage_eyebrow}
+              value={
+                settings.homepage_eyebrow
+              }
               onChange={(e) =>
                 handleChange(
                   "homepage_eyebrow",
@@ -566,19 +1221,22 @@ function WebsiteSettings() {
               placeholder="e.g. DERMATOLOGY & AESTHETICS"
               className="w-full rounded-xl border border-[#C9D3C5] bg-[#FFFDF8] px-4 py-3 text-sm text-[#234D3C] outline-none transition placeholder:text-[#9BA59C] focus:border-[#789681] focus:ring-2 focus:ring-[#DDE6D8]"
             />
-          </div>
 
+          </div>
 
           {/* Main Heading */}
 
           <div>
+
             <label className="mb-2 block text-sm font-semibold text-[#234D3C]">
               Main Heading
             </label>
 
             <input
               type="text"
-              value={settings.homepage_title}
+              value={
+                settings.homepage_title
+              }
               onChange={(e) =>
                 handleChange(
                   "homepage_title",
@@ -588,19 +1246,22 @@ function WebsiteSettings() {
               placeholder="e.g. Reveal Your Most Confident Skin"
               className="w-full rounded-xl border border-[#C9D3C5] bg-[#FFFDF8] px-4 py-3 text-sm text-[#234D3C] outline-none transition placeholder:text-[#9BA59C] focus:border-[#789681] focus:ring-2 focus:ring-[#DDE6D8]"
             />
-          </div>
 
+          </div>
 
           {/* Description */}
 
           <div>
+
             <label className="mb-2 block text-sm font-semibold text-[#234D3C]">
               Homepage Description
             </label>
 
             <textarea
               rows={5}
-              value={settings.homepage_description}
+              value={
+                settings.homepage_description
+              }
               onChange={(e) =>
                 handleChange(
                   "homepage_description",
@@ -610,27 +1271,26 @@ function WebsiteSettings() {
               placeholder="Write a short introduction about your clinic..."
               className="w-full resize-none rounded-xl border border-[#C9D3C5] bg-[#FFFDF8] px-4 py-3 text-sm leading-6 text-[#234D3C] outline-none transition placeholder:text-[#9BA59C] focus:border-[#789681] focus:ring-2 focus:ring-[#DDE6D8]"
             />
+
           </div>
 
-
-          {/* =====================================================
-              HOMEPAGE IMAGE UPLOAD
-          ====================================================== */}
+          {/* Homepage Image */}
 
           <div>
+
             <label className="mb-2 block text-sm font-semibold text-[#234D3C]">
               Homepage Image
             </label>
 
             <div className="overflow-hidden rounded-2xl border border-[#C9D3C5] bg-[#F5F1E7]">
 
-              {/* Image Preview */}
-
               {homepageImagePreview ? (
                 <div className="relative">
 
                   <img
-                    src={homepageImagePreview}
+                    src={getImageUrl(
+                      homepageImagePreview
+                    )}
                     alt="Homepage preview"
                     className="h-72 w-full object-cover"
                     onError={(e) => {
@@ -640,9 +1300,12 @@ function WebsiteSettings() {
                   />
 
                   <div className="absolute right-3 top-3">
+
                     <button
                       type="button"
-                      onClick={handleRemoveHomepageImage}
+                      onClick={
+                        handleRemoveHomepageImage
+                      }
                       disabled={
                         uploadingHomepageImage ||
                         savingHomepage
@@ -652,6 +1315,7 @@ function WebsiteSettings() {
                     >
                       <FiX size={17} />
                     </button>
+
                   </div>
 
                 </div>
@@ -667,14 +1331,14 @@ function WebsiteSettings() {
                   </p>
 
                   <p className="mt-1 text-xs text-[#7A857C]">
-                    Upload an image for the main homepage section.
+                    Upload an image for the main
+                    homepage section.
                   </p>
 
                 </div>
               )}
 
             </div>
-
 
             {/* Upload Controls */}
 
@@ -693,14 +1357,13 @@ function WebsiteSettings() {
                 <input
                   id="homepage-image-upload"
                   type="file"
-                  accept="image/*"
+                  accept="image/png,image/jpeg,image/webp"
                   onChange={
                     handleHomepageImageSelect
                   }
                   className="hidden"
                 />
               </label>
-
 
               <button
                 type="button"
@@ -722,7 +1385,6 @@ function WebsiteSettings() {
 
             </div>
 
-
             {/* Selected File */}
 
             {homepageImageFile && (
@@ -731,6 +1393,7 @@ function WebsiteSettings() {
                 <div className="flex items-center justify-between gap-3">
 
                   <div className="min-w-0">
+
                     <p className="truncate text-sm font-medium text-[#234D3C]">
                       {homepageImageFile.name}
                     </p>
@@ -743,6 +1406,7 @@ function WebsiteSettings() {
                       ).toFixed(2)}{" "}
                       MB
                     </p>
+
                   </div>
 
                   <button
@@ -764,18 +1428,18 @@ function WebsiteSettings() {
               </div>
             )}
 
-
             <p className="mt-2 text-xs leading-5 text-[#7A857C]">
-              Select an image from your computer and click
+              Select an image from your computer
+              and click{" "}
               <span className="font-semibold text-[#496253]">
-                {" "}Upload Image
+                Upload Image
               </span>
-              . The image will be uploaded to the CMS and its
-              URL will automatically be saved for the homepage.
+              . The image will be uploaded to the
+              CMS and its URL will automatically
+              be saved for the homepage.
             </p>
 
           </div>
-
 
           {/* Image Upload Error */}
 
@@ -785,7 +1449,6 @@ function WebsiteSettings() {
             </div>
           )}
 
-
           {/* Homepage Error */}
 
           {homepageError && (
@@ -793,7 +1456,6 @@ function WebsiteSettings() {
               {homepageError}
             </div>
           )}
-
 
           {/* Homepage Success */}
 
@@ -803,14 +1465,15 @@ function WebsiteSettings() {
             </div>
           )}
 
-
-          {/* Homepage Save */}
+          {/* Save Homepage */}
 
           <div className="flex justify-end border-t border-[#D8C99B]/50 pt-5">
 
             <button
               type="button"
-              onClick={handleSaveHomepage}
+              onClick={
+                handleSaveHomepage
+              }
               disabled={
                 savingHomepage ||
                 uploadingHomepageImage
@@ -829,7 +1492,6 @@ function WebsiteSettings() {
         </div>
       </section>
 
-
       {/* =====================================================
           CONTACT INFORMATION
       ====================================================== */}
@@ -845,6 +1507,7 @@ function WebsiteSettings() {
             </div>
 
             <div>
+
               <p className="text-[10px] font-semibold tracking-[0.2em] text-[#9B8246]">
                 CLINIC DETAILS
               </p>
@@ -854,21 +1517,22 @@ function WebsiteSettings() {
               </h3>
 
               <p className="mt-1 text-sm text-[#647267]">
-                Manage the contact details displayed throughout
-                the public website.
+                Manage the contact details displayed
+                throughout the public website.
               </p>
+
             </div>
 
           </div>
 
         </div>
 
-
         <div className="space-y-6 p-6">
 
           {/* Clinic Name */}
 
           <div>
+
             <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#234D3C]">
               <FiGlobe
                 size={15}
@@ -879,7 +1543,9 @@ function WebsiteSettings() {
 
             <input
               type="text"
-              value={settings.clinic_name}
+              value={
+                settings.clinic_name
+              }
               onChange={(e) =>
                 handleChange(
                   "clinic_name",
@@ -889,14 +1555,15 @@ function WebsiteSettings() {
               placeholder="e.g. Elite Dermatology Clinic"
               className="w-full rounded-xl border border-[#C9D3C5] bg-[#FFFDF8] px-4 py-3 text-sm text-[#234D3C] outline-none transition placeholder:text-[#9BA59C] focus:border-[#789681] focus:ring-2 focus:ring-[#DDE6D8]"
             />
-          </div>
 
+          </div>
 
           {/* Phone + Email */}
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
 
             <div>
+
               <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#234D3C]">
                 <FiPhone
                   size={15}
@@ -907,7 +1574,9 @@ function WebsiteSettings() {
 
               <input
                 type="text"
-                value={settings.phone}
+                value={
+                  settings.phone
+                }
                 onChange={(e) =>
                   handleChange(
                     "phone",
@@ -917,10 +1586,11 @@ function WebsiteSettings() {
                 placeholder="+92 300 1234567"
                 className="w-full rounded-xl border border-[#C9D3C5] bg-[#FFFDF8] px-4 py-3 text-sm text-[#234D3C] outline-none transition placeholder:text-[#9BA59C] focus:border-[#789681] focus:ring-2 focus:ring-[#DDE6D8]"
               />
+
             </div>
 
-
             <div>
+
               <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#234D3C]">
                 <FiMail
                   size={15}
@@ -931,7 +1601,9 @@ function WebsiteSettings() {
 
               <input
                 type="email"
-                value={settings.email}
+                value={
+                  settings.email
+                }
                 onChange={(e) =>
                   handleChange(
                     "email",
@@ -941,14 +1613,15 @@ function WebsiteSettings() {
                 placeholder="info@clinic.com"
                 className="w-full rounded-xl border border-[#C9D3C5] bg-[#FFFDF8] px-4 py-3 text-sm text-[#234D3C] outline-none transition placeholder:text-[#9BA59C] focus:border-[#789681] focus:ring-2 focus:ring-[#DDE6D8]"
               />
+
             </div>
 
           </div>
 
-
           {/* Address */}
 
           <div>
+
             <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#234D3C]">
               <FiMapPin
                 size={15}
@@ -959,7 +1632,9 @@ function WebsiteSettings() {
 
             <textarea
               rows={3}
-              value={settings.address}
+              value={
+                settings.address
+              }
               onChange={(e) =>
                 handleChange(
                   "address",
@@ -969,14 +1644,15 @@ function WebsiteSettings() {
               placeholder="Clinic address..."
               className="w-full resize-none rounded-xl border border-[#C9D3C5] bg-[#FFFDF8] px-4 py-3 text-sm leading-6 text-[#234D3C] outline-none transition placeholder:text-[#9BA59C] focus:border-[#789681] focus:ring-2 focus:ring-[#DDE6D8]"
             />
-          </div>
 
+          </div>
 
           {/* WhatsApp + Opening Hours */}
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
 
             <div>
+
               <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#234D3C]">
                 <FiMessageCircle
                   size={15}
@@ -987,7 +1663,9 @@ function WebsiteSettings() {
 
               <input
                 type="text"
-                value={settings.whatsapp}
+                value={
+                  settings.whatsapp
+                }
                 onChange={(e) =>
                   handleChange(
                     "whatsapp",
@@ -997,10 +1675,11 @@ function WebsiteSettings() {
                 placeholder="+92 300 1234567"
                 className="w-full rounded-xl border border-[#C9D3C5] bg-[#FFFDF8] px-4 py-3 text-sm text-[#234D3C] outline-none transition placeholder:text-[#9BA59C] focus:border-[#789681] focus:ring-2 focus:ring-[#DDE6D8]"
               />
+
             </div>
 
-
             <div>
+
               <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#234D3C]">
                 <FiClock
                   size={15}
@@ -1011,7 +1690,9 @@ function WebsiteSettings() {
 
               <input
                 type="text"
-                value={settings.opening_hours}
+                value={
+                  settings.opening_hours
+                }
                 onChange={(e) =>
                   handleChange(
                     "opening_hours",
@@ -1021,14 +1702,15 @@ function WebsiteSettings() {
                 placeholder="Mon - Sat: 10:00 AM - 8:00 PM"
                 className="w-full rounded-xl border border-[#C9D3C5] bg-[#FFFDF8] px-4 py-3 text-sm text-[#234D3C] outline-none transition placeholder:text-[#9BA59C] focus:border-[#789681] focus:ring-2 focus:ring-[#DDE6D8]"
               />
+
             </div>
 
           </div>
 
-
           {/* Google Maps */}
 
           <div>
+
             <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#234D3C]">
               <FiMap
                 size={15}
@@ -1039,7 +1721,9 @@ function WebsiteSettings() {
 
             <input
               type="url"
-              value={settings.map_url}
+              value={
+                settings.map_url
+              }
               onChange={(e) =>
                 handleChange(
                   "map_url",
@@ -1051,11 +1735,11 @@ function WebsiteSettings() {
             />
 
             <p className="mt-2 text-xs text-[#7A857C]">
-              Paste the Google Maps location URL for your
-              clinic.
+              Paste the Google Maps location URL
+              for your clinic.
             </p>
-          </div>
 
+          </div>
 
           {/* Contact Error */}
 
@@ -1065,7 +1749,6 @@ function WebsiteSettings() {
             </div>
           )}
 
-
           {/* Contact Success */}
 
           {contactMessage && (
@@ -1073,7 +1756,6 @@ function WebsiteSettings() {
               {contactMessage}
             </div>
           )}
-
 
           {/* Bottom Actions */}
 
@@ -1083,21 +1765,27 @@ function WebsiteSettings() {
               type="button"
               onClick={handleReset}
               disabled={
+                savingBranding ||
                 savingHomepage ||
                 savingContact ||
+                uploadingLogo ||
                 uploadingHomepageImage
               }
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#C9D3C5] bg-[#F5F1E7] px-4 py-3 text-sm font-medium text-[#496253] transition hover:border-[#B5C2B3] hover:bg-[#EEE9DC] disabled:cursor-not-allowed disabled:opacity-60"
             >
               <FiRotateCcw size={16} />
+
               Reload Saved Settings
             </button>
 
-
             <button
               type="button"
-              onClick={handleSaveContact}
-              disabled={savingContact}
+              onClick={
+                handleSaveContact
+              }
+              disabled={
+                savingContact
+              }
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#234D3C] px-5 py-3 text-sm font-semibold text-[#FBF8F0] shadow-[0_6px_18px_rgba(35,77,60,0.18)] transition hover:bg-[#193D2F] disabled:cursor-not-allowed disabled:opacity-60"
             >
               <FiSave size={17} />
@@ -1111,6 +1799,7 @@ function WebsiteSettings() {
 
         </div>
       </section>
+
     </div>
   );
 }

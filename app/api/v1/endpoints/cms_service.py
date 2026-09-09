@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.permissions import require_roles
+from app.api.tenant_context import get_effective_tenant_id
 from app.database.session import get_db
 from app.models.enums import UserRole
 from app.models.user import User
@@ -30,7 +31,7 @@ router = APIRouter(
 
 
 # =========================================================
-# PUBLIC WEBSITE — LIST SERVICES
+# PUBLIC SERVICES
 # =========================================================
 
 @router.get(
@@ -64,6 +65,7 @@ def public_services(
 def create_service(
     service_data: CMSServiceCreate,
     db: Session = Depends(get_db),
+    tenant_id: int = Depends(get_effective_tenant_id),
     current_user: User = Depends(
         require_roles(
             UserRole.OWNER,
@@ -75,12 +77,12 @@ def create_service(
     return create_cms_service_service(
         db=db,
         service_data=service_data,
-        tenant_id=current_user.tenant_id,
+        tenant_id=tenant_id,
     )
 
 
 # =========================================================
-# LIST SERVICES — DASHBOARD
+# LIST SERVICES
 # =========================================================
 
 @router.get(
@@ -89,6 +91,7 @@ def create_service(
 )
 def list_services(
     db: Session = Depends(get_db),
+    tenant_id: int = Depends(get_effective_tenant_id),
     current_user: User = Depends(
         require_roles(
             UserRole.OWNER,
@@ -99,12 +102,12 @@ def list_services(
 ):
     return get_cms_services_service(
         db=db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=tenant_id,
     )
 
 
 # =========================================================
-# GET SINGLE SERVICE
+# GET ONE SERVICE
 # =========================================================
 
 @router.get(
@@ -114,6 +117,7 @@ def list_services(
 def get_service(
     service_id: int,
     db: Session = Depends(get_db),
+    tenant_id: int = Depends(get_effective_tenant_id),
     current_user: User = Depends(
         require_roles(
             UserRole.OWNER,
@@ -125,7 +129,7 @@ def get_service(
     service = get_cms_service_service(
         db=db,
         service_id=service_id,
-        tenant_id=current_user.tenant_id,
+        tenant_id=tenant_id,
     )
 
     if not service:
@@ -149,6 +153,7 @@ def update_service(
     service_id: int,
     service_data: CMSServiceUpdate,
     db: Session = Depends(get_db),
+    tenant_id: int = Depends(get_effective_tenant_id),
     current_user: User = Depends(
         require_roles(
             UserRole.OWNER,
@@ -160,7 +165,7 @@ def update_service(
     service = get_cms_service_service(
         db=db,
         service_id=service_id,
-        tenant_id=current_user.tenant_id,
+        tenant_id=tenant_id,
     )
 
     if not service:
@@ -187,6 +192,7 @@ def update_service(
 def delete_service(
     service_id: int,
     db: Session = Depends(get_db),
+    tenant_id: int = Depends(get_effective_tenant_id),
     current_user: User = Depends(
         require_roles(
             UserRole.OWNER,
@@ -198,7 +204,7 @@ def delete_service(
     service = get_cms_service_service(
         db=db,
         service_id=service_id,
-        tenant_id=current_user.tenant_id,
+        tenant_id=tenant_id,
     )
 
     if not service:

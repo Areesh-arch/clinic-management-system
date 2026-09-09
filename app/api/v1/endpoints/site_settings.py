@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.permissions import require_roles
+from app.api.tenant_context import get_effective_tenant_id
 from app.database.session import get_db
 from app.models.enums import UserRole
 from app.models.user import User
@@ -28,7 +29,7 @@ router = APIRouter(
 
 
 # ============================================================
-# PUBLIC WEBSITE — GET SITE SETTINGS
+# PUBLIC SITE SETTINGS
 # ============================================================
 
 @router.get(
@@ -39,24 +40,6 @@ def get_public_site_settings(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    """
-    Return website settings for the clinic identified by the
-    public website hostname.
-
-    Examples:
-
-        areesha.localhost:5173
-            ↓
-        areesha
-            ↓
-        Tenant.subdomain == "areesha"
-            ↓
-        that clinic's site settings
-
-    This endpoint is PUBLIC.
-    It does not require a login or Authorization header.
-    """
-
     tenant = resolve_public_tenant(
         request=request,
         db=db,
@@ -77,7 +60,13 @@ def get_public_site_settings(
 
 
 # ============================================================
-# DASHBOARD — GET SITE SETTINGS
+# GET SETTINGS
+#
+# OWNER / STAFF:
+#     Uses their own tenant.
+#
+# SUPER_ADMIN:
+#     Uses X-Tenant-ID selected clinic.
 # ============================================================
 
 @router.get(
@@ -85,6 +74,7 @@ def get_public_site_settings(
     response_model=SiteSettingsResponse,
 )
 def get_settings(
+    tenant_id: int = Depends(get_effective_tenant_id),
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
@@ -94,10 +84,9 @@ def get_settings(
         )
     ),
 ):
-
     settings = get_site_settings_service(
         db=db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=tenant_id,
     )
 
     if not settings:
@@ -110,7 +99,13 @@ def get_settings(
 
 
 # ============================================================
-# DASHBOARD — CREATE SITE SETTINGS
+# CREATE SETTINGS
+#
+# OWNER / STAFF:
+#     Uses their own tenant.
+#
+# SUPER_ADMIN:
+#     Uses X-Tenant-ID selected clinic.
 # ============================================================
 
 @router.post(
@@ -120,6 +115,7 @@ def get_settings(
 )
 def create_settings(
     settings_data: SiteSettingsCreate,
+    tenant_id: int = Depends(get_effective_tenant_id),
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
@@ -129,10 +125,9 @@ def create_settings(
         )
     ),
 ):
-
     existing = get_site_settings_service(
         db=db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=tenant_id,
     )
 
     if existing:
@@ -144,12 +139,18 @@ def create_settings(
     return create_site_settings_service(
         db=db,
         settings_data=settings_data,
-        tenant_id=current_user.tenant_id,
+        tenant_id=tenant_id,
     )
 
 
 # ============================================================
-# DASHBOARD — UPDATE SITE SETTINGS
+# UPDATE SETTINGS
+#
+# OWNER / STAFF:
+#     Uses their own tenant.
+#
+# SUPER_ADMIN:
+#     Uses X-Tenant-ID selected clinic.
 # ============================================================
 
 @router.put(
@@ -158,6 +159,7 @@ def create_settings(
 )
 def update_settings(
     settings_data: SiteSettingsUpdate,
+    tenant_id: int = Depends(get_effective_tenant_id),
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
@@ -167,10 +169,9 @@ def update_settings(
         )
     ),
 ):
-
     settings = get_site_settings_service(
         db=db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=tenant_id,
     )
 
     if not settings:
@@ -179,7 +180,7 @@ def update_settings(
             settings_data=SiteSettingsCreate(
                 **settings_data.model_dump()
             ),
-            tenant_id=current_user.tenant_id,
+            tenant_id=tenant_id,
         )
 
         return settings

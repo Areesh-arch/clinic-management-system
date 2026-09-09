@@ -5,9 +5,12 @@ from app.crud.cms_blog import (
     delete_cms_blog,
     get_all_cms_blogs,
     get_cms_blog,
+    get_cms_blog_by_slug,
     update_cms_blog,
 )
+
 from app.models.cms_blog import CMSBlog
+
 from app.schemas.cms_blog import (
     CMSBlogCreate,
     CMSBlogUpdate,
@@ -36,6 +39,19 @@ def get_cms_blog_service(
     return get_cms_blog(
         db=db,
         blog_id=blog_id,
+        tenant_id=tenant_id,
+    )
+
+
+def get_cms_blog_by_slug_service(
+    db: Session,
+    slug: str,
+    tenant_id: int,
+) -> CMSBlog | None:
+
+    return get_cms_blog_by_slug(
+        db=db,
+        slug=slug,
         tenant_id=tenant_id,
     )
 

@@ -5,6 +5,19 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 class SiteSettingsCreate(BaseModel):
 
+    # =====================================================
+    # BRANDING
+    # =====================================================
+
+    logo_url: str | None = Field(
+        default=None,
+        max_length=500,
+    )
+
+    # =====================================================
+    # HOMEPAGE
+    # =====================================================
+
     homepage_eyebrow: str | None = Field(
         default=None,
         max_length=255,
@@ -21,6 +34,10 @@ class SiteSettingsCreate(BaseModel):
         default=None,
         max_length=500,
     )
+
+    # =====================================================
+    # CONTACT INFORMATION
+    # =====================================================
 
     clinic_name: str | None = Field(
         default=None,
@@ -51,6 +68,19 @@ class SiteSettingsCreate(BaseModel):
 
 class SiteSettingsUpdate(BaseModel):
 
+    # =====================================================
+    # BRANDING
+    # =====================================================
+
+    logo_url: str | None = Field(
+        default=None,
+        max_length=500,
+    )
+
+    # =====================================================
+    # HOMEPAGE
+    # =====================================================
+
     homepage_eyebrow: str | None = Field(
         default=None,
         max_length=255,
@@ -67,6 +97,10 @@ class SiteSettingsUpdate(BaseModel):
         default=None,
         max_length=500,
     )
+
+    # =====================================================
+    # CONTACT INFORMATION
+    # =====================================================
 
     clinic_name: str | None = Field(
         default=None,
@@ -96,13 +130,28 @@ class SiteSettingsUpdate(BaseModel):
 
 
 class SiteSettingsResponse(BaseModel):
+
     id: int
     tenant_id: int
+
+    # =====================================================
+    # BRANDING
+    # =====================================================
+
+    logo_url: str | None
+
+    # =====================================================
+    # HOMEPAGE
+    # =====================================================
 
     homepage_eyebrow: str | None
     homepage_title: str | None
     homepage_description: str | None
     homepage_image_url: str | None
+
+    # =====================================================
+    # CONTACT INFORMATION
+    # =====================================================
 
     clinic_name: str | None
     phone: str | None

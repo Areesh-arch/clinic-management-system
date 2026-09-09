@@ -1,3 +1,8 @@
+
+/* =========================================================
+   NAVBAR
+   ========================================================= */
+
 .navbar {
   width: 100%;
   background: #18392f;
@@ -8,80 +13,92 @@
 .navbar-container {
   max-width: 1240px;
   margin: 0 auto;
-  padding: 20px 40px;
+
+  padding: 16px 40px;
 
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 40px;
+
+  gap: 35px;
 }
+
+/* =========================================================
+   LOGO
+   ========================================================= */
 
 .navbar-logo {
   display: flex;
   align-items: center;
-  gap: 11px;
+
   text-decoration: none;
-  color: #f6f0e4;
+
+  flex-shrink: 0;
 }
 
-.logo-mark {
-  width: 38px;
-  height: 38px;
+.navbar-logo-image {
+  display: block;
 
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: auto;
+  height: 52px;
 
-  border: 1px solid #c8a96b;
-  border-radius: 50%;
+  max-width: 190px;
 
-  color: #d7c08a;
-  font-family: Georgia, serif;
-  font-size: 20px;
+  object-fit: contain;
+  object-position: left center;
+
+  transition:
+    transform 0.25s ease,
+    opacity 0.25s ease;
 }
 
-.logo-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1;
-  letter-spacing: 2px;
+.navbar-logo:hover .navbar-logo-image {
+  transform: translateY(-1px);
+  opacity: 0.94;
 }
 
-.logo-text strong {
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.logo-text small {
-  margin-top: 5px;
-  font-size: 8px;
-  letter-spacing: 3px;
-  color: #b7c8ba;
-}
+/* =========================================================
+   NAVIGATION
+   ========================================================= */
 
 .navbar-links {
   display: flex;
   align-items: center;
-  gap: 34px;
+
+  gap: 30px;
 }
 
 .navbar-links a {
   color: #e9e4d8;
+
   text-decoration: none;
+
   font-size: 14px;
-  transition: color 0.2s ease;
+
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
 }
 
 .navbar-links a:hover {
   color: #d7c08a;
+  transform: translateY(-1px);
 }
 
+/* =========================================================
+   CTA
+   ========================================================= */
+
 .navbar-button {
+  flex-shrink: 0;
+
   text-decoration: none;
+
   color: #18392f;
   background: #e9dfc9;
 
   padding: 12px 20px;
+
   border-radius: 24px;
 
   font-size: 13px;
@@ -89,24 +106,103 @@
 
   transition:
     background 0.2s ease,
-    transform 0.2s ease;
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
-.navbar-button:hover {
-  background: #f3ead8;
-  transform: translateY(-1px);
+.navbar-links a {
+  position: relative;
+
+  color: #e9e4d8;
+  text-decoration: none;
+
+  font-size: 14px;
+
+  transition: color 0.25s ease;
 }
+
+.navbar-links a::after {
+  content: "";
+
+  position: absolute;
+
+  left: 0;
+  bottom: -8px;
+
+  width: 100%;
+  height: 1px;
+
+  background: #c8a96b;
+
+  transform: scaleX(0);
+  transform-origin: center;
+
+  transition: transform 0.25s ease;
+}
+
+.navbar-links a:hover {
+  color: #d7c08a;
+}
+
+.navbar-links a:hover::after {
+  transform: scaleX(1);
+}
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 1050px) {
+  .navbar-links {
+    gap: 20px;
+  }
+
+  .navbar-links a {
+    font-size: 13px;
+  }
+
+  .navbar-container {
+    padding-left: 25px;
+    padding-right: 25px;
+  }
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
 
 @media (max-width: 850px) {
   .navbar-container {
-    padding: 18px 22px;
+    padding: 14px 22px;
   }
 
   .navbar-links {
     display: none;
   }
 
+  .navbar-logo-image {
+    height: 46px;
+    max-width: 165px;
+  }
+
   .navbar-button {
     padding: 10px 16px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 450px) {
+  .navbar-container {
+    padding: 13px 18px;
+  }
+
+  .navbar-logo-image {
+    height: 42px;
+    max-width: 145px;
+  }
+
+  .navbar-button {
+    padding: 9px 13px;
+    font-size: 11px;
   }
 }

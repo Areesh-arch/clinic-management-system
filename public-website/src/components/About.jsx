@@ -1,28 +1,68 @@
+﻿
 import "../styles/about.css";
 
-export default function About() {
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  "http://127.0.0.1:8000/api/v1";
+
+const API_ORIGIN = API_BASE_URL.replace(
+  /\/api\/v1\/?$/,
+  ""
+);
+
+export default function About({ siteSettings }) {
+  const eyebrow =
+    siteSettings?.homepage_eyebrow ||
+    "ABOUT OUR CLINIC";
+
+  const title =
+    siteSettings?.homepage_title ||
+    "Where refined care meets beautiful results.";
+
+  const description =
+    siteSettings?.homepage_description ||
+    "We believe aesthetic and dermatological care should feel personal, thoughtful, and effortless. Our approach combines modern treatments with careful consultation to create results that feel natural and uniquely yours.";
+
+  const rawImageUrl =
+    siteSettings?.homepage_image_url || "";
+
+  const imageUrl = rawImageUrl
+    ? rawImageUrl.startsWith("http://") ||
+      rawImageUrl.startsWith("https://")
+      ? rawImageUrl
+      : `${API_ORIGIN}${
+          rawImageUrl.startsWith("/") ? "" : "/"
+        }${rawImageUrl}`
+    : "";
+
   return (
-    <section className="about-section" id="about">
+    <section
+      className="about-section"
+      id="about"
+      style={
+        imageUrl
+          ? {
+              "--about-background-image": `url("${imageUrl}")`,
+            }
+          : undefined
+      }
+    >
+      <div className="about-overlay"></div>
+
       <div className="about-container">
+
         <div className="about-content">
-          <p className="about-eyebrow">ABOUT OUR CLINIC</p>
+
+          <p className="about-eyebrow">
+            {eyebrow}
+          </p>
 
           <h2>
-            Where refined care
-            <span> meets beautiful results.</span>
+            {title}
           </h2>
 
           <p className="about-description">
-            We believe aesthetic and dermatological care should feel personal,
-            thoughtful, and effortless. Our approach combines modern
-            treatments with careful consultation to create results that feel
-            natural and uniquely yours.
-          </p>
-
-          <p className="about-description secondary">
-            From your first consultation to every step of your treatment
-            journey, our team focuses on comfort, precision, and exceptional
-            care.
+            {description}
           </p>
 
           <button
@@ -30,30 +70,16 @@ export default function About() {
             onClick={() =>
               document
                 .getElementById("contact")
-                ?.scrollIntoView({ behavior: "smooth" })
+                ?.scrollIntoView({
+                  behavior: "smooth",
+                })
             }
           >
             Discover Our Approach
           </button>
+
         </div>
 
-        <div className="about-visual">
-          <div className="about-image-frame">
-            <div className="about-image-placeholder">
-              <span>CLINIC</span>
-              <strong>EXCELLENCE</strong>
-            </div>
-          </div>
-
-          <div className="about-accent-card">
-            <span className="accent-line"></span>
-            <p>
-              Personal care.
-              <br />
-              Exceptional standards.
-            </p>
-          </div>
-        </div>
       </div>
     </section>
   );
