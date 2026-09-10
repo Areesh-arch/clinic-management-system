@@ -9,6 +9,7 @@ from sqlalchemy import (
     Enum,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -31,16 +32,27 @@ if TYPE_CHECKING:
     from app.models.payment import Payment
     from app.models.outstanding import Outstanding
 
+
 class Patient(Base, IDMixin, TenantMixin, TimestampMixin):
     """
     Patient model.
+
+    Medical record numbers are unique within each tenant.
+    The same medical record number can exist in different tenants.
     """
 
     __tablename__ = "patients"
 
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id",
+            "medical_record_number",
+            name="uq_patient_tenant_medical_record_number",
+        ),
+    )
+
     medical_record_number: Mapped[str] = mapped_column(
         String(30),
-        unique=True,
         nullable=False,
         index=True,
     )
@@ -136,26 +148,27 @@ class Patient(Base, IDMixin, TenantMixin, TimestampMixin):
         "Tenant",
         back_populates="patients",
     )
-    
+
     appointments: Mapped[list["Appointment"]] = relationship(
         "Appointment",
         back_populates="patient",
         cascade="all, delete-orphan",
     )
+
     visits: Mapped[list["Visit"]] = relationship(
         "Visit",
         back_populates="patient",
         cascade="all, delete-orphan",
     )
-    
+
     payments: Mapped[list["Payment"]] = relationship(
         "Payment",
         back_populates="patient",
         cascade="all, delete-orphan",
     )
-    
+
     outstandings: Mapped[list["Outstanding"]] = relationship(
-    "Outstanding",
-    back_populates="patient",
-    cascade="all, delete-orphan",
-)
+        "Outstanding",
+        back_populates="patient",
+        cascade="all, delete-orphan",
+    )

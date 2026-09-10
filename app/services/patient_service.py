@@ -1,4 +1,4 @@
-from sqlalchemy import func, select
+from sqlalchemy import Integer, func, select, text
 from sqlalchemy.orm import Session
 
 from app.crud.patient import (
@@ -17,21 +17,45 @@ def generate_medical_record_number(
     tenant_id: int,
 ) -> str:
     """
-    Generate the next globally unique medical record number.
+    Generate the next medical record number for a specific tenant.
 
-    medical_record_number is globally UNIQUE in the database,
-    not unique per tenant.
+    Medical record numbers restart from DC-000001 for every tenant.
 
-    Therefore we cannot calculate it using only the
-    current tenant's patient count.
+    A PostgreSQL transaction-level advisory lock is used so that
+    two patients cannot receive the same number when created
+    simultaneously for the same tenant.
     """
 
-    count = db.scalar(
-        select(func.count())
-        .select_from(Patient)
+    # Lock this tenant for the duration of the current transaction.
+    #
+    # Different tenants use different lock keys, so creating a patient
+    # in Tenant A does not block patient creation in Tenant B.
+    db.execute(
+        text("SELECT pg_advisory_xact_lock(:tenant_id)"),
+        {"tenant_id": tenant_id},
     )
 
-    return f"DC-{(count or 0) + 1:06d}"
+    # Extract the numeric portion from medical_record_number
+    # and find the highest number belonging ONLY to this tenant.
+    max_number = db.scalar(
+        select(
+            func.max(
+                func.cast(
+                    func.substring(
+                        Patient.medical_record_number,
+                        4,
+                    ),
+                    Integer,
+                )
+            )
+        ).where(
+            Patient.tenant_id == tenant_id
+        )
+    )
+
+    next_number = (max_number or 0) + 1
+
+    return f"DC-{next_number:06d}"
 
 
 def create_patient_service(
