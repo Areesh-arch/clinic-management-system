@@ -4,15 +4,12 @@ function AppointmentTable({
   appointments,
   loading,
   error,
-
   search,
   status,
   date,
-
   onView,
   onEdit,
   onDelete,
-
   onRetry,
 }) {
   // ==========================================
@@ -154,22 +151,34 @@ function AppointmentTable({
     return (
       <div
         className="
-          bg-white
+          overflow-hidden
           rounded-[28px]
           border
-          border-slate-200
-          shadow-sm
-          overflow-hidden
+          border-[#E5DED0]
+          bg-[#FFFDF8]
+          shadow-[0_10px_35px_rgba(23,59,50,0.07)]
         "
       >
-        <div
-          className="
-            p-12
-            text-center
-            text-slate-500
-          "
-        >
-          Loading appointments...
+        <div className="flex min-h-70 items-center justify-center px-6 py-12">
+          <div className="text-center">
+            <div
+              className="
+                mx-auto
+                mb-4
+                h-9
+                w-9
+                animate-spin
+                rounded-full
+                border-4
+                border-[#DCE6DF]
+                border-t-[#173B32]
+              "
+            />
+
+            <p className="text-sm font-medium text-[#687770]">
+              Loading appointments...
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -183,21 +192,16 @@ function AppointmentTable({
     return (
       <div
         className="
-          bg-white
+          overflow-hidden
           rounded-[28px]
           border
-          border-red-200
-          shadow-sm
-          overflow-hidden
+          border-[#E6D5CF]
+          bg-[#FFFDF8]
+          shadow-[0_10px_35px_rgba(23,59,50,0.07)]
         "
       >
-        <div className="p-12 text-center">
-          <p
-            className="
-              text-red-600
-              font-medium
-            "
-          >
+        <div className="px-6 py-14 text-center">
+          <p className="font-medium text-[#9B5145]">
             {error}
           </p>
 
@@ -206,14 +210,17 @@ function AppointmentTable({
             onClick={onRetry}
             className="
               mt-5
+              rounded-xl
+              bg-[#173B32]
               px-5
               py-2.5
-              rounded-xl
-              bg-[#556B55]
+              text-sm
+              font-semibold
               text-white
-              font-medium
-              hover:bg-[#465946]
               transition-all
+              duration-200
+              hover:bg-[#245044]
+              active:scale-[0.98]
             "
           >
             Try Again
@@ -230,85 +237,159 @@ function AppointmentTable({
   return (
     <div
       className="
-        bg-white
+        overflow-hidden
         rounded-[28px]
         border
-        border-slate-200
-        shadow-sm
-        overflow-hidden
+        border-[#E5DED0]
+        bg-[#FFFDF8]
+        shadow-[0_10px_35px_rgba(23,59,50,0.07)]
       "
     >
-      {/* HEADER */}
+      {/* ======================================
+          HEADER / TITLE AREA
+      ====================================== */}
 
       <div
         className="
-          px-7
-          py-6
+          relative
+          overflow-hidden
           border-b
-          border-slate-200
-          flex
-          flex-col
-          sm:flex-row
-          sm:items-center
-          sm:justify-between
-          gap-4
+          border-[#E8E1D5]
+          bg-[#FFFDF8]
         "
       >
-        <div>
-          <h2
-            className="
-              text-2xl
-              font-bold
-              text-[#193B63]
-            "
-          >
-            Appointment Schedule
-          </h2>
-
-          <p className="text-slate-500 mt-1">
-            {filteredAppointments.length} appointments found
-          </p>
-        </div>
+        {/* Subtle background pattern */}
+        <div
+          className="
+            pointer-events-none
+            absolute
+            inset-0
+            opacity-[0.045]
+          "
+          style={{
+            backgroundImage: `
+              radial-gradient(
+                circle at 15px 15px,
+                #6F8F7D 1.2px,
+                transparent 1.5px
+              ),
+              radial-gradient(
+                circle at 45px 45px,
+                #B4935A 1px,
+                transparent 1.4px
+              )
+            `,
+            backgroundSize: "60px 60px",
+          }}
+        />
 
         <div
           className="
-            px-5
-            py-2.5
-            rounded-full
-            bg-[#EEF4EA]
-            text-[#556B55]
-            font-medium
-            whitespace-nowrap
+            relative
+            flex
+            flex-col
+            gap-5
+            px-7
+            py-7
+            sm:flex-row
+            sm:items-center
+            sm:justify-between
           "
         >
-          {filteredAppointments.length} Records
+          {/* TITLE */}
+
+          <div>
+            <h2
+              className="
+                text-2xl
+                font-bold
+                tracking-tight
+                text-[#173B32]
+              "
+            >
+              Appointment Schedule
+            </h2>
+
+            {/* Gold accent line */}
+
+            <div
+              className="
+                mt-3
+                h-0.75
+                w-24
+                rounded-full
+                bg-[#B4935A]
+              "
+            />
+
+            <p
+              className="
+                mt-2
+                text-sm
+                font-medium
+                text-[#7A8580]
+              "
+            >
+              {filteredAppointments.length} appointments found
+            </p>
+          </div>
+
+          {/* RECORD COUNT */}
+
+          <div
+            className="
+              inline-flex
+              w-fit
+              shrink-0
+              items-center
+              gap-2
+              rounded-full
+              border
+              border-[#D7E2DB]
+              bg-[#EEF4EF]
+              px-4
+              py-2
+              text-sm
+              font-semibold
+              text-[#365C4F]
+            "
+          >
+            <span
+              className="
+                h-2
+                w-2
+                rounded-full
+                bg-[#6F8F7D]
+              "
+            />
+
+            {filteredAppointments.length} Records
+          </div>
         </div>
       </div>
 
-      {/* TABLE */}
+      {/* ======================================
+          TABLE
+      ====================================== */}
 
       <div className="overflow-x-auto">
-        <table
-          className="
-            w-full
-            min-w-212.5
-          "
-        >
+        <table className="w-full min-w-212.5">
           <thead>
             <tr
               className="
-                bg-[#F7FAF7]
-                border-b
-                border-slate-200
-                text-[#31577E]
+                bg-[#173B32]
+                text-white
               "
             >
               <th
                 className="
                   px-7
-                  py-5
+                  py-4
                   text-left
-                  font-semibold
+                  text-xs
+                  font-bold
+                  uppercase
+                  tracking-[0.08em]
                 "
               >
                 Patient
@@ -317,9 +398,12 @@ function AppointmentTable({
               <th
                 className="
                   px-5
-                  py-5
+                  py-4
                   text-left
-                  font-semibold
+                  text-xs
+                  font-bold
+                  uppercase
+                  tracking-[0.08em]
                 "
               >
                 Date
@@ -328,9 +412,12 @@ function AppointmentTable({
               <th
                 className="
                   px-5
-                  py-5
+                  py-4
                   text-left
-                  font-semibold
+                  text-xs
+                  font-bold
+                  uppercase
+                  tracking-[0.08em]
                 "
               >
                 Time
@@ -339,9 +426,12 @@ function AppointmentTable({
               <th
                 className="
                   px-5
-                  py-5
+                  py-4
                   text-left
-                  font-semibold
+                  text-xs
+                  font-bold
+                  uppercase
+                  tracking-[0.08em]
                 "
               >
                 Reason
@@ -350,9 +440,12 @@ function AppointmentTable({
               <th
                 className="
                   px-5
-                  py-5
+                  py-4
                   text-left
-                  font-semibold
+                  text-xs
+                  font-bold
+                  uppercase
+                  tracking-[0.08em]
                 "
               >
                 Status
@@ -361,9 +454,12 @@ function AppointmentTable({
               <th
                 className="
                   px-7
-                  py-5
+                  py-4
                   text-left
-                  font-semibold
+                  text-xs
+                  font-bold
+                  uppercase
+                  tracking-[0.08em]
                 "
               >
                 Actions
@@ -371,7 +467,7 @@ function AppointmentTable({
             </tr>
           </thead>
 
-          <tbody>
+          <tbody className="divide-y divide-[#E5DED0]">
             {filteredAppointments.length > 0 ? (
               filteredAppointments.map(
                 (appointment) => (
@@ -395,13 +491,15 @@ function AppointmentTable({
                     px-6
                     py-16
                     text-center
+                    bg-[#FFFDF8]
                   "
                 >
-                  <div className="text-slate-400">
+                  <div className="text-[#87918C]">
                     <p
                       className="
                         text-lg
-                        font-medium
+                        font-semibold
+                        text-[#173B32]
                       "
                     >
                       No appointments found
@@ -409,8 +507,8 @@ function AppointmentTable({
 
                     <p
                       className="
-                        text-sm
                         mt-1
+                        text-sm
                       "
                     >
                       Try changing your search or filters.

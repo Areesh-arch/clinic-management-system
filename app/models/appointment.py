@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, time
+
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
@@ -20,11 +21,16 @@ from sqlalchemy.orm import (
 )
 
 from app.models.base import Base
+
 from app.models.mixins import (
     IDMixin,
     TimestampMixin,
 )
-from app.models.enums import AppointmentStatus
+
+from app.models.enums import (
+    AppointmentStatus,
+    AppointmentSource,
+)
 
 
 if TYPE_CHECKING:
@@ -34,7 +40,6 @@ if TYPE_CHECKING:
 
 
 class Appointment(Base, IDMixin, TimestampMixin):
-
     __tablename__ = "appointments"
 
     tenant_id: Mapped[int] = mapped_column(
@@ -77,6 +82,15 @@ class Appointment(Base, IDMixin, TimestampMixin):
             native_enum=False,
         ),
         default=AppointmentStatus.SCHEDULED,
+        nullable=False,
+    )
+
+    source: Mapped[AppointmentSource] = mapped_column(
+        Enum(
+            AppointmentSource,
+            native_enum=False,
+        ),
+        default=AppointmentSource.CLINIC,
         nullable=False,
     )
 

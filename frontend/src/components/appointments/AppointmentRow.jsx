@@ -1,238 +1,316 @@
-import {
-  FiEye,
-  FiEdit,
-  FiTrash2,
-} from "react-icons/fi";
-
+import { FiEye, FiEdit, FiTrash2, FiUser } from "react-icons/fi";
+import { useNavigate } from "react-router-dom";
 import AppointmentStatusBadge from "./AppointmentStatusBadge";
 
 function AppointmentRow({
   appointment,
-  statusLabel,
   onView,
   onEdit,
   onDelete,
 }) {
-  const formatDate = (value) => {
-    if (!value) return "-";
+  const navigate = useNavigate();
 
-    const date = new Date(
-      `${value}T00:00:00`
-    );
+  // =====================================================
+  // PATIENT DATA
+  // =====================================================
 
-    if (
-      Number.isNaN(
-        date.getTime()
-      )
-    ) {
-      return value;
-    }
-
-    return date.toLocaleDateString(
-      "en-GB",
-      {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }
-    );
-  };
-
-  const formatTime = (value) => {
-    if (!value) return "-";
-
-    const [hours, minutes] =
-      String(value).split(":");
-
-    const date = new Date();
-
-    date.setHours(
-      Number(hours),
-      Number(minutes),
-      0,
-      0
-    );
-
-    return date.toLocaleTimeString(
-      "en-US",
-      {
-        hour: "numeric",
-        minute: "2-digit",
-      }
-    );
-  };
+  const patientId =
+    appointment?.patient_id ??
+    appointment?.patient?.id;
 
   const patientName =
     appointment?.patient_name ||
     appointment?.patient?.full_name ||
     appointment?.patient?.name ||
-    "";
+    "Unknown Patient";
 
-  const patientMrn =
+  const medicalRecordNumber =
     appointment?.medical_record_number ||
     appointment?.patient?.medical_record_number ||
-    "";
+    "—";
+
+  // =====================================================
+  // DATE
+  // =====================================================
+
+  const formattedDate = appointment?.appointment_date
+    ? new Date(
+        `${appointment.appointment_date}T00:00:00`
+      ).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+    : "—";
+
+  // =====================================================
+  // TIME
+  // =====================================================
+
+  const formattedTime = appointment?.appointment_time
+    ? new Date(
+        `1970-01-01T${appointment.appointment_time}`
+      ).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "—";
+
+  // =====================================================
+  // STATUS
+  // =====================================================
+
+  const normalizedStatus = String(
+    appointment?.status || "scheduled"
+  )
+    .toLowerCase()
+    .replace(/-/g, "_");
+
+  // =====================================================
+  // PROFILE
+  // =====================================================
+
+  const handleProfile = () => {
+    if (!patientId) {
+      return;
+    }
+
+    navigate(`/patients/${patientId}`);
+  };
+
+  // =====================================================
+  // RENDER
+  // =====================================================
 
   return (
-    <tr className="border-b border-[#E8ECE6] hover:bg-[#FAFCF9] transition-all duration-200 group">
+    <tr
+      className="
+        border-b
+        border-[#E5DED0]
+        last:border-b-0
 
-      <td className="px-7 py-6 whitespace-nowrap">
-        {patientName ? (
-          <div>
-            <div className="font-semibold text-[#294936]">
-              {patientName}
-            </div>
+        odd:bg-[#F1F5F2]
+        even:bg-[#FFFDF8]
 
-            {patientMrn && (
-              <div className="text-xs text-[#7A827C] mt-1">
-                {patientMrn}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div>
-            <div className="font-semibold text-[#294936]">
-              Patient #{appointment?.patient_id}
-            </div>
+        hover:bg-[#E5EEE8]
 
-            <div className="text-xs text-[#9AA19B] mt-1">
-              Patient details loading
-            </div>
-          </div>
-        )}
-      </td>
+        transition-colors
+        duration-200
+      "
+    >
+      {/* =================================================
+          PATIENT
+      ================================================= */}
 
-      <td className="px-5 py-6 text-[#69736B] whitespace-nowrap">
-        {formatDate(
-          appointment?.appointment_date
-        )}
-      </td>
-
-      <td className="px-5 py-6 text-[#69736B] font-medium whitespace-nowrap">
-        {formatTime(
-          appointment?.appointment_time
-        )}
-      </td>
-
-      <td className="px-5 py-6 text-[#69736B] max-w-65">
-        <span
-          className="block truncate"
-          title={
-            appointment?.reason || "-"
-          }
-        >
-          {appointment?.reason || "-"}
-        </span>
-
-        {appointment?.is_follow_up === true && (
+      <td className="px-7 py-4">
+        <div className="flex flex-col">
           <span
             className="
-              inline-flex
-              mt-2
-              px-2.5 py-1
-              rounded-full
-              bg-[#EEF3EC]
-              text-[#647760]
-              text-xs
-              font-medium
+              font-semibold
+              text-[#173B32]
             "
           >
-            Follow-up
+            {patientName}
           </span>
-        )}
+
+          <span
+            className="
+              mt-1
+              text-xs
+              font-medium
+              text-[#7A8780]
+            "
+          >
+            {medicalRecordNumber}
+          </span>
+        </div>
       </td>
 
-      <td className="px-5 py-6">
+      {/* =================================================
+          DATE
+      ================================================= */}
+
+      <td
+        className="
+          whitespace-nowrap
+          px-5
+          py-4
+          text-sm
+          font-medium
+          text-[#4D5B54]
+        "
+      >
+        {formattedDate}
+      </td>
+
+      {/* =================================================
+          TIME
+      ================================================= */}
+
+      <td
+        className="
+          whitespace-nowrap
+          px-5
+          py-4
+          text-sm
+          font-medium
+          text-[#4D5B54]
+        "
+      >
+        {formattedTime}
+      </td>
+
+      {/* =================================================
+          REASON
+      ================================================= */}
+
+      <td className="px-5 py-4">
+        <div className="flex flex-col gap-1.5">
+          <span
+            className="
+              text-sm
+              font-medium
+              text-[#4D5B54]
+            "
+          >
+            {appointment?.reason || "—"}
+          </span>
+
+          {appointment?.is_follow_up && (
+            <span
+              className="
+                inline-flex
+                w-fit
+                items-center
+                rounded-full
+                border
+                border-[#D5E1D9]
+                bg-[#E7EFEA]
+                px-2.5
+                py-0.5
+                text-[11px]
+                font-semibold
+                text-[#496A5A]
+              "
+            >
+              Follow-up
+            </span>
+          )}
+        </div>
+      </td>
+
+      {/* =================================================
+          STATUS
+      ================================================= */}
+
+      <td className="px-5 py-4">
         <AppointmentStatusBadge
-          status={statusLabel}
+          status={normalizedStatus}
         />
       </td>
 
-      <td className="px-7 py-6">
-        <div className="flex items-center gap-3">
+      {/* =================================================
+          ACTIONS
+      ================================================= */}
+
+      <td className="px-5 py-4">
+        <div className="flex items-center gap-2">
+
+          {/* PROFILE */}
 
           <button
             type="button"
-            onClick={() => {
-              if (onView) {
-                onView(
-                  appointment
-                );
-              }
-            }}
-            title="View appointment"
-            className="
-              w-11 h-11
-              rounded-xl
-              bg-[#F1F5EF]
-              text-[#647760]
-              flex
-              items-center
-              justify-center
-              hover:bg-[#E5EEE2]
-              hover:text-[#294936]
-              hover:-translate-y-0.5
-              transition-all
-              duration-200
-            "
+            onClick={handleProfile}
+            disabled={!patientId}
+            title="Patient Profile"
+            className={`inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-all duration-200 ${
+              patientId
+                ? "border-[#C9D8CF] bg-[#F7FAF8] text-[#527565] hover:border-[#6F8F7D] hover:bg-[#E5EEE8] hover:text-[#173B32]"
+                : "cursor-not-allowed border-[#E8E8E8] bg-[#F7F7F7] text-[#B5B5B5]"
+            }`}
           >
-            <FiEye size={19} />
+            <FiUser size={15} />
           </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              if (onEdit) {
-                onEdit(
-                  appointment
-                );
-              }
-            }}
-            title="Edit appointment"
-            className="
-              w-11 h-11
-              rounded-xl
-              bg-[#F1F5EF]
-              text-[#647760]
-              flex
-              items-center
-              justify-center
-              hover:bg-[#E5EEE2]
-              hover:text-[#294936]
-              hover:-translate-y-0.5
-              transition-all
-              duration-200
-            "
-          >
-            <FiEdit size={19} />
-          </button>
+          {/* VIEW */}
 
           <button
             type="button"
-            onClick={() => {
-              if (onDelete) {
-                onDelete(
-                  appointment
-                );
-              }
-            }}
-            title="Delete appointment"
+            onClick={() => onView(appointment)}
+            title="View Appointment"
             className="
-              w-11 h-11
-              rounded-xl
-              bg-[#FAF1F1]
-              text-[#8B6868]
-              flex
+              inline-flex
+              h-9
+              w-9
               items-center
               justify-center
-              hover:bg-[#F8E6E6]
-              hover:text-[#9A5555]
-              hover:-translate-y-0.5
+              rounded-xl
+              border
+              border-[#C9D8CF]
+              bg-[#F7FAF8]
+              text-[#527565]
               transition-all
               duration-200
+              hover:border-[#6F8F7D]
+              hover:bg-[#E5EEE8]
+              hover:text-[#173B32]
             "
           >
-            <FiTrash2 size={19} />
+            <FiEye size={15} />
+          </button>
+
+          {/* EDIT */}
+
+          <button
+            type="button"
+            onClick={() => onEdit(appointment)}
+            title="Edit Appointment"
+            className="
+              inline-flex
+              h-9
+              w-9
+              items-center
+              justify-center
+              rounded-xl
+              border
+              border-[#DCCBA8]
+              bg-[#FBF8EF]
+              text-[#947844]
+              transition-all
+              duration-200
+              hover:border-[#B4935A]
+              hover:bg-[#F3EBDD]
+              hover:text-[#765E32]
+            "
+          >
+            <FiEdit size={15} />
+          </button>
+
+          {/* DELETE */}
+
+          <button
+            type="button"
+            onClick={() => onDelete(appointment)}
+            title="Delete Appointment"
+            className="
+              inline-flex
+              h-9
+              w-9
+              items-center
+              justify-center
+              rounded-xl
+              border
+              border-[#E5CEC8]
+              bg-[#FCF7F5]
+              text-[#A15D50]
+              transition-all
+              duration-200
+              hover:border-[#C98A7D]
+              hover:bg-[#F7EAE6]
+              hover:text-[#8D4337]
+            "
+          >
+            <FiTrash2 size={15} />
           </button>
 
         </div>

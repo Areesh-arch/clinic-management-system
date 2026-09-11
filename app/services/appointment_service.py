@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
 from fastapi import HTTPException, status
+
 from sqlalchemy.orm import Session
 
 from app.crud.appointment import (
@@ -10,6 +11,7 @@ from app.crud.appointment import (
     update_appointment,
     delete_appointment,
 )
+
 from app.models.appointment import Appointment
 from app.models.enums import AppointmentStatus
 from app.models.patient import Patient
@@ -47,12 +49,29 @@ def _validate_future_datetime(
     appointment_date,
     appointment_time,
 ) -> None:
+    """
+    Validate that the appointment date/time is in the future.
+
+    Appointment date/time represents clinic-local time.
+    If the incoming time is timezone-aware, remove the timezone
+    information before comparing it with the server's local time.
+    """
+
     appointment_datetime = datetime.combine(
         appointment_date,
         appointment_time,
     )
 
-    if appointment_datetime <= datetime.now():
+    # Prevent:
+    # TypeError: can't compare offset-naive and offset-aware datetimes
+    if appointment_datetime.tzinfo is not None:
+        appointment_datetime = appointment_datetime.replace(
+            tzinfo=None
+        )
+
+    now = datetime.now()
+
+    if appointment_datetime <= now:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Appointment date and time must be in the future.",
@@ -219,6 +238,7 @@ def _attach_patient_data(
     )
 
     appointment.patient_name = patient_data["patient_name"]
+
     appointment.medical_record_number = (
         patient_data["medical_record_number"]
     )
@@ -286,19 +306,28 @@ def _validate_status_change(
     if current_status == AppointmentStatus.COMPLETED:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A completed appointment cannot be changed to another status.",
+            detail=(
+                "A completed appointment cannot be changed "
+                "to another status."
+            ),
         )
 
     if current_status == AppointmentStatus.CANCELLED:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A cancelled appointment cannot be changed to another status.",
+            detail=(
+                "A cancelled appointment cannot be changed "
+                "to another status."
+            ),
         )
 
     if current_status == AppointmentStatus.NO_SHOW:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A no-show appointment cannot be changed to another status.",
+            detail=(
+                "A no-show appointment cannot be changed "
+                "to another status."
+            ),
         )
 
 
@@ -492,7 +521,6 @@ def update_appointment_service(
         appointment.duration_minutes,
     )
 
-    # IMPORTANT:
     # Only validate future date/time when the appointment
     # date or time is actually being changed.
     #
@@ -501,7 +529,8 @@ def update_appointment_service(
     #   - CANCELLED
     #   - COMPLETED
     #
-    # without triggering the "must be in the future" error.
+    # without triggering the future-date validation.
+
     if (
         "appointment_date" in update_data
         or "appointment_time" in update_data

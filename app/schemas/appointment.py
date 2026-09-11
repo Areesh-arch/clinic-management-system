@@ -2,7 +2,10 @@ from datetime import date, time
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.enums import AppointmentStatus
+from app.models.enums import (
+    AppointmentStatus,
+    AppointmentSource,
+)
 
 
 class AppointmentCreate(BaseModel):
@@ -33,6 +36,11 @@ class AppointmentCreate(BaseModel):
 
     notes: str | None = None
 
+    # Appointment origin.
+    # Existing clinic-created appointments default
+    # to CLINIC.
+    source: AppointmentSource = AppointmentSource.CLINIC
+
 
 class AppointmentUpdate(BaseModel):
 
@@ -54,6 +62,8 @@ class AppointmentUpdate(BaseModel):
     is_follow_up: bool | None = None
 
     notes: str | None = None
+
+    source: AppointmentSource | None = None
 
 
 class AppointmentResponse(BaseModel):
@@ -78,6 +88,8 @@ class AppointmentResponse(BaseModel):
     duration_minutes: int
 
     status: AppointmentStatus
+
+    source: AppointmentSource
 
     reason: str | None
 

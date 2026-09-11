@@ -11,12 +11,15 @@ import {
   FiAlertCircle,
   FiCheckCircle,
   FiCheck,
+  FiPlus,
 } from "react-icons/fi";
 
 import {
   createAppointment,
   updateAppointment,
 } from "../../services/appointmentService";
+
+import PatientForm from "../patients/PatientForm";
 
 // ======================================================
 // HELPERS
@@ -121,43 +124,56 @@ function AppointmentForm({
   onSuccess,
   onCancel,
 }) {
-  const isEditMode =
-    mode === "edit" || Boolean(appointment);
+  const isEditMode = mode === "edit" || Boolean(appointment);
 
-  const [formData, setFormData] = useState(
-    getInitialFormData
-  );
-
-  const [patientSearch, setPatientSearch] =
-    useState("");
-
-  const [showPatientList, setShowPatientList] =
-    useState(false);
-
-  const [loading, setLoading] =
-    useState(false);
-
-  const [error, setError] =
-    useState("");
-
-  const [success, setSuccess] =
-    useState("");
+  const [formData, setFormData] = useState(getInitialFormData);
+  const [patientSearch, setPatientSearch] = useState("");
+  const [showPatientList, setShowPatientList] = useState(false);
+  const [showNewPatientForm, setShowNewPatientForm] = useState(false);
+  const [newlyCreatedPatients, setNewlyCreatedPatients] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   // ====================================================
   // NORMALIZE PATIENT LIST
   // ====================================================
 
   const patientList = useMemo(() => {
-    if (!Array.isArray(patients)) {
-      return [];
-    }
+    const originalPatients = Array.isArray(patients) ? patients : [];
 
-    return patients.filter(
-      (patient) =>
-        patient?.id !== null &&
-        patient?.id !== undefined
-    );
-  }, [patients]);
+    const createdPatients = Array.isArray(newlyCreatedPatients)
+      ? newlyCreatedPatients
+      : [];
+
+    const combinedPatients = [
+      ...originalPatients,
+      ...createdPatients,
+    ];
+
+    const uniquePatients = [];
+    const seenIds = new Set();
+
+    combinedPatients.forEach((patient) => {
+      if (
+        patient?.id === null ||
+        patient?.id === undefined
+      ) {
+        return;
+      }
+
+      const patientId = Number(patient.id);
+
+      if (seenIds.has(patientId)) {
+        return;
+      }
+
+      seenIds.add(patientId);
+      uniquePatients.push(patient);
+    });
+
+    return uniquePatients;
+  }, [patients, newlyCreatedPatients]);
 
   // ====================================================
   // NORMALIZE APPOINTMENT LIST
@@ -191,10 +207,7 @@ function AppointmentForm({
           Number(formData.patient_id)
       ) || null
     );
-  }, [
-    patientList,
-    formData.patient_id,
-  ]);
+  }, [patientList, formData.patient_id]);
 
   // ====================================================
   // PATIENT NAME
@@ -233,8 +246,7 @@ function AppointmentForm({
 
     return appointmentList.some((item) => {
       if (
-        Number(item?.patient_id) !==
-        selectedId
+        Number(item?.patient_id) !== selectedId
       ) {
         return false;
       }
@@ -242,8 +254,7 @@ function AppointmentForm({
       if (
         appointment?.id !== null &&
         appointment?.id !== undefined &&
-        Number(item.id) ===
-          Number(appointment.id)
+        Number(item.id) === Number(appointment.id)
       ) {
         return false;
       }
@@ -257,10 +268,9 @@ function AppointmentForm({
   // ====================================================
 
   const filteredPatients = useMemo(() => {
-    const searchValue =
-      patientSearch
-        .toLowerCase()
-        .trim();
+    const searchValue = patientSearch
+      .toLowerCase()
+      .trim();
 
     if (!searchValue) {
       return patientList;
@@ -281,10 +291,7 @@ function AppointmentForm({
         mrn.includes(searchValue)
       );
     });
-  }, [
-    patientList,
-    patientSearch,
-  ]);
+  }, [patientList, patientSearch]);
 
   // ====================================================
   // POPULATE FORM
@@ -296,8 +303,7 @@ function AppointmentForm({
     // --------------------------------------------------
 
     if (!appointment) {
-      const initialData =
-        getInitialFormData();
+      const initialData = getInitialFormData();
 
       if (initialPatientId) {
         const numericPatientId =
@@ -323,9 +329,7 @@ function AppointmentForm({
 
       if (preselectedPatient) {
         setPatientSearch(
-          getPatientName(
-            preselectedPatient
-          )
+          getPatientName(preselectedPatient)
         );
       } else {
         setPatientSearch("");
@@ -346,8 +350,7 @@ function AppointmentForm({
       appointment.patient_id ?? "";
 
     setFormData({
-      patient_id:
-        appointmentPatientId,
+      patient_id: appointmentPatientId,
 
       appointment_date:
         appointment.appointment_date ?? "",
@@ -362,8 +365,6 @@ function AppointmentForm({
       duration_minutes:
         appointment.duration_minutes ?? 30,
 
-      // IMPORTANT:
-      // Preserve the existing appointment status.
       status:
         backendStatusToFormStatus(
           appointment.status
@@ -460,17 +461,14 @@ function AppointmentForm({
   // ====================================================
 
   const handlePatientSelect = (patient) => {
-    const patientId =
-      Number(patient.id);
+    const patientId = Number(patient.id);
 
     const automaticallyFollowUp =
       hasPreviousAppointment(patientId);
 
     setFormData((previous) => ({
       ...previous,
-
       patient_id: patientId,
-
       is_follow_up:
         automaticallyFollowUp,
     }));
@@ -485,14 +483,92 @@ function AppointmentForm({
   };
 
   // ====================================================
+  // NEW PATIENT
+  // ====================================================
+
+  const handleOpenNewPatientForm = () => {
+    setShowPatientList(false);
+    setShowNewPatientForm(true);
+    setError("");
+    setSuccess("");
+  };
+
+  const handleNewPatientSuccess = (
+    savedPatient
+  ) => {
+    if (
+      !savedPatient ||
+      savedPatient.id === null ||
+      savedPatient.id === undefined
+    ) {
+      setShowNewPatientForm(false);
+
+      setError(
+        "Patient was created, but the new patient information could not be loaded into the appointment."
+      );
+
+      return;
+    }
+
+    setNewlyCreatedPatients((previous) => {
+      const alreadyExists =
+        previous.some(
+          (patient) =>
+            Number(patient.id) ===
+            Number(savedPatient.id)
+        );
+
+      if (alreadyExists) {
+        return previous;
+      }
+
+      return [
+        ...previous,
+        savedPatient,
+      ];
+    });
+
+    const patientId =
+      Number(savedPatient.id);
+
+    const automaticallyFollowUp =
+      hasPreviousAppointment(patientId);
+
+    setFormData((previous) => ({
+      ...previous,
+      patient_id: patientId,
+      is_follow_up:
+        automaticallyFollowUp,
+    }));
+
+    setPatientSearch(
+      getPatientName(savedPatient)
+    );
+
+    setShowPatientList(false);
+    setShowNewPatientForm(false);
+
+    setError("");
+
+    setSuccess(
+      `Patient ${getPatientName(
+        savedPatient
+      )} was created and selected for this appointment.`
+    );
+  };
+
+  const handleCloseNewPatientForm = () => {
+    setShowNewPatientForm(false);
+  };
+
+  // ====================================================
   // PATIENT SEARCH
   // ====================================================
 
   const handlePatientSearchChange = (
     event
   ) => {
-    const value =
-      event.target.value;
+    const value = event.target.value;
 
     setPatientSearch(value);
     setShowPatientList(true);
@@ -550,10 +626,9 @@ function AppointmentForm({
       return "Please enter the reason for the appointment.";
     }
 
-    const selectedDateTime =
-      new Date(
-        `${formData.appointment_date}T${formData.appointment_time}:00`
-      );
+    const selectedDateTime = new Date(
+      `${formData.appointment_date}T${formData.appointment_time}:00`
+    );
 
     if (
       Number.isNaN(
@@ -563,9 +638,6 @@ function AppointmentForm({
       return "Please enter a valid appointment date and time.";
     }
 
-    // Only enforce future time for NEW appointments.
-    // Existing appointments may be edited after their
-    // scheduled time.
     if (!isEditMode) {
       const now = new Date();
 
@@ -640,17 +712,8 @@ function AppointmentForm({
           formData.is_follow_up,
 
         notes:
-          formData.notes.trim() ||
-          null,
+          formData.notes.trim() || null,
       };
-
-      // ------------------------------------------------
-      // IMPORTANT:
-      // Status is sent ONLY when editing.
-      //
-      // New appointments automatically receive
-      // "scheduled" from the backend.
-      // ------------------------------------------------
 
       if (isEditMode) {
         payload.status =
@@ -658,13 +721,6 @@ function AppointmentForm({
             formData.status
           );
       }
-
-      console.log(
-        isEditMode
-          ? "Updating appointment:"
-          : "Creating appointment:",
-        payload
-      );
 
       let result;
 
@@ -675,11 +731,6 @@ function AppointmentForm({
             payload
           );
 
-        console.log(
-          "UPDATE APPOINTMENT RESPONSE:",
-          result
-        );
-
         setSuccess(
           "Appointment updated successfully."
         );
@@ -688,11 +739,6 @@ function AppointmentForm({
           await createAppointment(
             payload
           );
-
-        console.log(
-          "CREATE APPOINTMENT RESPONSE:",
-          result
-        );
 
         setSuccess(
           "Appointment created successfully."
@@ -757,9 +803,12 @@ function AppointmentForm({
   return (
     <div className="w-full">
 
-      {/* HEADER */}
+      {/* =================================================
+          HEADER
+      ================================================= */}
 
       <div className="mb-7 flex items-start justify-between">
+
         <div>
           <div
             className="
@@ -803,7 +852,11 @@ function AppointmentForm({
           </p>
         </div>
 
-        {onCancel && (
+        {/* MAIN APPOINTMENT CLOSE BUTTON
+            Hidden while New Patient modal is open.
+            This prevents two crosses from showing. */}
+
+        {onCancel && !showNewPatientForm && (
           <button
             type="button"
             onClick={onCancel}
@@ -812,7 +865,8 @@ function AppointmentForm({
               flex h-10 w-10 shrink-0
               items-center justify-center
               rounded-full text-slate-400
-              transition hover:bg-[#EEF5EC]
+              transition
+              hover:bg-[#EEF5EC]
               hover:text-[#556B55]
               disabled:cursor-not-allowed
               disabled:opacity-50
@@ -824,7 +878,9 @@ function AppointmentForm({
         )}
       </div>
 
-      {/* ERROR */}
+      {/* =================================================
+          ERROR
+      ================================================= */}
 
       {error && (
         <div
@@ -852,7 +908,9 @@ function AppointmentForm({
         </div>
       )}
 
-      {/* SUCCESS */}
+      {/* =================================================
+          SUCCESS
+      ================================================= */}
 
       {success && (
         <div
@@ -874,16 +932,21 @@ function AppointmentForm({
         </div>
       )}
 
-      {/* FORM */}
+      {/* =================================================
+          APPOINTMENT FORM
+      ================================================= */}
 
       <form
         onSubmit={handleSubmit}
         className="space-y-6"
       >
 
-        {/* PATIENT */}
+        {/* =================================================
+            PATIENT
+        ================================================= */}
 
         <div className={sectionClass}>
+
           <div className="mb-5">
             <h3
               className="
@@ -904,14 +967,50 @@ function AppointmentForm({
           </div>
 
           <div className="relative">
-            <label
-              htmlFor="patient_search"
-              className={labelClass}
-            >
-              Select Patient
-            </label>
+
+            {/* PATIENT LABEL + ADD BUTTON */}
+
+            <div className="mb-2 flex items-center justify-between gap-3">
+
+              <label
+                htmlFor="patient_search"
+                className="text-sm font-semibold text-[#294C60]"
+              >
+                Select Patient
+              </label>
+
+              <button
+                type="button"
+                onClick={handleOpenNewPatientForm}
+                disabled={loading}
+                className="
+                  inline-flex items-center gap-1.5
+                  -translate-y-1
+                  rounded-xl
+                  border border-[#173B32]
+                  bg-[#173B32]
+                  px-3.5 py-2
+                  text-xs font-semibold
+                  text-white
+                  shadow-sm
+                  transition-all duration-200
+                  hover:border-[#102C26]
+                  hover:bg-[#102C26]
+                  hover:shadow-md
+                  active:scale-[0.98]
+                  disabled:cursor-not-allowed
+                  disabled:opacity-50
+                "
+              >
+                <FiPlus size={15} />
+                Add New Patient
+              </button>
+            </div>
+
+            {/* SEARCH INPUT */}
 
             <div className="relative">
+
               <FiSearch
                 className="
                   absolute left-4 top-1/2
@@ -1026,6 +1125,7 @@ function AppointmentForm({
                             `}
                           >
                             <div className="flex items-center gap-3 min-w-0">
+
                               <div
                                 className="
                                   flex h-10 w-10
@@ -1041,6 +1141,7 @@ function AppointmentForm({
                               </div>
 
                               <div className="min-w-0">
+
                                 <div
                                   className="
                                     font-semibold
@@ -1128,6 +1229,7 @@ function AppointmentForm({
                 "
               >
                 <div className="flex items-center gap-3">
+
                   <div
                     className="
                       flex h-9 w-9
@@ -1191,7 +1293,9 @@ function AppointmentForm({
           </div>
         </div>
 
-        {/* SCHEDULE */}
+        {/* =================================================
+            SCHEDULE
+        ================================================= */}
 
         <div
           className="
@@ -1200,6 +1304,7 @@ function AppointmentForm({
           "
         >
           <div className="mb-5">
+
             <h3
               className="
                 text-base font-bold
@@ -1224,6 +1329,7 @@ function AppointmentForm({
               md:grid-cols-2
             "
           >
+
             {/* DATE */}
 
             <div>
@@ -1235,6 +1341,7 @@ function AppointmentForm({
               </label>
 
               <div className="relative">
+
                 <FiCalendar
                   className="
                     pointer-events-none
@@ -1275,6 +1382,7 @@ function AppointmentForm({
               </label>
 
               <div className="relative">
+
                 <FiClock
                   className="
                     pointer-events-none
@@ -1318,6 +1426,7 @@ function AppointmentForm({
           {/* DURATION */}
 
           <div className="mt-5 max-w-md">
+
             <label
               htmlFor="duration_minutes"
               className={labelClass}
@@ -1373,11 +1482,15 @@ function AppointmentForm({
           </div>
         </div>
 
-        {/* STATUS */}
+        {/* =================================================
+            STATUS
+        ================================================= */}
 
         {isEditMode && (
           <div className={sectionClass}>
+
             <div className="mb-5">
+
               <h3
                 className="
                   text-base font-bold
@@ -1397,6 +1510,7 @@ function AppointmentForm({
             </div>
 
             <div className="max-w-md">
+
               <label
                 htmlFor="status"
                 className={labelClass}
@@ -1443,10 +1557,14 @@ function AppointmentForm({
           </div>
         )}
 
-        {/* DETAILS */}
+        {/* =================================================
+            DETAILS
+        ================================================= */}
 
         <div className={sectionClass}>
+
           <div className="mb-5">
+
             <h3
               className="
                 text-base font-bold
@@ -1468,6 +1586,7 @@ function AppointmentForm({
           {/* REASON */}
 
           <div>
+
             <label
               htmlFor="reason"
               className={labelClass}
@@ -1476,6 +1595,7 @@ function AppointmentForm({
             </label>
 
             <div className="relative">
+
               <FiFileText
                 className="
                   pointer-events-none
@@ -1511,6 +1631,7 @@ function AppointmentForm({
           {/* FOLLOW-UP */}
 
           <div className="mt-5">
+
             <label
               className="
                 flex cursor-pointer
@@ -1564,6 +1685,7 @@ function AppointmentForm({
           {/* NOTES */}
 
           <div className="mt-5">
+
             <label
               htmlFor="notes"
               className={labelClass}
@@ -1604,7 +1726,9 @@ function AppointmentForm({
           </div>
         </div>
 
-        {/* FOOTER */}
+        {/* =================================================
+            FOOTER
+        ================================================= */}
 
         <div
           className="
@@ -1613,6 +1737,7 @@ function AppointmentForm({
             sm:flex-row sm:justify-end
           "
         >
+
           {onCancel && (
             <button
               type="button"
@@ -1674,6 +1799,137 @@ function AppointmentForm({
           </button>
         </div>
       </form>
+
+      {/* ======================================================
+          NEW PATIENT MODAL
+      ====================================================== */}
+
+      {showNewPatientForm && (
+        <div
+          className="
+            fixed inset-0 z-100
+            flex items-center justify-center
+            bg-[#173B32]/60
+            p-4
+            backdrop-blur-sm
+          "
+          onMouseDown={(event) => {
+            if (
+              event.target ===
+              event.currentTarget
+            ) {
+              handleCloseNewPatientForm();
+            }
+          }}
+        >
+          <div
+            className="
+              flex max-h-[92vh]
+              w-full max-w-4xl
+              flex-col
+              overflow-hidden
+              rounded-3xl
+              border border-[#E4E9E2]
+              bg-[#FFFDF8]
+              shadow-2xl
+            "
+          >
+
+            {/* MODAL HEADER */}
+
+            <div
+              className="
+                flex shrink-0
+                items-start justify-between
+                border-b border-[#E4E9E2]
+                bg-[#173B32]
+                px-6 py-5
+              "
+            >
+
+              <div>
+
+                <div
+                  className="
+                    mb-2 inline-flex
+                    items-center gap-2
+                    rounded-full
+                    bg-white/10
+                    px-3 py-1.5
+                    text-xs font-semibold
+                    text-[#E5EFE2]
+                  "
+                >
+                  <FiUser size={13} />
+                  New Patient
+                </div>
+
+                <h3
+                  className="
+                    text-2xl font-bold
+                    tracking-tight
+                    text-white
+                  "
+                >
+                  Add New Patient
+                </h3>
+
+                <p
+                  className="
+                    mt-1 text-sm
+                    text-[#DCE7D9]
+                  "
+                >
+                  Create the patient first, then continue with this appointment.
+                </p>
+              </div>
+
+              {/* ONLY CROSS FOR NEW PATIENT MODAL */}
+
+              <button
+                type="button"
+                onClick={
+                  handleCloseNewPatientForm
+                }
+                className="
+                  flex h-10 w-10
+                  shrink-0
+                  items-center justify-center
+                  rounded-full
+                  text-white/70
+                  transition
+                  hover:bg-white/10
+                  hover:text-white
+                "
+                aria-label="Close new patient form"
+              >
+                <FiX size={22} />
+              </button>
+            </div>
+
+            {/* PATIENT FORM */}
+
+            <div
+              className="
+                overflow-y-auto
+                bg-[#FFFDF8]
+                px-6 py-6
+              "
+            >
+              <PatientForm
+                initialData={null}
+                isEditing={false}
+                onCancel={
+                  handleCloseNewPatientForm
+                }
+                onSuccess={
+                  handleNewPatientSuccess
+                }
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
