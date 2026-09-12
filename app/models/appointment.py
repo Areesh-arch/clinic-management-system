@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 from datetime import date, time
@@ -89,6 +90,9 @@ class Appointment(Base, IDMixin, TimestampMixin):
         Enum(
             AppointmentSource,
             native_enum=False,
+            values_callable=lambda enum_class: [
+                member.value for member in enum_class
+            ],
         ),
         default=AppointmentSource.CLINIC,
         nullable=False,

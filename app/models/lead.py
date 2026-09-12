@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -27,6 +27,16 @@ class Lead(Base, TimestampMixin):
     phone: Mapped[str] = mapped_column(
         String(30),
         nullable=False,
+    )
+
+    email: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
+    message: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
     )
 
     source: Mapped[str] = mapped_column(

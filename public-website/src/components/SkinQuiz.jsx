@@ -294,7 +294,7 @@ export default function SkinQuiz({ questions = [] }) {
                 href="#contact"
                 className="quiz-primary-button"
               >
-                Book Consultation
+                Book Appointment
               </a>
 
               <button

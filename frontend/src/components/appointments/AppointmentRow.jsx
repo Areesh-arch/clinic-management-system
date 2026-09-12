@@ -1,5 +1,8 @@
+
 import { FiEye, FiEdit, FiTrash2, FiUser } from "react-icons/fi";
+
 import { useNavigate } from "react-router-dom";
+
 import AppointmentStatusBadge from "./AppointmentStatusBadge";
 
 function AppointmentRow({
@@ -7,6 +10,8 @@ function AppointmentRow({
   onView,
   onEdit,
   onDelete,
+  sourceLabel,
+  sourceBadgeClass,
 }) {
   const navigate = useNavigate();
 
@@ -67,6 +72,50 @@ function AppointmentRow({
     .replace(/-/g, "_");
 
   // =====================================================
+  // SOURCE
+  // =====================================================
+
+  const normalizedSource = String(
+    appointment?.source || "clinic"
+  )
+    .trim()
+    .toLowerCase();
+
+  const displaySource =
+    sourceLabel ||
+    (() => {
+      switch (normalizedSource) {
+        case "website":
+          return "Website";
+
+        case "walk_in":
+        case "walk-in":
+          return "Walk-in";
+
+        case "clinic":
+        default:
+          return "Clinic";
+      }
+    })();
+
+  const displaySourceBadgeClass =
+    sourceBadgeClass ||
+    (() => {
+      switch (normalizedSource) {
+        case "website":
+          return "border-[#C9DDD2] bg-[#EDF5F0] text-[#365C4F]";
+
+        case "walk_in":
+        case "walk-in":
+          return "border-[#E5D6B9] bg-[#F8F2E5] text-[#8A6B32]";
+
+        case "clinic":
+        default:
+          return "border-[#D5DFDA] bg-[#F1F5F2] text-[#173B32]";
+      }
+    })();
+
+  // =====================================================
   // PROFILE
   // =====================================================
 
@@ -75,7 +124,11 @@ function AppointmentRow({
       return;
     }
 
-    navigate(`/patients/${patientId}`);
+    navigate(`/patients/${patientId}`, {
+      state: {
+        from: "/appointments",
+      },
+    });
   };
 
   // =====================================================
@@ -88,12 +141,9 @@ function AppointmentRow({
         border-b
         border-[#E5DED0]
         last:border-b-0
-
         odd:bg-[#F1F5F2]
         even:bg-[#FFFDF8]
-
         hover:bg-[#E5EEE8]
-
         transition-colors
         duration-200
       "
@@ -200,6 +250,29 @@ function AppointmentRow({
       </td>
 
       {/* =================================================
+          SOURCE
+      ================================================= */}
+
+      <td className="px-5 py-4">
+        <span
+          className={`
+            inline-flex
+            items-center
+            rounded-full
+            border
+            px-3
+            py-1
+            text-[11px]
+            font-bold
+            tracking-wide
+            ${displaySourceBadgeClass}
+          `}
+        >
+          {displaySource}
+        </span>
+      </td>
+
+      {/* =================================================
           STATUS
       ================================================= */}
 
@@ -223,11 +296,22 @@ function AppointmentRow({
             onClick={handleProfile}
             disabled={!patientId}
             title="Patient Profile"
-            className={`inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-all duration-200 ${
-              patientId
-                ? "border-[#C9D8CF] bg-[#F7FAF8] text-[#527565] hover:border-[#6F8F7D] hover:bg-[#E5EEE8] hover:text-[#173B32]"
-                : "cursor-not-allowed border-[#E8E8E8] bg-[#F7F7F7] text-[#B5B5B5]"
-            }`}
+            className={`
+              inline-flex
+              h-9
+              w-9
+              items-center
+              justify-center
+              rounded-xl
+              border
+              transition-all
+              duration-200
+              ${
+                patientId
+                  ? "border-[#C9D8CF] bg-[#F7FAF8] text-[#527565] hover:border-[#6F8F7D] hover:bg-[#E5EEE8] hover:text-[#173B32]"
+                  : "cursor-not-allowed border-[#E8E8E8] bg-[#F7F7F7] text-[#B5B5B5]"
+              }
+            `}
           >
             <FiUser size={15} />
           </button>

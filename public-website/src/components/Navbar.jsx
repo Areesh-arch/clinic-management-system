@@ -35,7 +35,7 @@ export default function Navbar() {
           href="#contact"
           className="navbar-button"
         >
-          Book Consultation
+          Book Appointment
         </a>
 
       </div>

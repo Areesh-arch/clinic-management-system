@@ -1,7 +1,15 @@
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
 
-import { getAppointments } from "../../services/appointmentService";
-import { getPatients } from "../../services/patientService";
+import {
+  getAppointments,
+} from "../../services/appointmentService";
+
+import {
+  getPatients,
+} from "../../services/patientService";
 
 import {
   createTreatment,
@@ -14,28 +22,43 @@ function TreatmentForm({
   onSuccess,
   onClose,
 }) {
-
-  // =====================================================
-  // MODE
-  // =====================================================
-
-  const isEditing = Boolean(treatment);
+  const isEditing =
+    Boolean(treatment);
 
 
   // =====================================================
   // STATE
   // =====================================================
 
-  const [appointments, setAppointments] = useState([]);
-  const [patients, setPatients] = useState([]);
+  const [
+    appointments,
+    setAppointments,
+  ] = useState([]);
 
-  const [loadingAppointments, setLoadingAppointments] =
-    useState(true);
+  const [
+    patients,
+    setPatients,
+  ] = useState([]);
 
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [
+    loadingAppointments,
+    setLoadingAppointments,
+  ] = useState(true);
 
-  const [formData, setFormData] = useState({
+  const [
+    saving,
+    setSaving,
+  ] = useState(false);
+
+  const [
+    error,
+    setError,
+  ] = useState("");
+
+  const [
+    formData,
+    setFormData,
+  ] = useState({
     appointment_id: "",
     diagnosis: "",
     notes: "",
@@ -50,11 +73,8 @@ function TreatmentForm({
   // =====================================================
 
   useEffect(() => {
-
     const loadData = async () => {
-
       try {
-
         setLoadingAppointments(true);
         setError("");
 
@@ -66,16 +86,6 @@ function TreatmentForm({
           getPatients(),
         ]);
 
-        console.log(
-          "Appointments available for treatment:",
-          appointmentData
-        );
-
-        console.log(
-          "Patients available for treatment:",
-          patientData
-        );
-
         const appointmentList =
           Array.isArray(appointmentData)
             ? appointmentData
@@ -86,31 +96,30 @@ function TreatmentForm({
             ? patientData
             : [];
 
-        setAppointments(appointmentList);
-        setPatients(patientList);
+        setAppointments(
+          appointmentList
+        );
+
+        setPatients(
+          patientList
+        );
 
       } catch (err) {
-
         console.error(
           "Failed to load appointments/patients:",
           err
         );
 
         setError(
-          err.message ||
+          err?.message ||
           "Failed to load appointments and patients."
         );
-
       } finally {
-
         setLoadingAppointments(false);
-
       }
-
     };
 
     loadData();
-
   }, []);
 
 
@@ -119,9 +128,7 @@ function TreatmentForm({
   // =====================================================
 
   useEffect(() => {
-
     if (!treatment) {
-
       setFormData({
         appointment_id: "",
         diagnosis: "",
@@ -135,34 +142,31 @@ function TreatmentForm({
     }
 
     setFormData({
-
       appointment_id:
-        treatment.appointment_id ?? "",
+        treatment?.appointment_id ?? "",
 
       diagnosis:
-        treatment.diagnosis ??
-        treatment.treatment ??
+        treatment?.diagnosis ??
+        treatment?.treatment ??
         "",
 
       notes:
-        treatment.notes ??
+        treatment?.notes ??
         "",
 
       charge:
-        treatment.charge ??
-        treatment.cost ??
+        treatment?.charge ??
+        treatment?.cost ??
         "",
 
       chief_complaint:
-        treatment.chief_complaint ??
+        treatment?.chief_complaint ??
         "",
 
       status:
-        treatment.status ??
+        treatment?.status ??
         "IN_PROGRESS",
-
     });
-
   }, [treatment]);
 
 
@@ -171,7 +175,6 @@ function TreatmentForm({
   // =====================================================
 
   const handleChange = (event) => {
-
     const {
       name,
       value,
@@ -182,6 +185,9 @@ function TreatmentForm({
       [name]: value,
     }));
 
+    if (error) {
+      setError("");
+    }
   };
 
 
@@ -192,7 +198,6 @@ function TreatmentForm({
   const getPatientIdFromAppointment = (
     appointment
   ) => {
-
     return (
       appointment?.patient_id ??
       appointment?.patient?.id ??
@@ -200,14 +205,12 @@ function TreatmentForm({
       appointment?.patient_info?.id ??
       null
     );
-
   };
 
 
   const findPatientForAppointment = (
     appointment
   ) => {
-
     const patientId =
       getPatientIdFromAppointment(
         appointment
@@ -227,16 +230,12 @@ function TreatmentForm({
           String(patientId)
       ) || null
     );
-
   };
 
 
-  const getPatientName = (appointment) => {
-
-    // -------------------------------------------------
-    // First try patient already included in appointment
-    // -------------------------------------------------
-
+  const getPatientName = (
+    appointment
+  ) => {
     const embeddedPatient =
       appointment?.patient ||
       appointment?.patient_data ||
@@ -270,16 +269,12 @@ function TreatmentForm({
       "";
 
     const embeddedFullName =
-      `${embeddedFirstName} ${embeddedLastName}`.trim();
+      `${embeddedFirstName} ${embeddedLastName}`
+        .trim();
 
     if (embeddedFullName) {
       return embeddedFullName;
     }
-
-
-    // -------------------------------------------------
-    // Otherwise find patient using patient_id
-    // -------------------------------------------------
 
     const patient =
       findPatientForAppointment(
@@ -291,35 +286,32 @@ function TreatmentForm({
     }
 
     const patientName =
-      patient.name ||
-      patient.full_name;
+      patient?.name ||
+      patient?.full_name;
 
     if (patientName) {
       return patientName;
     }
 
     const firstName =
-      patient.first_name ||
-      "";
+      patient?.first_name || "";
 
     const lastName =
-      patient.last_name ||
-      "";
+      patient?.last_name || "";
 
     const fullName =
       `${firstName} ${lastName}`.trim();
 
-    return fullName || "Unknown patient";
-
+    return (
+      fullName ||
+      "Unknown patient"
+    );
   };
 
 
-  const getPatientMrn = (appointment) => {
-
-    // -------------------------------------------------
-    // First try appointment response
-    // -------------------------------------------------
-
+  const getPatientMrn = (
+    appointment
+  ) => {
     const embeddedPatient =
       appointment?.patient ||
       appointment?.patient_data ||
@@ -343,11 +335,6 @@ function TreatmentForm({
       return embeddedMrn;
     }
 
-
-    // -------------------------------------------------
-    // Otherwise find patient using patient_id
-    // -------------------------------------------------
-
     const patient =
       findPatientForAppointment(
         appointment
@@ -358,11 +345,10 @@ function TreatmentForm({
     }
 
     return (
-      patient.medical_record_number ||
-      patient.mrn ||
+      patient?.medical_record_number ||
+      patient?.mrn ||
       ""
     );
-
   };
 
 
@@ -373,20 +359,17 @@ function TreatmentForm({
   const getAppointmentDate = (
     appointment
   ) => {
-
     return (
       appointment?.appointment_date ||
       appointment?.date ||
       ""
     );
-
   };
 
 
   const getAppointmentTime = (
     appointment
   ) => {
-
     const value =
       appointment?.appointment_time ||
       appointment?.time ||
@@ -400,23 +383,21 @@ function TreatmentForm({
       typeof value === "string" &&
       value.includes("T")
     ) {
-
       return (
-        value.split("T")[1]?.slice(0, 5) ||
+        value
+          .split("T")[1]
+          ?.slice(0, 5) ||
         value
       );
-
     }
 
     return String(value).slice(0, 5);
-
   };
 
 
   const getAppointmentReason = (
     appointment
   ) => {
-
     return (
       appointment?.reason ||
       appointment?.purpose ||
@@ -424,26 +405,35 @@ function TreatmentForm({
       appointment?.notes ||
       ""
     );
-
   };
 
 
   const formatAppointmentDate = (
     value
   ) => {
-
     if (!value) {
       return "Date not available";
     }
 
-    const date = new Date(value);
+    const date =
+      new Date(value);
 
-    if (Number.isNaN(date.getTime())) {
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
       return value;
     }
 
-    return date.toLocaleDateString();
-
+    return date.toLocaleDateString(
+      "en-GB",
+      {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }
+    );
   };
 
 
@@ -455,7 +445,9 @@ function TreatmentForm({
     appointments.find(
       (appointment) =>
         String(appointment.id) ===
-        String(formData.appointment_id)
+        String(
+          formData.appointment_id
+        )
     );
 
 
@@ -463,8 +455,9 @@ function TreatmentForm({
   // SUBMIT
   // =====================================================
 
-  const handleSubmit = async (event) => {
-
+  const handleSubmit = async (
+    event
+  ) => {
     event.preventDefault();
 
     setError("");
@@ -478,13 +471,11 @@ function TreatmentForm({
       !isEditing &&
       !formData.appointment_id
     ) {
-
       setError(
         "Please select an appointment."
       );
 
       return;
-
     }
 
 
@@ -495,18 +486,16 @@ function TreatmentForm({
     if (
       !formData.diagnosis.trim()
     ) {
-
       setError(
         "Please enter the diagnosis/treatment details."
       );
 
       return;
-
     }
 
 
     // -------------------------------------------------
-    // STATUS VALIDATION FOR UPDATE
+    // STATUS VALIDATION
     // -------------------------------------------------
 
     if (
@@ -517,18 +506,38 @@ function TreatmentForm({
         "CANCELLED",
       ].includes(formData.status)
     ) {
-
       setError(
         "Please select a valid treatment status."
       );
 
       return;
+    }
 
+
+    // -------------------------------------------------
+    // CHARGE VALIDATION
+    // -------------------------------------------------
+
+    const numericCharge =
+      formData.charge === ""
+        ? 0
+        : Number(formData.charge);
+
+    if (
+      Number.isNaN(
+        numericCharge
+      ) ||
+      numericCharge < 0
+    ) {
+      setError(
+        "Please enter a valid charge."
+      );
+
+      return;
     }
 
 
     try {
-
       setSaving(true);
 
 
@@ -537,7 +546,6 @@ function TreatmentForm({
       // ------------------------------------------------
 
       const createPayload = {
-
         appointment_id:
           Number(
             formData.appointment_id
@@ -555,10 +563,7 @@ function TreatmentForm({
           null,
 
         charge:
-          formData.charge !== ""
-            ? Number(formData.charge)
-            : 0,
-
+          numericCharge,
       };
 
 
@@ -567,7 +572,6 @@ function TreatmentForm({
       // ------------------------------------------------
 
       const updatePayload = {
-
         status:
           formData.status ||
           "IN_PROGRESS",
@@ -584,10 +588,7 @@ function TreatmentForm({
           null,
 
         charge:
-          formData.charge !== ""
-            ? Number(formData.charge)
-            : 0,
-
+          numericCharge,
       };
 
 
@@ -598,27 +599,17 @@ function TreatmentForm({
       let result;
 
       if (isEditing) {
-
         result =
           await updateTreatment(
             treatment.id,
             updatePayload
           );
-
       } else {
-
         result =
           await createTreatment(
             createPayload
           );
-
       }
-
-
-      console.log(
-        "Treatment saved:",
-        result
-      );
 
 
       // ------------------------------------------------
@@ -626,31 +617,63 @@ function TreatmentForm({
       // ------------------------------------------------
 
       if (onSuccess) {
-
         await onSuccess(result);
-
       }
 
-
     } catch (err) {
-
       console.error(
         "Failed to save treatment:",
         err
       );
 
       setError(
-        err.message ||
+        err?.message ||
         "Failed to save treatment."
       );
-
     } finally {
-
       setSaving(false);
-
     }
-
   };
+
+
+  // =====================================================
+  // INPUT CLASS
+  // =====================================================
+
+  const inputClass = `
+    w-full
+    rounded-xl
+    border
+    border-[#D8DED9]
+    bg-[#FFFDF8]
+    px-4
+    py-3.5
+    text-sm
+    font-medium
+    text-[#263C34]
+    outline-none
+    transition-all
+    duration-200
+    placeholder:text-[#A0AAA4]
+    focus:border-[#6F8F7D]
+    focus:bg-white
+    focus:ring-4
+    focus:ring-[#6F8F7D]/10
+    disabled:cursor-not-allowed
+    disabled:bg-[#F3F2ED]
+    disabled:text-[#9CA59F]
+  `;
+
+
+  const labelClass = `
+    mb-2
+    block
+    text-[11px]
+    font-bold
+    uppercase
+    tracking-[0.12em]
+    text-[#617169]
+  `;
 
 
   // =====================================================
@@ -658,27 +681,76 @@ function TreatmentForm({
   // =====================================================
 
   return (
-
     <form
       onSubmit={handleSubmit}
-      className="space-y-5"
+      className="space-y-6"
     >
 
       {/* =================================================
-          TITLE
+          HEADER
           ================================================= */}
 
-      <h2
+      <div
         className="
-          text-3xl
-          font-bold
-          text-[#25312A]
+          border-b
+          border-[#E6E0D4]
+          pb-5
         "
       >
-        {isEditing
-          ? "Edit Treatment"
-          : "Add Treatment"}
-      </h2>
+        <div
+          className="
+            flex
+            flex-col
+            gap-1
+          "
+        >
+          <span
+            className="
+              text-[10px]
+              font-bold
+              uppercase
+              tracking-[0.2em]
+              text-[#B4935A]
+            "
+          >
+            Clinical Record
+          </span>
+
+          <h2
+            className="
+              text-2xl
+              font-bold
+              tracking-tight
+              text-[#173B32]
+              sm:text-3xl
+            "
+          >
+            {isEditing
+              ? "Edit Treatment"
+              : "Add Treatment"}
+          </h2>
+
+          <p
+            className="
+              text-sm
+              text-[#78847E]
+            "
+          >
+            {isEditing
+              ? "Update the patient's treatment and visit information."
+              : "Create a treatment record from an existing appointment."}
+          </p>
+        </div>
+
+        <div
+          className="
+            mt-4
+            h-px
+            w-20
+            bg-[#B4935A]
+          "
+        />
+      </div>
 
 
       {/* =================================================
@@ -686,21 +758,21 @@ function TreatmentForm({
           ================================================= */}
 
       {error && (
-
         <div
           className="
             rounded-xl
             border
-            border-red-200
-            bg-red-50
+            border-[#E7C7C0]
+            bg-[#FFF7F5]
             px-4
             py-3
-            text-red-700
+            text-sm
+            font-medium
+            text-[#984E42]
           "
         >
           {error}
         </div>
-
       )}
 
 
@@ -709,20 +781,12 @@ function TreatmentForm({
           ================================================= */}
 
       <div>
-
         <label
           htmlFor="appointment_id"
-          className="
-            mb-2
-            block
-            text-sm
-            font-medium
-            text-[#45524A]
-          "
+          className={labelClass}
         >
           Appointment
         </label>
-
 
         <select
           id="appointment_id"
@@ -736,22 +800,8 @@ function TreatmentForm({
             loadingAppointments ||
             saving
           }
-          className="
-            w-full
-            rounded-xl
-            border
-            border-[#25312A]
-            bg-white
-            p-4
-            text-lg
-            focus:outline-none
-            focus:ring-2
-            focus:ring-[#A8C5A0]
-            disabled:cursor-not-allowed
-            disabled:bg-gray-100
-          "
+          className={inputClass}
         >
-
           <option value="">
             {loadingAppointments
               ? "Loading appointments..."
@@ -760,10 +810,8 @@ function TreatmentForm({
                 : "Select appointment"}
           </option>
 
-
           {appointments.map(
             (appointment) => {
-
               const patientName =
                 getPatientName(
                   appointment
@@ -789,231 +837,354 @@ function TreatmentForm({
                   appointment
                 );
 
-
               return (
-
                 <option
                   key={appointment.id}
                   value={appointment.id}
                 >
-
                   {patientName}
-
                   {patientMrn
                     ? ` — ${patientMrn}`
                     : ""}
-
                   {" | "}
-
                   {formatAppointmentDate(
                     date
                   )}
-
                   {time
                     ? ` ${time}`
                     : ""}
-
                   {reason
                     ? ` — ${reason}`
                     : ""}
-
                 </option>
-
               );
-
             }
           )}
-
         </select>
-
 
         {!loadingAppointments &&
           appointments.length === 0 && (
-
             <p
               className="
                 mt-2
-                text-sm
-                text-amber-600
+                text-xs
+                font-medium
+                text-[#A77A31]
               "
             >
-              No appointments were returned
-              by the backend.
+              No appointments were returned by the backend.
             </p>
-
           )}
-
       </div>
 
 
       {/* =================================================
-          SELECTED APPOINTMENT INFO
+          SELECTED APPOINTMENT
           ================================================= */}
 
       {selectedAppointment && (
-
         <div
           className="
-            rounded-xl
+            overflow-hidden
+            rounded-2xl
             border
-            border-[#E6E1D8]
-            bg-[#F6F4EF]
-            p-4
+            border-[#D8E2DC]
+            bg-[#F3F7F4]
           "
         >
-
-          <p
-            className="
-              text-sm
-              text-gray-500
-            "
-          >
-            Selected appointment
-          </p>
-
-
-          <p
-            className="
-              mt-1
-              text-lg
-              font-semibold
-              text-[#25312A]
-            "
-          >
-            {getPatientName(
-              selectedAppointment
-            )}
-          </p>
-
-
-          {getPatientMrn(
-            selectedAppointment
-          ) && (
-
-            <p
-              className="
-                mt-1
-                text-sm
-                font-medium
-                text-[#5F7A63]
-              "
-            >
-              MRN:{" "}
-              {getPatientMrn(
-                selectedAppointment
-              )}
-            </p>
-
-          )}
-
-
           <div
             className="
-              mt-3
-              space-y-1
-              text-sm
-              text-gray-600
+              flex
+              items-center
+              gap-3
+              border-b
+              border-[#DCE6E0]
+              px-4
+              py-3
             "
           >
+            <div
+              className="
+                flex
+                h-9
+                w-9
+                shrink-0
+                items-center
+                justify-center
+                rounded-xl
+                bg-[#173B32]
+                text-sm
+                font-bold
+                text-white
+              "
+            >
+              ✓
+            </div>
 
-            <p>
-              Date:{" "}
-              {formatAppointmentDate(
-                getAppointmentDate(
-                  selectedAppointment
-                )
-              )}
-            </p>
-
-
-            {getAppointmentTime(
-              selectedAppointment
-            ) && (
-
-              <p>
-                Time:{" "}
-                {getAppointmentTime(
-                  selectedAppointment
-                )}
+            <div>
+              <p
+                className="
+                  text-[10px]
+                  font-bold
+                  uppercase
+                  tracking-[0.14em]
+                  text-[#6F8F7D]
+                "
+              >
+                Selected Appointment
               </p>
 
-            )}
+              <p
+                className="
+                  mt-0.5
+                  text-sm
+                  font-bold
+                  text-[#173B32]
+                "
+              >
+                Appointment linked to this treatment
+              </p>
+            </div>
+          </div>
 
+
+          <div className="p-4">
+            <div
+              className="
+                grid
+                grid-cols-1
+                gap-3
+                sm:grid-cols-2
+              "
+            >
+              <div>
+                <p
+                  className="
+                    text-[10px]
+                    font-bold
+                    uppercase
+                    tracking-[0.12em]
+                    text-[#87928C]
+                  "
+                >
+                  Patient
+                </p>
+
+                <p
+                  className="
+                    mt-1
+                    font-semibold
+                    text-[#173B32]
+                  "
+                >
+                  {getPatientName(
+                    selectedAppointment
+                  )}
+                </p>
+              </div>
+
+              <div>
+                <p
+                  className="
+                    text-[10px]
+                    font-bold
+                    uppercase
+                    tracking-[0.12em]
+                    text-[#87928C]
+                  "
+                >
+                  MRN
+                </p>
+
+                <p
+                  className="
+                    mt-1
+                    font-semibold
+                    text-[#527565]
+                  "
+                >
+                  {getPatientMrn(
+                    selectedAppointment
+                  ) || "—"}
+                </p>
+              </div>
+
+              <div>
+                <p
+                  className="
+                    text-[10px]
+                    font-bold
+                    uppercase
+                    tracking-[0.12em]
+                    text-[#87928C]
+                  "
+                >
+                  Date
+                </p>
+
+                <p
+                  className="
+                    mt-1
+                    text-sm
+                    font-medium
+                    text-[#45554D]
+                  "
+                >
+                  {formatAppointmentDate(
+                    getAppointmentDate(
+                      selectedAppointment
+                    )
+                  )}
+                </p>
+              </div>
+
+              <div>
+                <p
+                  className="
+                    text-[10px]
+                    font-bold
+                    uppercase
+                    tracking-[0.12em]
+                    text-[#87928C]
+                  "
+                >
+                  Time
+                </p>
+
+                <p
+                  className="
+                    mt-1
+                    text-sm
+                    font-medium
+                    text-[#45554D]
+                  "
+                >
+                  {getAppointmentTime(
+                    selectedAppointment
+                  ) || "—"}
+                </p>
+              </div>
+            </div>
 
             {getAppointmentReason(
               selectedAppointment
             ) && (
+              <div
+                className="
+                  mt-4
+                  rounded-xl
+                  border
+                  border-[#DCE6E0]
+                  bg-[#FFFDF8]
+                  px-3.5
+                  py-3
+                "
+              >
+                <p
+                  className="
+                    text-[10px]
+                    font-bold
+                    uppercase
+                    tracking-[0.12em]
+                    text-[#87928C]
+                  "
+                >
+                  Appointment Reason
+                </p>
 
-              <p>
-                Reason:{" "}
-                {getAppointmentReason(
-                  selectedAppointment
-                )}
-              </p>
-
+                <p
+                  className="
+                    mt-1
+                    text-sm
+                    font-medium
+                    text-[#45554D]
+                  "
+                >
+                  {getAppointmentReason(
+                    selectedAppointment
+                  )}
+                </p>
+              </div>
             )}
-
-
-            {selectedAppointment.status && (
-
-              <p>
-                Status:{" "}
-                {selectedAppointment.status}
-              </p>
-
-            )}
-
           </div>
-
         </div>
-
       )}
 
 
       {/* =================================================
-          CHIEF COMPLAINT
+          CHIEF COMPLAINT + CHARGE
           ================================================= */}
 
-      <div>
+      <div
+        className="
+          grid
+          grid-cols-1
+          gap-5
+          md:grid-cols-2
+        "
+      >
+        <div>
+          <label
+            htmlFor="chief_complaint"
+            className={labelClass}
+          >
+            Chief Complaint
+          </label>
 
-        <label
-          htmlFor="chief_complaint"
-          className="
-            mb-2
-            block
-            text-sm
-            font-medium
-            text-[#45524A]
-          "
-        >
-          Chief Complaint
-        </label>
+          <input
+            id="chief_complaint"
+            type="text"
+            name="chief_complaint"
+            value={
+              formData.chief_complaint
+            }
+            onChange={handleChange}
+            placeholder="Patient's main complaint"
+            disabled={saving}
+            className={inputClass}
+          />
+        </div>
 
+        <div>
+          <label
+            htmlFor="charge"
+            className={labelClass}
+          >
+            Treatment Charge
+          </label>
 
-        <input
-          id="chief_complaint"
-          type="text"
-          name="chief_complaint"
-          value={
-            formData.chief_complaint
-          }
-          onChange={handleChange}
-          placeholder="Patient's main complaint"
-          disabled={saving}
-          className="
-            w-full
-            rounded-xl
-            border
-            border-[#25312A]
-            p-4
-            text-lg
-            focus:outline-none
-            focus:ring-2
-            focus:ring-[#A8C5A0]
-            disabled:bg-gray-100
-          "
-        />
+          <div className="relative">
+            <span
+              className="
+                pointer-events-none
+                absolute
+                left-4
+                top-1/2
+                -translate-y-1/2
+                text-xs
+                font-bold
+                text-[#8A7550]
+              "
+            >
+              PKR
+            </span>
 
+            <input
+              id="charge"
+              type="number"
+              name="charge"
+              value={
+                formData.charge
+              }
+              onChange={handleChange}
+              placeholder="0"
+              min="0"
+              step="0.01"
+              disabled={saving}
+              className={`${inputClass} pl-14`}
+            />
+          </div>
+        </div>
       </div>
 
 
@@ -1022,20 +1193,12 @@ function TreatmentForm({
           ================================================= */}
 
       <div>
-
         <label
           htmlFor="diagnosis"
-          className="
-            mb-2
-            block
-            text-sm
-            font-medium
-            text-[#45524A]
-          "
+          className={labelClass}
         >
           Diagnosis / Treatment Details
         </label>
-
 
         <input
           id="diagnosis"
@@ -1047,69 +1210,8 @@ function TreatmentForm({
           onChange={handleChange}
           placeholder="Diagnosis or treatment procedure"
           disabled={saving}
-          className="
-            w-full
-            rounded-xl
-            border
-            border-[#25312A]
-            p-4
-            text-lg
-            focus:outline-none
-            focus:ring-2
-            focus:ring-[#A8C5A0]
-            disabled:bg-gray-100
-          "
+          className={inputClass}
         />
-
-      </div>
-
-
-      {/* =================================================
-          CHARGE
-          ================================================= */}
-
-      <div>
-
-        <label
-          htmlFor="charge"
-          className="
-            mb-2
-            block
-            text-sm
-            font-medium
-            text-[#45524A]
-          "
-        >
-          Charge
-        </label>
-
-
-        <input
-          id="charge"
-          type="number"
-          name="charge"
-          value={
-            formData.charge
-          }
-          onChange={handleChange}
-          placeholder="0.00"
-          min="0"
-          step="0.01"
-          disabled={saving}
-          className="
-            w-full
-            rounded-xl
-            border
-            border-[#25312A]
-            p-4
-            text-lg
-            focus:outline-none
-            focus:ring-2
-            focus:ring-[#A8C5A0]
-            disabled:bg-gray-100
-          "
-        />
-
       </div>
 
 
@@ -1118,22 +1220,13 @@ function TreatmentForm({
           ================================================= */}
 
       {isEditing && (
-
         <div>
-
           <label
             htmlFor="status"
-            className="
-              mb-2
-              block
-              text-sm
-              font-medium
-              text-[#45524A]
-            "
+            className={labelClass}
           >
-            Status
+            Treatment Status
           </label>
-
 
           <select
             id="status"
@@ -1143,21 +1236,8 @@ function TreatmentForm({
             }
             onChange={handleChange}
             disabled={saving}
-            className="
-              w-full
-              rounded-xl
-              border
-              border-[#25312A]
-              bg-white
-              p-4
-              text-lg
-              focus:outline-none
-              focus:ring-2
-              focus:ring-[#A8C5A0]
-              disabled:bg-gray-100
-            "
+            className={inputClass}
           >
-
             <option value="IN_PROGRESS">
               In Progress
             </option>
@@ -1169,11 +1249,8 @@ function TreatmentForm({
             <option value="CANCELLED">
               Cancelled
             </option>
-
           </select>
-
         </div>
-
       )}
 
 
@@ -1182,20 +1259,12 @@ function TreatmentForm({
           ================================================= */}
 
       <div>
-
         <label
           htmlFor="notes"
-          className="
-            mb-2
-            block
-            text-sm
-            font-medium
-            text-[#45524A]
-          "
+          className={labelClass}
         >
-          Notes
+          Clinical Notes
         </label>
-
 
         <textarea
           id="notes"
@@ -1204,24 +1273,14 @@ function TreatmentForm({
             formData.notes
           }
           onChange={handleChange}
-          placeholder="Additional visit notes..."
-          rows={4}
+          placeholder="Additional visit notes, observations, or instructions..."
+          rows={5}
           disabled={saving}
-          className="
-            w-full
+          className={`
+            ${inputClass}
             resize-none
-            rounded-xl
-            border
-            border-[#25312A]
-            p-4
-            text-lg
-            focus:outline-none
-            focus:ring-2
-            focus:ring-[#A8C5A0]
-            disabled:bg-gray-100
-          "
+          `}
         />
-
       </div>
 
 
@@ -1234,37 +1293,41 @@ function TreatmentForm({
           flex
           flex-col-reverse
           gap-3
+          border-t
+          border-[#E6E0D4]
+          pt-5
           sm:flex-row
           sm:justify-end
         "
       >
-
         {onClose && (
-
           <button
             type="button"
             onClick={onClose}
             disabled={saving}
             className="
+              w-full
               rounded-xl
               border
-              border-gray-200
-              bg-white
+              border-[#D8DED9]
+              bg-[#FFFDF8]
               px-6
-              py-4
-              font-semibold
-              text-gray-600
-              transition
-              hover:bg-gray-50
+              py-3.5
+              text-sm
+              font-bold
+              text-[#52615A]
+              transition-all
+              duration-200
+              hover:border-[#B9C9C0]
+              hover:bg-[#F4F6F3]
               disabled:cursor-not-allowed
               disabled:opacity-60
+              sm:w-auto
             "
           >
             Cancel
           </button>
-
         )}
-
 
         <button
           type="submit"
@@ -1275,34 +1338,32 @@ function TreatmentForm({
           className="
             w-full
             rounded-xl
-            bg-[#A8C5A0]
-            py-4
-            text-lg
-            font-semibold
+            bg-[#173B32]
+            px-7
+            py-3.5
+            text-sm
+            font-bold
             text-white
-            transition
-            hover:bg-[#90B68A]
+            shadow-[0_5px_14px_rgba(23,59,50,0.16)]
+            transition-all
+            duration-200
+            hover:-translate-y-0.5
+            hover:bg-[#214B40]
+            hover:shadow-[0_8px_20px_rgba(23,59,50,0.22)]
             disabled:cursor-not-allowed
             disabled:opacity-60
             sm:w-auto
-            sm:px-8
           "
         >
-
           {saving
             ? "Saving..."
             : isEditing
               ? "Update Treatment"
               : "Save Treatment"}
-
         </button>
-
       </div>
-
     </form>
-
   );
-
 }
 
 

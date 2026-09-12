@@ -1,10 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Request,
+    status,
+)
+
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.api.features import require_feature
-from app.api.tenant_context import get_effective_tenant_id
 from app.api.permissions import require_roles
+from app.api.tenant_context import get_effective_tenant_id
 
 from app.models.enums import UserRole
 from app.models.user import User
@@ -14,14 +21,20 @@ from app.schemas.appointment import (
     AppointmentCreate,
     AppointmentUpdate,
     AppointmentResponse,
+    PublicAppointmentCreate,
 )
 
 from app.services.appointment_service import (
     create_appointment_service,
+    create_public_appointment_service,
     get_appointment_service,
     list_appointments_service,
     update_appointment_service,
     delete_appointment_service,
+)
+
+from app.api.v1.endpoints.lead import (
+    resolve_public_tenant,
 )
 
 
@@ -29,6 +42,65 @@ router = APIRouter(
     prefix="",
     tags=["Appointments"],
 )
+
+
+# =========================================================
+# PUBLIC WEBSITE
+# CREATE APPOINTMENT
+# =========================================================
+
+@router.post(
+    "/public",
+    response_model=AppointmentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_public_appointment(
+    appointment: PublicAppointmentCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Create an appointment from the clinic's public website.
+
+    The clinic/tenant is resolved automatically from the
+    website hostname/origin.
+
+    The frontend does NOT provide:
+        - tenant_id
+        - patient_id
+        - source
+
+    The backend:
+        1. Resolves the clinic.
+        2. Finds the patient by phone.
+        3. Creates the patient if necessary.
+        4. Generates the patient's MRN through the
+           existing patient service.
+        5. Creates the appointment.
+        6. Forces source = WEBSITE.
+        7. Reuses the normal appointment business logic.
+    """
+
+    tenant = resolve_public_tenant(
+        request=request,
+        db=db,
+    )
+
+    try:
+        return create_public_appointment_service(
+            db=db,
+            appointment_data=appointment,
+            tenant_id=tenant.id,
+        )
+
+    except HTTPException:
+        raise
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
 
 
 # =========================================================

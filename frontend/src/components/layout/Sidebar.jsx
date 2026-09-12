@@ -1,12 +1,11 @@
+
 import {
   FiHome,
-  FiUsers,
   FiCalendar,
   FiPackage,
   FiCamera,
   FiClipboard,
   FiCreditCard,
-  FiUserPlus,
   FiEdit3,
 } from "react-icons/fi";
 
@@ -18,11 +17,6 @@ function Sidebar() {
       name: "Dashboard",
       icon: <FiHome />,
       path: "/dashboard",
-    },
-    {
-      name: "Patients",
-      icon: <FiUsers />,
-      path: "/patients",
     },
     {
       name: "Appointments",
@@ -50,11 +44,6 @@ function Sidebar() {
       path: "/billing",
     },
     {
-      name: "CRM",
-      icon: <FiUserPlus />,
-      path: "/crm",
-    },
-    {
       name: "CMS",
       icon: <FiEdit3 />,
       path: "/cms",
@@ -67,6 +56,7 @@ function Sidebar() {
       {/* =====================================================
           BRAND
       ===================================================== */}
+
       <div className="px-8 py-8 border-b border-[#E6E1D8]">
 
         <h1 className="text-4xl font-bold text-[#7A9E7E]">
@@ -82,6 +72,7 @@ function Sidebar() {
       {/* =====================================================
           MENU
       ===================================================== */}
+
       <nav className="flex-1 overflow-y-auto px-5 py-6 space-y-2">
 
         {menus.map((item) => (
@@ -111,6 +102,7 @@ function Sidebar() {
       {/* =====================================================
           FOOTER
       ===================================================== */}
+
       <div className="p-6 border-t border-[#E6E1D8]">
 
         <p className="text-sm text-[#8C938D]">

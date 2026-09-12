@@ -1,3 +1,4 @@
+
 import AppointmentRow from "./AppointmentRow";
 
 function AppointmentTable({
@@ -50,6 +51,52 @@ function AppointmentTable({
 
       default:
         return value || "-";
+    }
+  };
+
+  // ==========================================
+  // SOURCE DISPLAY
+  // ==========================================
+
+  const getSourceLabel = (value) => {
+    const normalized = String(value || "")
+      .trim()
+      .toLowerCase();
+
+    switch (normalized) {
+      case "website":
+        return "Website";
+
+      case "walk_in":
+      case "walk-in":
+        return "Walk-in";
+
+      case "clinic":
+      default:
+        return "Clinic";
+    }
+  };
+
+  // ==========================================
+  // SOURCE BADGE
+  // ==========================================
+
+  const getSourceBadgeClass = (value) => {
+    const normalized = String(value || "")
+      .trim()
+      .toLowerCase();
+
+    switch (normalized) {
+      case "website":
+        return "border-[#C9DDD2] bg-[#EDF5F0] text-[#365C4F]";
+
+      case "walk_in":
+      case "walk-in":
+        return "border-[#E5D6B9] bg-[#F8F2E5] text-[#8A6B32]";
+
+      case "clinic":
+      default:
+        return "border-[#D5DFDA] bg-[#F1F5F2] text-[#173B32]";
     }
   };
 
@@ -373,7 +420,7 @@ function AppointmentTable({
       ====================================== */}
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-212.5">
+        <table className="w-full min-w-237.5">
           <thead>
             <tr
               className="
@@ -437,6 +484,22 @@ function AppointmentTable({
                 Reason
               </th>
 
+              {/* SOURCE */}
+
+              <th
+                className="
+                  px-5
+                  py-4
+                  text-left
+                  text-xs
+                  font-bold
+                  uppercase
+                  tracking-[0.08em]
+                "
+              >
+                Source
+              </th>
+
               <th
                 className="
                   px-5
@@ -477,6 +540,12 @@ function AppointmentTable({
                     statusLabel={getStatusLabel(
                       appointment.status
                     )}
+                    sourceLabel={getSourceLabel(
+                      appointment.source
+                    )}
+                    sourceBadgeClass={getSourceBadgeClass(
+                      appointment.source
+                    )}
                     onView={onView}
                     onEdit={onEdit}
                     onDelete={onDelete}
@@ -486,7 +555,7 @@ function AppointmentTable({
             ) : (
               <tr>
                 <td
-                  colSpan="6"
+                  colSpan="7"
                   className="
                     px-6
                     py-16

@@ -1,6 +1,8 @@
+
 import { useEffect, useState } from "react";
 
 import "../../styles/crm.css";
+
 import Layout from "../../components/layout/Layout";
 
 import {
@@ -34,16 +36,12 @@ const toDisplayStatus = (status) => {
   switch (normalized) {
     case "new":
       return "New";
-
     case "contacted":
       return "Contacted";
-
     case "converted":
       return "Converted";
-
     case "lost":
       return "Lost";
-
     default:
       return "New";
   }
@@ -56,6 +54,8 @@ const toDisplayStatus = (status) => {
 const emptyLeadForm = {
   full_name: "",
   phone: "",
+  email: "",
+  message: "",
   source: "Website",
   status: "New",
 };
@@ -90,10 +90,7 @@ function CRM() {
 
   const [showLeadModal, setShowLeadModal] = useState(false);
   const [editingLead, setEditingLead] = useState(null);
-
-  const [leadForm, setLeadForm] = useState(
-    emptyLeadForm
-  );
+  const [leadForm, setLeadForm] = useState(emptyLeadForm);
 
   // =======================================================
   // DELETE CONFIRMATION
@@ -120,7 +117,6 @@ function CRM() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-
   const [error, setError] = useState("");
 
   // =======================================================
@@ -134,30 +130,19 @@ function CRM() {
 
       const data = await getLeads();
 
-      const normalizedLeads = (data || []).map(
-        (lead) => ({
-          ...lead,
-          displayStatus: toDisplayStatus(
-            lead.status
-          ),
-        })
-      );
+      const normalizedLeads = (data || []).map((lead) => ({
+        ...lead,
+        displayStatus: toDisplayStatus(lead.status),
+      }));
 
       setLeads(normalizedLeads);
 
-      console.log(
-        "CRM leads received:",
-        normalizedLeads
-      );
+      console.log("CRM leads received:", normalizedLeads);
     } catch (error) {
-      console.error(
-        "Failed to load CRM leads:",
-        error
-      );
+      console.error("Failed to load CRM leads:", error);
 
       setError(
-        error.message ||
-          "Failed to load CRM leads."
+        error.message || "Failed to load CRM leads."
       );
     } finally {
       setLoading(false);
@@ -201,8 +186,7 @@ function CRM() {
   // =======================================================
 
   const filteredLeads = leads.filter((lead) => {
-    const searchText =
-      search.trim().toLowerCase();
+    const searchText = search.trim().toLowerCase();
 
     const leadName = (
       lead.full_name || ""
@@ -212,26 +196,34 @@ function CRM() {
       lead.phone || ""
     ).toLowerCase();
 
+    const leadEmail = (
+      lead.email || ""
+    ).toLowerCase();
+
     const leadSource = (
       lead.source || ""
     ).toLowerCase();
 
-    const displayStatus =
-      toDisplayStatus(lead.status);
+    const leadMessage = (
+      lead.message || ""
+    ).toLowerCase();
+
+    const displayStatus = toDisplayStatus(
+      lead.status
+    );
 
     const matchesSearch =
       leadName.includes(searchText) ||
       leadPhone.includes(searchText) ||
-      leadSource.includes(searchText);
+      leadEmail.includes(searchText) ||
+      leadSource.includes(searchText) ||
+      leadMessage.includes(searchText);
 
     const matchesStatus =
       statusFilter === "All" ||
       displayStatus === statusFilter;
 
-    return (
-      matchesSearch &&
-      matchesStatus
-    );
+    return matchesSearch && matchesStatus;
   });
 
   // =======================================================
@@ -240,7 +232,7 @@ function CRM() {
 
   const openAddLeadModal = () => {
     setEditingLead(null);
-    setLeadForm(emptyLeadForm);
+    setLeadForm({ ...emptyLeadForm });
     setError("");
     setShowLeadModal(true);
   };
@@ -255,10 +247,10 @@ function CRM() {
     setLeadForm({
       full_name: lead.full_name || "",
       phone: lead.phone || "",
+      email: lead.email || "",
+      message: lead.message || "",
       source: lead.source || "Website",
-      status: toDisplayStatus(
-        lead.status
-      ),
+      status: toDisplayStatus(lead.status),
     });
 
     setError("");
@@ -276,7 +268,7 @@ function CRM() {
 
     setShowLeadModal(false);
     setEditingLead(null);
-    setLeadForm(emptyLeadForm);
+    setLeadForm({ ...emptyLeadForm });
     setError("");
   };
 
@@ -284,11 +276,8 @@ function CRM() {
   // FORM CHANGE
   // =======================================================
 
-  const handleLeadFormChange = (
-    event
-  ) => {
-    const { name, value } =
-      event.target;
+  const handleLeadFormChange = (event) => {
+    const { name, value } = event.target;
 
     setLeadForm((previous) => ({
       ...previous,
@@ -300,9 +289,7 @@ function CRM() {
   // CREATE / UPDATE LEAD
   // =======================================================
 
-  const handleLeadSubmit = async (
-    event
-  ) => {
+  const handleLeadSubmit = async (event) => {
     event.preventDefault();
 
     // -----------------------------------------------
@@ -310,16 +297,12 @@ function CRM() {
     // -----------------------------------------------
 
     if (!leadForm.full_name.trim()) {
-      setError(
-        "Lead name is required."
-      );
+      setError("Full name is required.");
       return;
     }
 
     if (!leadForm.phone.trim()) {
-      setError(
-        "Phone number is required."
-      );
+      setError("Contact number is required.");
       return;
     }
 
@@ -328,23 +311,18 @@ function CRM() {
       setError("");
 
       // ---------------------------------------------
-      // PAYLOAD MATCHES BACKEND SCHEMA
+      // PAYLOAD
       // ---------------------------------------------
 
       const payload = {
-        full_name:
-          leadForm.full_name.trim(),
-
-        phone:
-          leadForm.phone.trim(),
-
-        source:
-          leadForm.source.trim(),
-
-        status:
-          toBackendStatus(
-            leadForm.status
-          ),
+        full_name: leadForm.full_name.trim(),
+        phone: leadForm.phone.trim(),
+        email: leadForm.email.trim() || null,
+        message: leadForm.message.trim() || null,
+        source: leadForm.source.trim(),
+        status: toBackendStatus(
+          leadForm.status
+        ),
       };
 
       // =================================================
@@ -352,37 +330,32 @@ function CRM() {
       // =================================================
 
       if (editingLead) {
-        const updatedLead =
-          await updateLead(
-            editingLead.id,
-            payload
-          );
+        const updatedLead = await updateLead(
+          editingLead.id,
+          payload
+        );
 
         const normalizedLead = {
           ...updatedLead,
-          displayStatus:
-            toDisplayStatus(
-              updatedLead.status
-            ),
+          displayStatus: toDisplayStatus(
+            updatedLead.status
+          ),
         };
 
         setLeads((previous) =>
           previous.map((lead) =>
-            lead.id ===
-            editingLead.id
+            lead.id === editingLead.id
               ? normalizedLead
               : lead
           )
         );
 
         // Update currently opened view
-        setSelectedLead(
-          (previous) =>
-            previous &&
-            previous.id ===
-              editingLead.id
-              ? normalizedLead
-              : previous
+        setSelectedLead((previous) =>
+          previous &&
+          previous.id === editingLead.id
+            ? normalizedLead
+            : previous
         );
 
         console.log(
@@ -396,17 +369,15 @@ function CRM() {
       // =================================================
 
       else {
-        const createdLead =
-          await createLead(
-            payload
-          );
+        const createdLead = await createLead(
+          payload
+        );
 
         const normalizedLead = {
           ...createdLead,
-          displayStatus:
-            toDisplayStatus(
-              createdLead.status
-            ),
+          displayStatus: toDisplayStatus(
+            createdLead.status
+          ),
         };
 
         setLeads((previous) => [
@@ -432,7 +403,7 @@ function CRM() {
 
       setShowLeadModal(false);
       setEditingLead(null);
-      setLeadForm(emptyLeadForm);
+      setLeadForm({ ...emptyLeadForm });
     } catch (error) {
       console.error(
         editingLead
@@ -443,11 +414,9 @@ function CRM() {
 
       setError(
         error.message ||
-          (
-            editingLead
-              ? "Failed to update lead."
-              : "Failed to create lead."
-          )
+          (editingLead
+            ? "Failed to update lead."
+            : "Failed to create lead.")
       );
     } finally {
       setSaving(false);
@@ -466,24 +435,21 @@ function CRM() {
       setError("");
 
       const payload = {
-        status:
-          toBackendStatus(
-            newStatus
-          ),
+        status: toBackendStatus(
+          newStatus
+        ),
       };
 
-      const updatedLead =
-        await updateLead(
-          id,
-          payload
-        );
+      const updatedLead = await updateLead(
+        id,
+        payload
+      );
 
       const normalizedLead = {
         ...updatedLead,
-        displayStatus:
-          toDisplayStatus(
-            updatedLead.status
-          ),
+        displayStatus: toDisplayStatus(
+          updatedLead.status
+        ),
       };
 
       setLeads((previous) =>
@@ -494,12 +460,10 @@ function CRM() {
         )
       );
 
-      setSelectedLead(
-        (previous) =>
-          previous &&
-          previous.id === id
-            ? normalizedLead
-            : previous
+      setSelectedLead((previous) =>
+        previous && previous.id === id
+          ? normalizedLead
+          : previous
       );
 
       await loadStats();
@@ -520,9 +484,7 @@ function CRM() {
   // OPEN DELETE CONFIRMATION
   // =======================================================
 
-  const openDeleteConfirmation = (
-    lead
-  ) => {
+  const openDeleteConfirmation = (lead) => {
     setError("");
     setDeletingLead(lead);
   };
@@ -560,19 +522,16 @@ function CRM() {
       setLeads((previous) =>
         previous.filter(
           (lead) =>
-            lead.id !==
-            deletingLead.id
+            lead.id !== deletingLead.id
         )
       );
 
       // Close view modal if same lead
-      setSelectedLead(
-        (previous) =>
-          previous &&
-          previous.id ===
-            deletingLead.id
-            ? null
-            : previous
+      setSelectedLead((previous) =>
+        previous &&
+        previous.id === deletingLead.id
+          ? null
+          : previous
       );
 
       // Refresh statistics
@@ -608,8 +567,7 @@ function CRM() {
       return "-";
     }
 
-    const parsedDate =
-      new Date(date);
+    const parsedDate = new Date(date);
 
     if (
       Number.isNaN(
@@ -642,7 +600,6 @@ function CRM() {
         ================================================= */}
 
         <div className="crm-header">
-
           <div>
             <h1>CRM</h1>
 
@@ -656,13 +613,10 @@ function CRM() {
           <button
             type="button"
             className="crm-add-button"
-            onClick={
-              openAddLeadModal
-            }
+            onClick={openAddLeadModal}
           >
             + Add Lead
           </button>
-
         </div>
 
         {/* =================================================
@@ -696,7 +650,9 @@ function CRM() {
           </div>
 
           <div className="crm-stat-card">
-            <span>New</span>
+            <span>
+              New
+            </span>
 
             <strong>
               {stats.new}
@@ -746,7 +702,9 @@ function CRM() {
           <div className="crm-section-header">
 
             <div>
-              <h2>Leads</h2>
+              <h2>
+                Leads
+              </h2>
 
               <p>
                 People who contacted the
@@ -757,7 +715,6 @@ function CRM() {
             <div className="crm-controls">
 
               <div className="crm-search">
-
                 <span>⌕</span>
 
                 <input
@@ -770,20 +727,16 @@ function CRM() {
                     )
                   }
                 />
-
               </div>
 
               <select
-                value={
-                  statusFilter
-                }
+                value={statusFilter}
                 onChange={(event) =>
                   setStatusFilter(
                     event.target.value
                   )
                 }
               >
-
                 <option value="All">
                   All statuses
                 </option>
@@ -798,7 +751,6 @@ function CRM() {
                     </option>
                   )
                 )}
-
               </select>
 
             </div>
@@ -815,12 +767,29 @@ function CRM() {
 
               <thead>
                 <tr>
-                  <th>Lead</th>
-                  <th>Phone</th>
-                  <th>Source</th>
-                  <th>Status</th>
-                  <th>Added</th>
-                  <th>Actions</th>
+                  <th>
+                    Lead
+                  </th>
+
+                  <th>
+                    Phone
+                  </th>
+
+                  <th>
+                    Source
+                  </th>
+
+                  <th>
+                    Status
+                  </th>
+
+                  <th>
+                    Added
+                  </th>
+
+                  <th>
+                    Actions
+                  </th>
                 </tr>
               </thead>
 
@@ -841,8 +810,7 @@ function CRM() {
                     </td>
                   </tr>
 
-                ) : filteredLeads.length >
-                  0 ? (
+                ) : filteredLeads.length > 0 ? (
 
                   filteredLeads.map(
                     (lead) => {
@@ -854,15 +822,12 @@ function CRM() {
 
                       return (
                         <tr
-                          key={
-                            lead.id
-                          }
+                          key={lead.id}
                         >
 
                           {/* LEAD */}
 
                           <td>
-
                             <div className="crm-lead">
 
                               <div className="crm-avatar">
@@ -870,14 +835,11 @@ function CRM() {
                                   lead.full_name ||
                                   "?"
                                 )
-                                  .charAt(
-                                    0
-                                  )
+                                  .charAt(0)
                                   .toUpperCase()}
                               </div>
 
                               <div>
-
                                 <strong>
                                   {
                                     lead.full_name
@@ -890,11 +852,9 @@ function CRM() {
                                     lead.id
                                   }
                                 </small>
-
                               </div>
 
                             </div>
-
                           </td>
 
                           {/* PHONE */}
@@ -909,14 +869,12 @@ function CRM() {
                           {/* SOURCE */}
 
                           <td>
-
                             <span className="crm-source">
                               {
                                 lead.source ||
                                 "-"
                               }
                             </span>
-
                           </td>
 
                           {/* STATUS */}
@@ -924,41 +882,30 @@ function CRM() {
                           <td>
 
                             <select
-                              className={`crm-status crm-status-${displayStatus.toLowerCase()}`}
+                              className={
+                              "crm-status crm-status-" +
+                              displayStatus.toLowerCase()
+                        }
                               value={
                                 displayStatus
                               }
-                              onChange={(
-                                event
-                              ) =>
+                              onChange={(event) =>
                                 handleStatusChange(
                                   lead.id,
-                                  event
-                                    .target
-                                    .value
+                                  event.target.value
                                 )
                               }
                             >
-
                               {statuses.map(
-                                (
-                                  status
-                                ) => (
+                                (status) => (
                                   <option
-                                    key={
-                                      status
-                                    }
-                                    value={
-                                      status
-                                    }
+                                    key={status}
+                                    value={status}
                                   >
-                                    {
-                                      status
-                                    }
+                                    {status}
                                   </option>
                                 )
                               )}
-
                             </select>
 
                           </td>
@@ -1031,12 +978,10 @@ function CRM() {
                 ) : (
 
                   <tr>
-
                     <td
                       colSpan="6"
                       className="crm-empty-cell"
                     >
-
                       <div className="crm-empty">
 
                         <h3>
@@ -1049,9 +994,7 @@ function CRM() {
                         </p>
 
                       </div>
-
                     </td>
-
                   </tr>
 
                 )}
@@ -1072,9 +1015,7 @@ function CRM() {
 
           <div
             className="crm-modal-overlay"
-            onClick={
-              closeLeadModal
-            }
+            onClick={closeLeadModal}
           >
 
             <div
@@ -1089,7 +1030,6 @@ function CRM() {
               <div className="crm-modal-header">
 
                 <div>
-
                   <span>
                     CRM
                   </span>
@@ -1099,15 +1039,12 @@ function CRM() {
                       ? "Edit Lead"
                       : "Add New Lead"}
                   </h2>
-
                 </div>
 
                 <button
                   type="button"
                   className="crm-close-button"
-                  onClick={
-                    closeLeadModal
-                  }
+                  onClick={closeLeadModal}
                   disabled={saving}
                   aria-label="Close"
                 >
@@ -1133,7 +1070,7 @@ function CRM() {
                     <div className="crm-form-group">
 
                       <label htmlFor="lead-full-name">
-                        Name *
+                        Full Name *
                       </label>
 
                       <input
@@ -1146,18 +1083,18 @@ function CRM() {
                         onChange={
                           handleLeadFormChange
                         }
-                        placeholder="Enter lead name"
+                        placeholder="Enter full name"
                         required
                       />
 
                     </div>
 
-                    {/* PHONE */}
+                    {/* CONTACT NUMBER */}
 
                     <div className="crm-form-group">
 
                       <label htmlFor="lead-phone">
-                        Phone *
+                        Contact Number *
                       </label>
 
                       <input
@@ -1172,6 +1109,52 @@ function CRM() {
                         }
                         placeholder="0300-1234567"
                         required
+                      />
+
+                    </div>
+
+                    {/* EMAIL */}
+
+                    <div className="crm-form-group">
+
+                      <label htmlFor="lead-email">
+                        Email
+                      </label>
+
+                      <input
+                        id="lead-email"
+                        type="email"
+                        name="email"
+                        value={
+                          leadForm.email
+                        }
+                        onChange={
+                          handleLeadFormChange
+                        }
+                        placeholder="patient@example.com"
+                      />
+
+                    </div>
+
+                    {/* MESSAGE / REASON */}
+
+                    <div className="crm-form-group">
+
+                      <label htmlFor="lead-message">
+                        Message / Reason
+                      </label>
+
+                      <textarea
+                        id="lead-message"
+                        name="message"
+                        value={
+                          leadForm.message
+                        }
+                        onChange={
+                          handleLeadFormChange
+                        }
+                        placeholder="Tell us what you need help with..."
+                        rows="4"
                       />
 
                     </div>
@@ -1194,7 +1177,6 @@ function CRM() {
                           handleLeadFormChange
                         }
                       >
-
                         <option value="Website">
                           Website
                         </option>
@@ -1214,7 +1196,6 @@ function CRM() {
                         <option value="Other">
                           Other
                         </option>
-
                       </select>
 
                     </div>
@@ -1237,22 +1218,16 @@ function CRM() {
                           handleLeadFormChange
                         }
                       >
-
                         {statuses.map(
                           (status) => (
                             <option
-                              key={
-                                status
-                              }
-                              value={
-                                status
-                              }
+                              key={status}
+                              value={status}
                             >
                               {status}
                             </option>
                           )
                         )}
-
                       </select>
 
                     </div>
@@ -1268,9 +1243,7 @@ function CRM() {
                   <button
                     type="button"
                     className="crm-cancel-button"
-                    onClick={
-                      closeLeadModal
-                    }
+                    onClick={closeLeadModal}
                     disabled={saving}
                   >
                     Cancel
@@ -1323,7 +1296,6 @@ function CRM() {
               <div className="crm-modal-header">
 
                 <div>
-
                   <span>
                     Lead Details
                   </span>
@@ -1333,16 +1305,13 @@ function CRM() {
                       selectedLead.full_name
                     }
                   </h2>
-
                 </div>
 
                 <button
                   type="button"
                   className="crm-close-button"
                   onClick={() =>
-                    setSelectedLead(
-                      null
-                    )
+                    setSelectedLead(null)
                   }
                   aria-label="Close"
                 >
@@ -1353,9 +1322,11 @@ function CRM() {
 
               <div className="crm-details">
 
+                {/* NAME */}
+
                 <div>
                   <label>
-                    Name
+                    Full Name
                   </label>
 
                   <strong>
@@ -1365,17 +1336,37 @@ function CRM() {
                   </strong>
                 </div>
 
+                {/* PHONE */}
+
                 <div>
                   <label>
-                    Phone
+                    Contact Number
                   </label>
 
                   <strong>
                     {
-                      selectedLead.phone
+                      selectedLead.phone ||
+                      "-"
                     }
                   </strong>
                 </div>
+
+                {/* EMAIL */}
+
+                <div>
+                  <label>
+                    Email
+                  </label>
+
+                  <strong>
+                    {
+                      selectedLead.email ||
+                      "-"
+                    }
+                  </strong>
+                </div>
+
+                {/* SOURCE */}
 
                 <div>
                   <label>
@@ -1390,6 +1381,8 @@ function CRM() {
                   </strong>
                 </div>
 
+                {/* STATUS */}
+
                 <div>
                   <label>
                     Status
@@ -1401,6 +1394,8 @@ function CRM() {
                     )}
                   </strong>
                 </div>
+
+                {/* ADDED */}
 
                 <div>
                   <label>
@@ -1414,6 +1409,23 @@ function CRM() {
                   </strong>
                 </div>
 
+                {/* MESSAGE */}
+
+                <div className="crm-detail-full">
+
+                  <label>
+                    Message / Reason
+                  </label>
+
+                  <strong className="crm-detail-message">
+                    {
+                      selectedLead.message ||
+                      "-"
+                    }
+                  </strong>
+
+                </div>
+
               </div>
 
               <div className="crm-modal-actions">
@@ -1422,9 +1434,7 @@ function CRM() {
                   type="button"
                   className="crm-cancel-button"
                   onClick={() =>
-                    setSelectedLead(
-                      null
-                    )
+                    setSelectedLead(null)
                   }
                 >
                   Close
@@ -1437,9 +1447,7 @@ function CRM() {
                     const lead =
                       selectedLead;
 
-                    setSelectedLead(
-                      null
-                    );
+                    setSelectedLead(null);
 
                     openEditLeadModal(
                       lead
@@ -1487,7 +1495,6 @@ function CRM() {
               <div className="crm-modal-header">
 
                 <div>
-
                   <span>
                     CRM
                   </span>
@@ -1495,7 +1502,6 @@ function CRM() {
                   <h2>
                     Delete Lead
                   </h2>
-
                 </div>
 
                 <button

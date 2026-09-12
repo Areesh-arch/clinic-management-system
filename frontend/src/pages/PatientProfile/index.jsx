@@ -1,4 +1,6 @@
+
 import { useEffect, useState } from "react";
+
 import {
   FiArrowLeft,
   FiCalendar,
@@ -9,7 +11,12 @@ import {
   FiPlus,
   FiUser,
 } from "react-icons/fi";
-import { useNavigate, useParams } from "react-router-dom";
+
+import {
+  useLocation,
+  useNavigate,
+  useParams,
+} from "react-router-dom";
 
 import Layout from "../../components/layout/Layout";
 import { getPatientProfile } from "../../services/patientService";
@@ -284,6 +291,28 @@ function PhotoGallery({ photos }) {
 export default function PatientProfile() {
   const { patientId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  /*
+   * ============================================================
+   * BACK NAVIGATION
+   * ============================================================
+   *
+   * When opened from Appointments:
+   * Appointments -> Patient Profile -> Back to Appointments
+   *
+   * When opened from Patients:
+   * Patients -> Patient Profile -> Back to Patients
+   *
+   * Default remains /patients so existing behavior is preserved.
+   * ============================================================
+   */
+  const backPath = location.state?.from || "/patients";
+
+  const backLabel =
+    location.state?.from === "/appointments"
+      ? "Back to Appointments"
+      : "Back to Patients";
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -342,6 +371,7 @@ export default function PatientProfile() {
         <div className="flex min-h-[60vh] items-center justify-center">
           <div className="text-center">
             <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-[#DDE5DF] border-t-[#173B32]" />
+
             <p className="text-sm text-[#727B75]">
               Loading patient profile...
             </p>
@@ -357,11 +387,11 @@ export default function PatientProfile() {
         <div className="p-4 sm:p-6">
           <button
             type="button"
-            onClick={() => navigate("/patients")}
+            onClick={() => navigate(backPath)}
             className="inline-flex items-center gap-2 text-sm font-medium text-[#587363] transition-colors hover:text-[#173B32]"
           >
             <FiArrowLeft size={16} />
-            Back to Patients
+            {backLabel}
           </button>
 
           <div className="mt-8 rounded-2xl border border-[#F0D9D7] bg-[#FFFDFB] p-8 text-center">
@@ -413,25 +443,26 @@ export default function PatientProfile() {
     <Layout>
       <div className="min-h-full bg-[#F7F3E9] p-4 sm:p-6 lg:p-7">
         <div className="mx-auto max-w-375 space-y-5">
-
           {/* Back */}
+
           <button
             type="button"
-            onClick={() => navigate("/patients")}
+            onClick={() => navigate(backPath)}
             className="inline-flex items-center gap-2 text-sm font-medium text-[#587363] transition-colors hover:text-[#173B32]"
           >
             <FiArrowLeft size={16} />
-            Back to Patients
+            {backLabel}
           </button>
 
           {/* Patient Header */}
+
           <div className="relative overflow-hidden rounded-2xl bg-[#173B32] shadow-[0_8px_28px_rgba(23,59,50,0.12)]">
             <div className="absolute right-0 top-0 h-40 w-40 translate-x-16 -translate-y-16 rounded-full border border-white/10" />
+
             <div className="absolute bottom-0 right-20 h-28 w-28 translate-y-16 rounded-full border border-[#B4935A]/20" />
 
             <div className="relative p-5 sm:p-7">
               <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-
                 <div className="flex min-w-0 items-center gap-4 sm:gap-5">
                   <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-xl font-semibold text-[#F7F3E9] backdrop-blur-sm sm:h-20 sm:w-20 sm:text-2xl">
                     {patientName.charAt(0).toUpperCase()}
@@ -482,6 +513,7 @@ export default function PatientProfile() {
           </div>
 
           {/* Quick Stats */}
+
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Stat
               icon={<FiCalendar size={18} />}
@@ -510,6 +542,7 @@ export default function PatientProfile() {
           </div>
 
           {/* Basic Information */}
+
           <Section
             title="Basic Information"
             icon={<FiUser size={17} />}
@@ -533,7 +566,8 @@ export default function PatientProfile() {
               <InfoCard
                 label="Date of Birth"
                 value={formatDate(
-                  patient?.date_of_birth || patient?.dob
+                  patient?.date_of_birth ||
+                    patient?.dob
                 )}
               />
 
@@ -584,6 +618,7 @@ export default function PatientProfile() {
           </Section>
 
           {/* Medical Information */}
+
           <Section
             title="Medical Information"
             icon={<FiHeart size={17} />}
@@ -612,6 +647,7 @@ export default function PatientProfile() {
           </Section>
 
           {/* Appointments */}
+
           <Section
             title="Appointments"
             icon={<FiCalendar size={17} />}
@@ -689,6 +725,7 @@ export default function PatientProfile() {
           </Section>
 
           {/* Treatment History */}
+
           <Section
             title="Treatment History"
             icon={<FiFileText size={17} />}
@@ -702,7 +739,7 @@ export default function PatientProfile() {
               <EmptyState message="No treatment history available." />
             ) : (
               <div className="space-y-3">
-                {visits.map((visit, index) => (
+                {visits.map((visit) => (
                   <div
                     key={visit.id}
                     className="relative rounded-xl border border-[#E6EAE5] bg-[#FCFDFB] p-4 sm:p-5"
@@ -777,6 +814,7 @@ export default function PatientProfile() {
           </Section>
 
           {/* Payments & Billing */}
+
           <Section
             title="Payments & Billing"
             icon={<FiCreditCard size={17} />}
@@ -872,6 +910,7 @@ export default function PatientProfile() {
           </Section>
 
           {/* Patient Photos */}
+
           <Section
             title="Patient Photos"
             icon={<FiCamera size={17} />}

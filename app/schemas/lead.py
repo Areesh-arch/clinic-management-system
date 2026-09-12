@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 # =========================================================
@@ -10,10 +10,35 @@ from pydantic import BaseModel, ConfigDict, Field
 # =========================================================
 
 class LeadCreate(BaseModel):
-    full_name: str = Field(..., min_length=1, max_length=255)
-    phone: str = Field(..., min_length=1, max_length=30)
-    source: str = Field(..., min_length=1, max_length=100)
-    status: str = Field(default="new", max_length=50)
+    full_name: str = Field(
+        ...,
+        min_length=1,
+        max_length=255,
+    )
+
+    phone: str = Field(
+        ...,
+        min_length=1,
+        max_length=30,
+    )
+
+    email: EmailStr | None = None
+
+    message: str | None = Field(
+        default=None,
+        max_length=2000,
+    )
+
+    source: str = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+    )
+
+    status: str = Field(
+        default="new",
+        max_length=50,
+    )
 
 
 # =========================================================
@@ -31,6 +56,13 @@ class LeadUpdate(BaseModel):
         default=None,
         min_length=1,
         max_length=30,
+    )
+
+    email: EmailStr | None = None
+
+    message: str | None = Field(
+        default=None,
+        max_length=2000,
     )
 
     source: str | None = Field(
@@ -52,10 +84,16 @@ class LeadUpdate(BaseModel):
 class LeadResponse(BaseModel):
     id: int
     tenant_id: int
+
     full_name: str
     phone: str
+
+    email: EmailStr | None = None
+    message: str | None = None
+
     source: str
     status: str
+
     created_at: datetime
     updated_at: datetime
 

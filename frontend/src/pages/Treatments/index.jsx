@@ -26,27 +26,16 @@ import {
 
 
 function Treatments() {
+  const [treatments, setTreatments] = useState([]);
+  const [patients, setPatients] = useState([]);
 
-  const [treatments, setTreatments] =
-    useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const [patients, setPatients] =
-    useState([]);
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("All");
 
-  const [loading, setLoading] =
-    useState(true);
-
-  const [error, setError] =
-    useState("");
-
-  const [search, setSearch] =
-    useState("");
-
-  const [status, setStatus] =
-    useState("All");
-
-  const [showModal, setShowModal] =
-    useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   const [
     editingTreatment,
@@ -64,9 +53,7 @@ function Treatments() {
   // =====================================================
 
   const loadTreatments = async () => {
-
     try {
-
       setLoading(true);
       setError("");
 
@@ -77,16 +64,6 @@ function Treatments() {
         getTreatments(),
         getPatients(),
       ]);
-
-      console.log(
-        "Treatments received from backend:",
-        treatmentData
-      );
-
-      console.log(
-        "Patients received from backend:",
-        patientData
-      );
 
       const treatmentList =
         Array.isArray(treatmentData)
@@ -102,199 +79,182 @@ function Treatments() {
 
 
       // =================================================
-      // NORMALIZE TREATMENTS / VISITS
+      // NORMALIZE VISITS INTO TREATMENT RECORDS
       // =================================================
 
-      const normalized =
-        treatmentList.map((visit) => {
-
-          const patientId =
-            visit.patient_id ??
-            visit.patient?.id ??
-            null;
+      const normalized = treatmentList.map((visit) => {
+        const patientId =
+          visit?.patient_id ??
+          visit?.patient?.id ??
+          null;
 
 
-          // ---------------------------------------------
-          // FIND REAL PATIENT
-          // ---------------------------------------------
+        // ---------------------------------------------
+        // FIND REAL PATIENT
+        // ---------------------------------------------
 
-          const patient =
-            patientList.find(
-              (item) =>
-                String(item.id) ===
-                String(patientId)
-            ) || null;
-
-
-          // ---------------------------------------------
-          // PATIENT NAME
-          // ---------------------------------------------
-
-          const embeddedPatient =
-            visit.patient ||
-            visit.patient_data ||
-            visit.patient_info ||
-            null;
+        const patient =
+          patientList.find(
+            (item) =>
+              String(item.id) ===
+              String(patientId)
+          ) || null;
 
 
-          const embeddedFirstName =
-            embeddedPatient?.first_name ||
-            visit.patient_first_name ||
-            "";
+        // ---------------------------------------------
+        // EMBEDDED PATIENT
+        // ---------------------------------------------
+
+        const embeddedPatient =
+          visit?.patient ||
+          visit?.patient_data ||
+          visit?.patient_info ||
+          null;
 
 
-          const embeddedLastName =
-            embeddedPatient?.last_name ||
-            visit.patient_last_name ||
-            "";
+        // ---------------------------------------------
+        // PATIENT NAME
+        // ---------------------------------------------
+
+        const embeddedFirstName =
+          embeddedPatient?.first_name ||
+          visit?.patient_first_name ||
+          "";
+
+        const embeddedLastName =
+          embeddedPatient?.last_name ||
+          visit?.patient_last_name ||
+          "";
+
+        const embeddedFullName =
+          [
+            embeddedFirstName,
+            embeddedLastName,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .trim();
 
 
-          const embeddedFullName =
-            [
-              embeddedFirstName,
-              embeddedLastName,
-            ]
-              .filter(Boolean)
-              .join(" ")
-              .trim();
+        const patientFirstName =
+          patient?.first_name || "";
+
+        const patientLastName =
+          patient?.last_name || "";
+
+        const patientFullName =
+          [
+            patientFirstName,
+            patientLastName,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .trim();
 
 
-          const patientFirstName =
-            patient?.first_name ||
-            "";
+        const patientName =
+          visit?.patient_name ||
+          visit?.patient_full_name ||
+          embeddedPatient?.name ||
+          embeddedPatient?.full_name ||
+          embeddedFullName ||
+          patientFullName ||
+          "Unknown patient";
 
 
-          const patientLastName =
-            patient?.last_name ||
-            "";
+        // ---------------------------------------------
+        // PATIENT MRN
+        // ---------------------------------------------
+
+        const patientMrn =
+          visit?.medical_record_number ||
+          visit?.patient_mrn ||
+          visit?.mrn ||
+          embeddedPatient?.medical_record_number ||
+          embeddedPatient?.mrn ||
+          patient?.medical_record_number ||
+          patient?.mrn ||
+          "";
 
 
-          const patientFullName =
-            [
-              patientFirstName,
-              patientLastName,
-            ]
-              .filter(Boolean)
-              .join(" ")
-              .trim();
+        // ---------------------------------------------
+        // NORMALIZED TREATMENT
+        // ---------------------------------------------
 
+        return {
+          id: visit?.id,
 
-          const patientName =
-            visit.patient_name ||
-            visit.patient_full_name ||
-            embeddedPatient?.name ||
-            embeddedPatient?.full_name ||
-            embeddedFullName ||
-            patientFullName ||
-            "Unknown patient";
+          tenant_id:
+            visit?.tenant_id,
 
+          appointment_id:
+            visit?.appointment_id,
 
-          // ---------------------------------------------
-          // PATIENT MRN
-          // ---------------------------------------------
+          patient_id:
+            patientId,
 
-          const patientMrn =
-            visit.medical_record_number ||
-            visit.patient_mrn ||
-            visit.mrn ||
-            embeddedPatient?.medical_record_number ||
-            embeddedPatient?.mrn ||
-            patient?.medical_record_number ||
-            patient?.mrn ||
-            "";
+          patient_name:
+            patientName,
 
+          medical_record_number:
+            patientMrn,
 
-          // ---------------------------------------------
-          // RETURN NORMALIZED TREATMENT
-          // ---------------------------------------------
+          patient_mrn:
+            patientMrn,
 
-          return {
+          patient,
 
-            id:
-              visit.id,
+          treatment:
+            visit?.diagnosis ||
+            "—",
 
-            tenant_id:
-              visit.tenant_id,
+          diagnosis:
+            visit?.diagnosis ||
+            "",
 
-            appointment_id:
-              visit.appointment_id,
+          chief_complaint:
+            visit?.chief_complaint ||
+            "",
 
-            patient_id:
-              patientId,
+          notes:
+            visit?.notes ||
+            "",
 
-            patient_name:
-              patientName,
+          date:
+            visit?.visit_time,
 
-            medical_record_number:
-              patientMrn,
+          cost:
+            visit?.charge ?? 0,
 
-            patient_mrn:
-              patientMrn,
+          charge:
+            visit?.charge ?? 0,
 
-            patient:
-              patient,
+          status:
+            visit?.status ||
+            "IN_PROGRESS",
 
-            treatment:
-              visit.diagnosis ||
-              "—",
-
-            diagnosis:
-              visit.diagnosis ||
-              "",
-
-            chief_complaint:
-              visit.chief_complaint ||
-              "",
-
-            notes:
-              visit.notes ||
-              "",
-
-            date:
-              visit.visit_time,
-
-            cost:
-              visit.charge ?? 0,
-
-            charge:
-              visit.charge ?? 0,
-
-            status:
-              visit.status,
-
-          };
-
-        });
-
-
-      console.log(
-        "Normalized treatments:",
-        normalized
-      );
+          appointment_status:
+            visit?.appointment_status ||
+            "",
+        };
+      });
 
 
       setTreatments(normalized);
 
-
     } catch (err) {
-
       console.error(
         "Failed to load treatments:",
         err
       );
 
       setError(
-        err.message ||
+        err?.message ||
         "Failed to load treatments."
       );
-
-
     } finally {
-
       setLoading(false);
-
     }
-
   };
 
 
@@ -303,9 +263,7 @@ function Treatments() {
   // =====================================================
 
   useEffect(() => {
-
     loadTreatments();
-
   }, []);
 
 
@@ -314,13 +272,10 @@ function Treatments() {
   // =====================================================
 
   useEffect(() => {
-
     if (
       searchParams.get("new") === "true"
     ) {
-
       setEditingTreatment(null);
-
       setShowModal(true);
 
       setSearchParams(
@@ -329,9 +284,7 @@ function Treatments() {
           replace: true,
         }
       );
-
     }
-
   }, [
     searchParams,
     setSearchParams,
@@ -345,33 +298,29 @@ function Treatments() {
   const total =
     treatments.length;
 
-
   const completed =
     treatments.filter(
       (item) =>
-        item.status ===
+        String(item?.status || "")
+          .toUpperCase() ===
         "COMPLETED"
     ).length;
-
 
   const inProgress =
     treatments.filter(
       (item) =>
-        item.status ===
+        String(item?.status || "")
+          .toUpperCase() ===
         "IN_PROGRESS"
     ).length;
-
 
   const cancelled =
     treatments.filter(
       (item) =>
-        item.status ===
+        String(item?.status || "")
+          .toUpperCase() ===
         "CANCELLED"
     ).length;
-
-
-  const card =
-    "bg-white rounded-2xl shadow-sm p-6 border border-[#E6E1D8]";
 
 
   // =====================================================
@@ -379,13 +328,9 @@ function Treatments() {
   // =====================================================
 
   const handleAddTreatment = () => {
-
     setEditingTreatment(null);
-
     setError("");
-
     setShowModal(true);
-
   };
 
 
@@ -394,20 +339,9 @@ function Treatments() {
   // =====================================================
 
   const handleEdit = (treatment) => {
-
-    console.log(
-      "Editing treatment:",
-      treatment
-    );
-
-    setEditingTreatment(
-      treatment
-    );
-
+    setEditingTreatment(treatment);
     setError("");
-
     setShowModal(true);
-
   };
 
 
@@ -415,16 +349,12 @@ function Treatments() {
   // CREATED / UPDATED
   // =====================================================
 
-  const handleTreatmentSuccess =
-    async () => {
+  const handleTreatmentSuccess = async () => {
+    setShowModal(false);
+    setEditingTreatment(null);
 
-      setShowModal(false);
-
-      setEditingTreatment(null);
-
-      await loadTreatments();
-
-    };
+    await loadTreatments();
+  };
 
 
   // =====================================================
@@ -432,11 +362,8 @@ function Treatments() {
   // =====================================================
 
   const closeModal = () => {
-
     setShowModal(false);
-
     setEditingTreatment(null);
-
   };
 
 
@@ -444,60 +371,122 @@ function Treatments() {
   // DELETE
   // =====================================================
 
-  const handleDelete =
-    async (treatment) => {
+  const handleDelete = async (treatment) => {
+    const confirmed =
+      window.confirm(
+        "Are you sure you want to delete this treatment?"
+      );
 
-      const confirmed =
-        window.confirm(
-          "Are you sure you want to delete this treatment?"
-        );
+    if (!confirmed) {
+      return;
+    }
 
+    try {
+      setError("");
 
-      if (!confirmed) {
-        return;
-      }
+      await deleteTreatment(
+        treatment.id
+      );
 
+      await loadTreatments();
 
-      try {
+    } catch (err) {
+      console.error(
+        "Failed to delete treatment:",
+        err
+      );
 
-        setError("");
-
-        console.log(
-          "Deleting treatment:",
-          treatment.id
-        );
-
-
-        await deleteTreatment(
-          treatment.id
-        );
-
-
-        console.log(
-          "Treatment deleted successfully:",
-          treatment.id
-        );
+      setError(
+        err?.message ||
+        "Failed to delete treatment."
+      );
+    }
+  };
 
 
-        await loadTreatments();
+  // =====================================================
+  // STAT CARD
+  // =====================================================
 
+  const StatCard = ({
+    label,
+    value,
+    accent,
+    icon,
+  }) => (
+    <div
+      className="
+        group
+        relative
+        overflow-hidden
+        rounded-2xl
+        border
+        border-[#E3DED2]
+        bg-[#FFFDF8]
+        p-5
+        shadow-[0_4px_18px_rgba(23,59,50,0.05)]
+        transition-all
+        duration-300
+        hover:-translate-y-0.5
+        hover:shadow-[0_10px_28px_rgba(23,59,50,0.09)]
+      "
+    >
+      <div
+        className={`
+          absolute
+          left-0
+          top-0
+          h-full
+          w-1
+          ${accent}
+        `}
+      />
 
-      } catch (err) {
+      <div className="flex items-center justify-between">
+        <div>
+          <p
+            className="
+              text-[11px]
+              font-bold
+              uppercase
+              tracking-[0.16em]
+              text-[#7C887F]
+            "
+          >
+            {label}
+          </p>
 
-        console.error(
-          "Failed to delete treatment:",
-          err
-        );
+          <p
+            className="
+              mt-2
+              text-3xl
+              font-bold
+              tracking-tight
+              text-[#173B32]
+            "
+          >
+            {value}
+          </p>
+        </div>
 
-
-        setError(
-          err.message ||
-          "Failed to delete treatment."
-        );
-
-      }
-
-    };
+        <div
+          className="
+            flex
+            h-11
+            w-11
+            items-center
+            justify-center
+            rounded-xl
+            bg-[#F1F5F2]
+            text-lg
+            text-[#527565]
+          "
+        >
+          {icon}
+        </div>
+      </div>
+    </div>
+  );
 
 
   // =====================================================
@@ -505,10 +494,8 @@ function Treatments() {
   // =====================================================
 
   return (
-
     <Layout>
-
-      <div className="space-y-8">
+      <div className="space-y-7">
 
         {/* =================================================
             HEADER
@@ -526,13 +513,43 @@ function Treatments() {
             ================================================= */}
 
         {error && (
+          <div
+            className="
+              flex
+              items-start
+              gap-3
+              rounded-2xl
+              border
+              border-[#E7C7C0]
+              bg-[#FFF7F5]
+              px-5
+              py-4
+              text-sm
+              font-medium
+              text-[#984E42]
+              shadow-sm
+            "
+          >
+            <span
+              className="
+                mt-0.5
+                flex
+                h-5
+                w-5
+                shrink-0
+                items-center
+                justify-center
+                rounded-full
+                bg-[#F4DED9]
+                text-xs
+                font-bold
+              "
+            >
+              !
+            </span>
 
-          <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 px-4 py-3">
-
-            {error}
-
+            <span>{error}</span>
           </div>
-
         )}
 
 
@@ -540,59 +557,42 @@ function Treatments() {
             STATS
             ================================================= */}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        <div
+          className="
+            grid
+            grid-cols-1
+            gap-4
+            sm:grid-cols-2
+            xl:grid-cols-4
+          "
+        >
+          <StatCard
+            label="Total Treatments"
+            value={total}
+            accent="bg-[#173B32]"
+            icon="✦"
+          />
 
-          <div className={card}>
+          <StatCard
+            label="Completed"
+            value={completed}
+            accent="bg-[#6F8F7D]"
+            icon="✓"
+          />
 
-            <h3>
-              Total Treatments
-            </h3>
+          <StatCard
+            label="In Progress"
+            value={inProgress}
+            accent="bg-[#B4935A]"
+            icon="◷"
+          />
 
-            <p className="text-3xl font-bold mt-3">
-              {total}
-            </p>
-
-          </div>
-
-
-          <div className={card}>
-
-            <h3>
-              Completed
-            </h3>
-
-            <p className="text-3xl font-bold mt-3">
-              {completed}
-            </p>
-
-          </div>
-
-
-          <div className={card}>
-
-            <h3>
-              In Progress
-            </h3>
-
-            <p className="text-3xl font-bold mt-3">
-              {inProgress}
-            </p>
-
-          </div>
-
-
-          <div className={card}>
-
-            <h3>
-              Cancelled
-            </h3>
-
-            <p className="text-3xl font-bold mt-3">
-              {cancelled}
-            </p>
-
-          </div>
-
+          <StatCard
+            label="Cancelled"
+            value={cancelled}
+            accent="bg-[#A15D50]"
+            icon="×"
+          />
         </div>
 
 
@@ -621,17 +621,62 @@ function Treatments() {
             ================================================= */}
 
         {loading ? (
+          <div
+            className="
+              overflow-hidden
+              rounded-2xl
+              border
+              border-[#E3DED2]
+              bg-[#FFFDF8]
+              shadow-[0_4px_18px_rgba(23,59,50,0.05)]
+            "
+          >
+            <div
+              className="
+                flex
+                min-h-65
+                flex-col
+                items-center
+                justify-center
+                px-6
+                text-center
+              "
+            >
+              <div
+                className="
+                  h-10
+                  w-10
+                  animate-spin
+                  rounded-full
+                  border-4
+                  border-[#DDE7E1]
+                  border-t-[#173B32]
+                "
+              />
 
-          <div className="bg-white rounded-2xl border border-[#E6E1D8] p-10 text-center">
+              <p
+                className="
+                  mt-4
+                  text-sm
+                  font-semibold
+                  text-[#52615A]
+                "
+              >
+                Loading treatments...
+              </p>
 
-            <p className="text-gray-500">
-              Loading treatments...
-            </p>
-
+              <p
+                className="
+                  mt-1
+                  text-xs
+                  text-[#89948E]
+                "
+              >
+                Please wait while your treatment records load.
+              </p>
+            </div>
           </div>
-
         ) : (
-
           <TreatmentTable
             treatments={treatments}
             search={search}
@@ -639,9 +684,7 @@ function Treatments() {
             onEdit={handleEdit}
             onDelete={handleDelete}
           />
-
         )}
-
       </div>
 
 
@@ -655,11 +698,8 @@ function Treatments() {
         onSuccess={handleTreatmentSuccess}
         treatment={editingTreatment}
       />
-
     </Layout>
-
   );
-
 }
 
 

@@ -65,7 +65,7 @@ export default function Footer() {
           </a>
 
           <a href="#contact">
-            Book Consultation
+            Book Appointment
           </a>
 
           <span>

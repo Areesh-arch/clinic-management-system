@@ -13,14 +13,29 @@ from app.crud.appointment import (
 )
 
 from app.models.appointment import Appointment
-from app.models.enums import AppointmentStatus
+from app.models.enums import (
+    AppointmentSource,
+    AppointmentStatus,
+)
 from app.models.patient import Patient
 from app.models.user import User
+
 from app.schemas.appointment import (
     AppointmentCreate,
     AppointmentUpdate,
+    PublicAppointmentCreate,
 )
 
+from app.schemas.patient import PatientCreate
+
+from app.services.patient_service import (
+    create_patient_service,
+)
+
+
+# =========================================================
+# PATIENT VALIDATION
+# =========================================================
 
 def _validate_patient(
     db: Session,
@@ -45,6 +60,10 @@ def _validate_patient(
     return patient
 
 
+# =========================================================
+# FUTURE DATE / TIME VALIDATION
+# =========================================================
+
 def _validate_future_datetime(
     appointment_date,
     appointment_time,
@@ -53,8 +72,6 @@ def _validate_future_datetime(
     Validate that the appointment date/time is in the future.
 
     Appointment date/time represents clinic-local time.
-    If the incoming time is timezone-aware, remove the timezone
-    information before comparing it with the server's local time.
     """
 
     appointment_datetime = datetime.combine(
@@ -62,8 +79,6 @@ def _validate_future_datetime(
         appointment_time,
     )
 
-    # Prevent:
-    # TypeError: can't compare offset-naive and offset-aware datetimes
     if appointment_datetime.tzinfo is not None:
         appointment_datetime = appointment_datetime.replace(
             tzinfo=None
@@ -78,6 +93,10 @@ def _validate_future_datetime(
         )
 
 
+# =========================================================
+# DURATION VALIDATION
+# =========================================================
+
 def _validate_duration(
     duration_minutes: int,
 ) -> None:
@@ -87,6 +106,10 @@ def _validate_duration(
             detail="Duration must be greater than zero.",
         )
 
+
+# =========================================================
+# APPOINTMENT OVERLAP
+# =========================================================
 
 def _check_overlap(
     db: Session,
@@ -115,14 +138,15 @@ def _check_overlap(
     )
 
     for appointment in appointments:
+
         if (
             exclude_appointment_id is not None
             and appointment.id == exclude_appointment_id
         ):
             continue
 
-        # Cancelled and no-show appointments should not
-        # block a new appointment time.
+        # Cancelled and no-show appointments do not
+        # block the appointment slot.
         if appointment.status in (
             AppointmentStatus.CANCELLED,
             AppointmentStatus.NO_SHOW,
@@ -148,6 +172,10 @@ def _check_overlap(
             )
 
 
+# =========================================================
+# PREVIOUS APPOINTMENT
+# =========================================================
+
 def _has_previous_appointment(
     db: Session,
     tenant_id: int,
@@ -155,6 +183,7 @@ def _has_previous_appointment(
     appointment_date,
     exclude_appointment_id: int | None = None,
 ) -> bool:
+
     query = (
         db.query(Appointment)
         .filter(
@@ -172,6 +201,10 @@ def _has_previous_appointment(
     return query.first() is not None
 
 
+# =========================================================
+# FOLLOW-UP
+# =========================================================
+
 def _determine_follow_up(
     db: Session,
     tenant_id: int,
@@ -180,6 +213,7 @@ def _determine_follow_up(
     requested_value: bool | None,
     exclude_appointment_id: int | None = None,
 ) -> bool:
+
     previous_appointment = _has_previous_appointment(
         db=db,
         tenant_id=tenant_id,
@@ -194,10 +228,15 @@ def _determine_follow_up(
     return bool(requested_value)
 
 
+# =========================================================
+# PATIENT DISPLAY DATA
+# =========================================================
+
 def _get_patient_display_data(
     db: Session,
     appointment: Appointment,
 ) -> dict:
+
     patient = (
         db.query(Patient)
         .filter(
@@ -232,12 +271,15 @@ def _attach_patient_data(
     db: Session,
     appointment: Appointment,
 ) -> Appointment:
+
     patient_data = _get_patient_display_data(
         db,
         appointment,
     )
 
-    appointment.patient_name = patient_data["patient_name"]
+    appointment.patient_name = patient_data[
+        "patient_name"
+    ]
 
     appointment.medical_record_number = (
         patient_data["medical_record_number"]
@@ -250,6 +292,7 @@ def _attach_patient_data_to_list(
     db: Session,
     appointments: list[Appointment],
 ) -> list[Appointment]:
+
     for appointment in appointments:
         _attach_patient_data(
             db,
@@ -267,25 +310,12 @@ def _validate_status_change(
     current_status: AppointmentStatus,
     new_status: AppointmentStatus,
 ) -> None:
-    """
-    Validate allowed appointment status transitions.
-
-    Normal appointment lifecycle:
-
-        SCHEDULED
-            ├── COMPLETED
-            ├── CANCELLED
-            └── NO_SHOW
-
-    Once an appointment reaches a final state, it cannot
-    be changed to another final state through the normal
-    appointment update endpoint.
-    """
 
     if current_status == new_status:
         return
 
     if current_status == AppointmentStatus.SCHEDULED:
+
         allowed_statuses = {
             AppointmentStatus.COMPLETED,
             AppointmentStatus.CANCELLED,
@@ -297,7 +327,8 @@ def _validate_status_change(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=(
                     f"Appointment cannot be changed from "
-                    f"{current_status.value} to {new_status.value}."
+                    f"{current_status.value} to "
+                    f"{new_status.value}."
                 ),
             )
 
@@ -332,7 +363,7 @@ def _validate_status_change(
 
 
 # =========================================================
-# CREATE
+# CREATE APPOINTMENT
 # =========================================================
 
 def create_appointment_service(
@@ -341,6 +372,7 @@ def create_appointment_service(
     current_user: User,
     tenant_id: int,
 ) -> Appointment:
+
     _validate_patient(
         db=db,
         patient_id=appointment_data.patient_id,
@@ -391,6 +423,157 @@ def create_appointment_service(
 
 
 # =========================================================
+# PUBLIC WEBSITE
+# FIND PATIENT BY PHONE
+# =========================================================
+
+def _find_patient_by_phone(
+    db: Session,
+    tenant_id: int,
+    phone: str,
+) -> Patient | None:
+
+    normalized_phone = phone.strip()
+
+    return (
+        db.query(Patient)
+        .filter(
+            Patient.tenant_id == tenant_id,
+            Patient.phone == normalized_phone,
+        )
+        .first()
+    )
+
+
+# =========================================================
+# PUBLIC WEBSITE
+# SPLIT FULL NAME
+# =========================================================
+
+def _split_full_name(
+    full_name: str,
+) -> tuple[str, str]:
+
+    parts = full_name.strip().split()
+
+    if not parts:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Please enter your full name.",
+        )
+
+    if len(parts) == 1:
+        return parts[0], parts[0]
+
+    return parts[0], " ".join(parts[1:])
+
+
+# =========================================================
+# PUBLIC WEBSITE
+# FIND OR CREATE PATIENT
+# =========================================================
+
+def _get_or_create_public_patient(
+    db: Session,
+    public_data: PublicAppointmentCreate,
+    tenant_id: int,
+) -> Patient:
+
+    phone = public_data.phone.strip()
+
+    patient = _find_patient_by_phone(
+        db=db,
+        tenant_id=tenant_id,
+        phone=phone,
+    )
+
+    # -----------------------------------------------------
+    # EXISTING PATIENT
+    # -----------------------------------------------------
+
+    if patient is not None:
+        return patient
+
+    # -----------------------------------------------------
+    # NEW PATIENT
+    # -----------------------------------------------------
+
+    first_name, last_name = _split_full_name(
+        public_data.full_name
+    )
+
+    patient_data = PatientCreate(
+        first_name=first_name,
+        last_name=last_name,
+        gender=public_data.gender,
+        date_of_birth=public_data.date_of_birth,
+        phone=phone,
+        email=public_data.email,
+    )
+
+    return create_patient_service(
+        db=db,
+        patient_data=patient_data,
+        tenant_id=tenant_id,
+    )
+
+
+# =========================================================
+# PUBLIC WEBSITE
+# CREATE APPOINTMENT
+# =========================================================
+
+def create_public_appointment_service(
+    db: Session,
+    appointment_data: PublicAppointmentCreate,
+    tenant_id: int,
+) -> Appointment:
+
+    # -----------------------------------------------------
+    # FIND OR CREATE PATIENT
+    # -----------------------------------------------------
+
+    patient = _get_or_create_public_patient(
+        db=db,
+        public_data=appointment_data,
+        tenant_id=tenant_id,
+    )
+
+    # -----------------------------------------------------
+    # BUILD NORMAL APPOINTMENT DATA
+    # -----------------------------------------------------
+    #
+    # IMPORTANT:
+    # source is NOT accepted from the frontend.
+    # It is always controlled by the backend.
+    #
+
+    normal_appointment_data = AppointmentCreate(
+        patient_id=patient.id,
+        appointment_date=appointment_data.appointment_date,
+        appointment_time=appointment_data.appointment_time,
+        duration_minutes=appointment_data.duration_minutes,
+        source=AppointmentSource.WEBSITE,
+        is_follow_up=None,
+        reason=appointment_data.message,
+        notes=None,
+    )
+
+    # -----------------------------------------------------
+    # REUSE EXISTING APPOINTMENT BUSINESS LOGIC
+    # -----------------------------------------------------
+
+    appointment = create_appointment_service(
+        db=db,
+        appointment_data=normal_appointment_data,
+        current_user=None,
+        tenant_id=tenant_id,
+    )
+
+    return appointment
+
+
+# =========================================================
 # GET
 # =========================================================
 
@@ -400,6 +583,7 @@ def get_appointment_service(
     current_user: User,
     tenant_id: int,
 ) -> Appointment:
+
     appointment = get_appointment_by_id(
         db=db,
         appointment_id=appointment_id,
@@ -432,6 +616,7 @@ def list_appointments_service(
     current_user: User,
     tenant_id: int,
 ) -> list[Appointment]:
+
     appointments = get_appointments(
         db=db,
         tenant_id=tenant_id,
@@ -454,6 +639,7 @@ def update_appointment_service(
     current_user: User,
     tenant_id: int,
 ) -> Appointment:
+
     appointment = get_appointment_by_id(
         db=db,
         appointment_id=appointment_id,
@@ -476,10 +662,11 @@ def update_appointment_service(
     )
 
     # -----------------------------------------------------
-    # STATUS UPDATE
+    # STATUS
     # -----------------------------------------------------
 
     if "status" in update_data:
+
         new_status = update_data["status"]
 
         _validate_status_change(
@@ -521,20 +708,11 @@ def update_appointment_service(
         appointment.duration_minutes,
     )
 
-    # Only validate future date/time when the appointment
-    # date or time is actually being changed.
-    #
-    # This allows an old appointment to be marked:
-    #   - NO_SHOW
-    #   - CANCELLED
-    #   - COMPLETED
-    #
-    # without triggering the future-date validation.
-
     if (
         "appointment_date" in update_data
         or "appointment_time" in update_data
     ):
+
         _validate_future_datetime(
             appointment_date,
             appointment_time,
@@ -548,13 +726,13 @@ def update_appointment_service(
     # OVERLAP
     # -----------------------------------------------------
 
-    # Only check overlap when scheduling information changes.
     if (
         "appointment_date" in update_data
         or "appointment_time" in update_data
         or "duration_minutes" in update_data
         or "patient_id" in update_data
     ):
+
         _check_overlap(
             db=db,
             tenant_id=tenant_id,
@@ -573,6 +751,7 @@ def update_appointment_service(
         or "appointment_date" in update_data
         or "is_follow_up" in update_data
     ):
+
         requested_follow_up = update_data.get(
             "is_follow_up",
             appointment.is_follow_up,
@@ -617,6 +796,7 @@ def delete_appointment_service(
     current_user: User,
     tenant_id: int,
 ) -> None:
+
     appointment = get_appointment_by_id(
         db=db,
         appointment_id=appointment_id,
