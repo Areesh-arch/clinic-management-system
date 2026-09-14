@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from "react";
 
 import Layout from "../../components/layout/Layout";
@@ -9,8 +8,12 @@ import MedicineSearch from "../../components/inventory/MedicineSearch";
 import MedicineFilters from "../../components/inventory/MedicineFilters";
 import MedicineTable from "../../components/inventory/MedicineTable";
 import MedicineModal from "../../components/inventory/MedicineModal";
+
 import MedicineLogTable from "../../components/inventory/MedicineLogTable";
 import MedicineLogModal from "../../components/inventory/MedicineLogModal";
+
+import MedicineIssueSlip from "../../components/inventory/MedicineIssueSlip";
+import MedicineEditModal from "../../components/inventory/MedicineEditModal";
 
 import {
   getInventory,
@@ -19,45 +22,51 @@ import {
   deleteInventory,
 } from "../../services/inventoryService";
 
-import {
-  getMedicineLog,
-} from "../../services/medicineLogService";
+import { getMedicineLog } from "../../services/medicineLogService";
 
+import {
+  deletePrescriptionItem,
+} from "../../services/prescriptionService";
 
 export default function Inventory() {
-  const [activeTab, setActiveTab] =
-    useState("stock");
+  const [activeTab, setActiveTab] = useState("stock");
 
-  const [medicines, setMedicines] =
-    useState([]);
+  const [medicines, setMedicines] = useState([]);
+  const [medicineLog, setMedicineLog] = useState([]);
 
-  const [medicineLog, setMedicineLog] =
-    useState([]);
+  const [loading, setLoading] = useState(true);
+  const [logLoading, setLogLoading] = useState(false);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [error, setError] = useState("");
+  const [logError, setLogError] = useState("");
 
-  const [logLoading, setLogLoading] =
-    useState(false);
-
-  const [error, setError] =
-    useState("");
-
-  const [logError, setLogError] =
-    useState("");
-
-  const [showModal, setShowModal] =
-    useState(false);
-
+  const [showModal, setShowModal] = useState(false);
+  const [medicineToEdit, setMedicineToEdit] = useState(null);
   const [showMedicineLogModal, setShowMedicineLogModal] =
     useState(false);
 
-  const [searchTerm, setSearchTerm] =
-    useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [stockFilter, setStockFilter] = useState("all");
 
-  const [stockFilter, setStockFilter] =
-    useState("all");
+  // =========================================================
+  // DELETE CONFIRMATION
+  // =========================================================
 
+  const [medicineToDelete, setMedicineToDelete] = useState(null);
+  const [deletingMedicine, setDeletingMedicine] = useState(false);
+
+  const [logItemToDelete, setLogItemToDelete] = useState(null);
+  const [deletingLogItem, setDeletingLogItem] = useState(false);
+
+  // =========================================================
+  // MEDICINE LOG ACTIONS
+  // =========================================================
+
+  const [selectedMedicineSlip, setSelectedMedicineSlip] =
+    useState(null);
+
+  const [editingMedicineLog, setEditingMedicineLog] =
+    useState(null);
 
   // =========================================================
   // LOAD INVENTORY
@@ -89,7 +98,6 @@ export default function Inventory() {
       setLoading(false);
     }
   };
-
 
   // =========================================================
   // LOAD MEDICINE LOG
@@ -123,7 +131,6 @@ export default function Inventory() {
     }
   };
 
-
   // =========================================================
   // INITIAL LOAD
   // =========================================================
@@ -131,7 +138,6 @@ export default function Inventory() {
   useEffect(() => {
     fetchInventory();
   }, []);
-
 
   // =========================================================
   // LOAD LOG WHEN TAB OPENS
@@ -142,7 +148,6 @@ export default function Inventory() {
       fetchMedicineLog();
     }
   }, [activeTab]);
-
 
   // =========================================================
   // CREATE INVENTORY MEDICINE
@@ -181,10 +186,16 @@ export default function Inventory() {
       }
     };
 
-
   // =========================================================
-  // UPDATE
+  // UPDATE INVENTORY
   // =========================================================
+  const handleMedicineEditRequest = (
+  medicineId,
+  medicine
+) => {
+  setMedicineToEdit(medicine);
+  setShowModal(true);
+};
 
   const handleMedicineUpdated =
     async (
@@ -222,27 +233,43 @@ export default function Inventory() {
       }
     };
 
+  // =========================================================
+  // REQUEST INVENTORY DELETE
+  // =========================================================
+
+  const handleMedicineDeleteRequest =
+    (medicine) => {
+      setMedicineToDelete(medicine);
+    };
 
   // =========================================================
-  // DELETE
+  // CONFIRM INVENTORY DELETE
   // =========================================================
 
   const handleMedicineDeleted =
-    async (medicineId) => {
+    async () => {
+      if (!medicineToDelete?.id) {
+        return;
+      }
+
       try {
+        setDeletingMedicine(true);
         setError("");
 
         await deleteInventory(
-          medicineId
+          medicineToDelete.id
         );
 
         setMedicines(
           (previous) =>
             previous.filter(
               (medicine) =>
-                medicine.id !== medicineId
+                medicine.id !==
+                medicineToDelete.id
             )
         );
+
+        setMedicineToDelete(null);
       } catch (err) {
         console.error(
           "Failed to delete inventory:",
@@ -253,9 +280,10 @@ export default function Inventory() {
           err?.message ||
             "Failed to delete inventory item."
         );
+      } finally {
+        setDeletingMedicine(false);
       }
     };
-
 
   // =========================================================
   // FILTER STOCK
@@ -334,7 +362,6 @@ export default function Inventory() {
       stockFilter,
     ]);
 
-
   // =========================================================
   // REFRESH INVENTORY
   // =========================================================
@@ -344,22 +371,85 @@ export default function Inventory() {
       await fetchInventory();
     };
 
-
   // =========================================================
   // MEDICINE ISSUED SUCCESSFULLY
   // =========================================================
 
   const handleMedicineIssued =
     async () => {
-      /*
-       * Refresh both:
-       *
-       * 1. Inventory stock
-       * 2. Medicine Log
-       *
-       * because issuing medicine decreases
-       * stock and creates a log record.
-       */
+      await Promise.all([
+        fetchInventory(),
+        fetchMedicineLog(),
+      ]);
+    };
+
+  // =========================================================
+  // REQUEST MEDICINE LOG DELETE
+  // =========================================================
+
+  const handleLogDeleteRequest =
+    (record) => {
+      setLogItemToDelete(record);
+    };
+
+  // =========================================================
+  // CONFIRM MEDICINE LOG DELETE
+  // =========================================================
+
+  const handleLogDelete =
+    async () => {
+      if (
+        !logItemToDelete
+          ?.prescription_item_id
+      ) {
+        return;
+      }
+
+      try {
+        setDeletingLogItem(true);
+        setLogError("");
+
+        await deletePrescriptionItem(
+          logItemToDelete.prescription_item_id
+        );
+
+        setLogItemToDelete(null);
+
+        await Promise.all([
+          fetchInventory(),
+          fetchMedicineLog(),
+        ]);
+      } catch (err) {
+        console.error(
+          "Failed to delete medicine log item:",
+          err
+        );
+
+        setLogError(
+          err?.message ||
+            "Failed to delete medicine record."
+        );
+      } finally {
+        setDeletingLogItem(false);
+      }
+    };
+
+  // =========================================================
+  // OPEN EDIT MEDICINE
+  // =========================================================
+
+  const handleEditMedicineLog =
+    (record) => {
+      setEditingMedicineLog(record);
+    };
+
+  // =========================================================
+  // EDIT SUCCESS
+  // =========================================================
+
+  const handleMedicineLogEdited =
+    async () => {
+      setEditingMedicineLog(null);
 
       await Promise.all([
         fetchInventory(),
@@ -367,6 +457,16 @@ export default function Inventory() {
       ]);
     };
 
+  // =========================================================
+  // OPEN MEDICINE SLIP
+  // =========================================================
+
+  const handleOpenMedicineSlip =
+    (record) => {
+      setSelectedMedicineSlip(
+        record
+      );
+    };
 
   return (
     <Layout>
@@ -377,18 +477,17 @@ export default function Inventory() {
         {/* ================================================= */}
 
         <MedicineHeader
-          onAddMedicine={() =>
-            setShowModal(true)
-          }
+          onAddMedicine={() =>{
+            setMedicineToEdit(null);
+            setShowModal(true);
+          }}
         />
-
 
         {/* ================================================= */}
         {/* TABS */}
         {/* ================================================= */}
 
         <div className="rounded-2xl border border-[#E7E1D5] bg-[#FFFDF8] p-2 shadow-[0_4px_20px_rgba(23,60,50,0.04)]">
-
           <div className="grid grid-cols-2 gap-2">
 
             {/* STOCK */}
@@ -411,7 +510,6 @@ export default function Inventory() {
               Clinic Stock
             </button>
 
-
             {/* MEDICINE LOG */}
 
             <button
@@ -431,10 +529,8 @@ export default function Inventory() {
             >
               Medicine Log
             </button>
-
           </div>
         </div>
-
 
         {/* ================================================= */}
         {/* CLINIC STOCK */}
@@ -447,9 +543,7 @@ export default function Inventory() {
               loading={loading}
             />
 
-
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-
               <div className="w-full md:flex-1">
                 <MedicineSearch
                   searchTerm={searchTerm}
@@ -469,15 +563,12 @@ export default function Inventory() {
                   }
                 />
               </div>
-
             </div>
-
 
             {(searchTerm ||
               stockFilter !==
                 "all") && (
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-
                 <p className="text-sm text-[#718078]">
                   Showing{" "}
                   <span className="font-semibold text-[#173C32]">
@@ -492,7 +583,6 @@ export default function Inventory() {
                   medicines
                 </p>
 
-
                 <button
                   type="button"
                   onClick={() => {
@@ -505,14 +595,11 @@ export default function Inventory() {
                 >
                   Clear filters
                 </button>
-
               </div>
             )}
 
-
             {error && (
               <div className="flex flex-col gap-3 rounded-xl border border-[#E4CAC5] bg-[#F8ECE9] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-
                 <p className="text-sm font-medium text-[#8B554D]">
                   {error}
                 </p>
@@ -526,10 +613,8 @@ export default function Inventory() {
                 >
                   Retry
                 </button>
-
               </div>
             )}
-
 
             <MedicineTable
               medicines={
@@ -537,15 +622,14 @@ export default function Inventory() {
               }
               loading={loading}
               onUpdate={
-                handleMedicineUpdated
+                handleMedicineEditRequest
               }
               onDelete={
-                handleMedicineDeleted
+                handleMedicineDeleteRequest
               }
             />
           </>
         )}
-
 
         {/* ================================================= */}
         {/* MEDICINE LOG */}
@@ -553,14 +637,11 @@ export default function Inventory() {
 
         {activeTab === "log" && (
           <>
-
             {/* LOG HEADER */}
 
             <div className="flex flex-col gap-4 rounded-2xl border border-[#E7E1D5] bg-[#FFFDF8] p-5 shadow-[0_4px_20px_rgba(23,60,50,0.04)] sm:flex-row sm:items-center sm:justify-between sm:p-6">
-
               <div>
                 <div className="flex items-center gap-3">
-
                   <div className="h-9 w-1 rounded-full bg-[#B4935A]" />
 
                   <div>
@@ -572,17 +653,15 @@ export default function Inventory() {
                       Track medicines issued to patients.
                     </p>
                   </div>
-
                 </div>
               </div>
-
-
-              {/* ISSUE MEDICINE */}
 
               <button
                 type="button"
                 onClick={() =>
-                  setShowMedicineLogModal(true)
+                  setShowMedicineLogModal(
+                    true
+                  )
                 }
                 className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#173C32] px-5 py-3 text-sm font-semibold text-white shadow-[0_5px_16px_rgba(23,60,50,0.14)] transition-all hover:bg-[#245346] hover:shadow-[0_7px_20px_rgba(23,60,50,0.18)] sm:w-auto"
               >
@@ -592,15 +671,12 @@ export default function Inventory() {
 
                 Issue Medicine
               </button>
-
             </div>
-
 
             {/* LOG ERROR */}
 
             {logError && (
               <div className="flex flex-col gap-3 rounded-xl border border-[#E4CAC5] bg-[#F8ECE9] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-
                 <p className="text-sm font-medium text-[#8B554D]">
                   {logError}
                 </p>
@@ -614,43 +690,46 @@ export default function Inventory() {
                 >
                   Retry
                 </button>
-
               </div>
             )}
-
 
             {/* LOG TABLE */}
 
             <MedicineLogTable
-              records={
-                medicineLog
+              records={medicineLog}
+              loading={logLoading}
+              onSlip={
+                handleOpenMedicineSlip
               }
-              loading={
-                logLoading
+              onEdit={
+                handleEditMedicineLog
+              }
+              onDelete={
+                handleLogDeleteRequest
               }
             />
-
           </>
         )}
-
       </div>
-
 
       {/* ================================================= */}
       {/* ADD MEDICINE MODAL */}
       {/* ================================================= */}
 
       {showModal && (
-        <MedicineModal
-          onClose={() =>
-            setShowModal(false)
-          }
-          onSave={
-            handleMedicineAdded
-          }
-        />
-      )}
-
+  <MedicineModal
+    medicine={medicineToEdit}
+    onClose={() => {
+      setShowModal(false);
+      setMedicineToEdit(null);
+    }}
+    onSave={
+      medicineToEdit
+        ? handleMedicineUpdated
+        : handleMedicineAdded
+    }
+  />
+)}
 
       {/* ================================================= */}
       {/* ISSUE MEDICINE MODAL */}
@@ -659,7 +738,9 @@ export default function Inventory() {
       {showMedicineLogModal && (
         <MedicineLogModal
           onClose={() =>
-            setShowMedicineLogModal(false)
+            setShowMedicineLogModal(
+              false
+            )
           }
           onSuccess={
             handleMedicineIssued
@@ -667,6 +748,181 @@ export default function Inventory() {
         />
       )}
 
+      {/* ================================================= */}
+      {/* INVENTORY DELETE CONFIRMATION */}
+      {/* ================================================= */}
+
+      {medicineToDelete && (
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-[#173C32]/50 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-[#E7E1D5] bg-[#FFFDF8] shadow-2xl">
+
+            <div className="border-b border-[#E7E1D5] px-6 py-5">
+              <h3 className="text-lg font-bold text-[#173C32]">
+                Delete medicine?
+              </h3>
+
+              <p className="mt-1 text-sm text-[#718078]">
+                This action will permanently remove this
+                medicine from clinic stock.
+              </p>
+            </div>
+
+            <div className="px-6 py-5">
+              <div className="rounded-xl border border-[#E7E1D5] bg-[#F7F4EC] px-4 py-3">
+                <p className="text-sm font-semibold text-[#173C32]">
+                  {medicineToDelete.name}
+                </p>
+
+                {medicineToDelete.brand && (
+                  <p className="mt-1 text-xs text-[#718078]">
+                    {medicineToDelete.brand}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-col-reverse gap-3 border-t border-[#E7E1D5] px-6 py-4 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() =>
+                  setMedicineToDelete(null)
+                }
+                disabled={
+                  deletingMedicine
+                }
+                className="rounded-xl border border-[#D9D4C9] px-5 py-2.5 text-sm font-semibold text-[#52635B] transition-colors hover:bg-[#F3F0E8] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={
+                  handleMedicineDeleted
+                }
+                disabled={
+                  deletingMedicine
+                }
+                className="rounded-xl bg-[#9B4E45] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#843F37] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {deletingMedicine
+                  ? "Deleting..."
+                  : "Yes, Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================================================= */}
+      {/* MEDICINE LOG DELETE CONFIRMATION */}
+      {/* ================================================= */}
+
+      {logItemToDelete && (
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-[#173C32]/50 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-[#E7E1D5] bg-[#FFFDF8] shadow-2xl">
+
+            <div className="border-b border-[#E7E1D5] px-6 py-5">
+              <h3 className="text-lg font-bold text-[#173C32]">
+                Delete medicine record?
+              </h3>
+
+              <p className="mt-1 text-sm leading-6 text-[#718078]">
+                The issued quantity will be restored to inventory
+                and this medicine record will be removed.
+              </p>
+            </div>
+
+            <div className="px-6 py-5">
+              <div className="rounded-xl border border-[#E7E1D5] bg-[#F7F4EC] px-4 py-3">
+                <p className="text-sm font-semibold text-[#173C32]">
+                  {logItemToDelete.medicine_name}
+                </p>
+
+                <p className="mt-1 text-xs text-[#718078]">
+                  {logItemToDelete.patient_name}{" "}
+                  {logItemToDelete.medical_record_number
+                    ? `• ${logItemToDelete.medical_record_number}`
+                    : ""}
+                </p>
+
+                <p className="mt-1 text-xs text-[#718078]">
+                  Quantity:{" "}
+                  {logItemToDelete.quantity}{" "}
+                  {logItemToDelete.medicine_unit || ""}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col-reverse gap-3 border-t border-[#E7E1D5] px-6 py-4 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() =>
+                  setLogItemToDelete(null)
+                }
+                disabled={
+                  deletingLogItem
+                }
+                className="rounded-xl border border-[#D9D4C9] px-5 py-2.5 text-sm font-semibold text-[#52635B] transition-colors hover:bg-[#F3F0E8] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={
+                  handleLogDelete
+                }
+                disabled={
+                  deletingLogItem
+                }
+                className="rounded-xl bg-[#9B4E45] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#843F37] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {deletingLogItem
+                  ? "Deleting..."
+                  : "Yes, Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================================================= */}
+      {/* MEDICINE EDIT MODAL */}
+      {/* ================================================= */}
+
+      {editingMedicineLog && (
+        <MedicineEditModal
+          record={
+            editingMedicineLog
+          }
+          onClose={() =>
+            setEditingMedicineLog(
+              null
+            )
+          }
+          onSuccess={
+            handleMedicineLogEdited
+          }
+        />
+      )}
+
+      {/* ================================================= */}
+      {/* MEDICINE ISSUE SLIP */}
+      {/* ================================================= */}
+
+      {selectedMedicineSlip && (
+        <MedicineIssueSlip
+          record={
+            selectedMedicineSlip
+          }
+          onClose={() =>
+            setSelectedMedicineSlip(
+              null
+            )
+          }
+        />
+      )}
     </Layout>
   );
 }

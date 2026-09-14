@@ -51,10 +51,7 @@ export default function MedicineTable({
 
           <p className="mt-1 text-sm text-[#818B85]">
             {medicines.length}{" "}
-            {medicines.length === 1
-              ? "medicine"
-              : "medicines"}{" "}
-            displayed
+            {medicines.length === 1 ? "medicine" : "medicines"} displayed
           </p>
         </div>
 
@@ -65,7 +62,7 @@ export default function MedicineTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[850px]">
+        <table className="w-full min-w-225">
           <thead>
             <tr className="bg-[#F6F3EB] border-b border-[#E7E1D5]">
               <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-[#718078]">
@@ -100,21 +97,15 @@ export default function MedicineTable({
 
           <tbody className="divide-y divide-[#ECE7DD]">
             {medicines.map((medicine) => {
-              const quantity = Number(
-                medicine.quantity
-              );
-
-              const minimumStock = Number(
-                medicine.minimum_stock
-              );
+              const quantity = Number(medicine.quantity) || 0;
+              const minimumStock =
+                Number(medicine.minimum_stock) || 0;
 
               let status = "In Stock";
 
               if (quantity === 0) {
                 status = "Out of Stock";
-              } else if (
-                quantity <= minimumStock
-              ) {
+              } else if (quantity <= minimumStock) {
                 status = "Low Stock";
               }
 
@@ -138,7 +129,7 @@ export default function MedicineTable({
                   </td>
 
                   <td className="px-6 py-4 text-sm text-[#52645B]">
-                    {medicine.category}
+                    {medicine.category || "—"}
                   </td>
 
                   <td className="px-6 py-4">
@@ -152,8 +143,7 @@ export default function MedicineTable({
                       </span>
 
                       <p className="mt-0.5 text-[11px] text-[#9A9F9B]">
-                        Min:{" "}
-                        {medicine.minimum_stock}
+                        Min: {medicine.minimum_stock}
                       </p>
                     </div>
                   </td>
@@ -161,14 +151,14 @@ export default function MedicineTable({
                   <td className="px-6 py-4 text-sm font-medium text-[#52645B]">
                     Rs.{" "}
                     {Number(
-                      medicine.purchase_price
+                      medicine.purchase_price || 0
                     ).toLocaleString()}
                   </td>
 
                   <td className="px-6 py-4 text-sm font-semibold text-[#29483D]">
                     Rs.{" "}
                     {Number(
-                      medicine.selling_price
+                      medicine.selling_price || 0
                     ).toLocaleString()}
                   </td>
 
@@ -178,6 +168,7 @@ export default function MedicineTable({
 
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-end gap-2">
+                      {/* EDIT */}
                       <button
                         type="button"
                         onClick={() =>
@@ -186,17 +177,18 @@ export default function MedicineTable({
                             medicine
                           )
                         }
-                        className="px-3 py-1.5 rounded-lg text-xs font-medium text-[#496C59] hover:bg-[#E3EEE6] transition-colors"
+                        className="px-3 py-1.5 rounded-lg text-xs font-medium text-[#496C59] border border-transparent hover:border-[#C9DECF] hover:bg-[#E3EEE6] transition-all"
                       >
                         Edit
                       </button>
 
+                      {/* DELETE */}
                       <button
                         type="button"
                         onClick={() =>
-                          onDelete?.(medicine.id)
+                          onDelete?.(medicine)
                         }
-                        className="px-3 py-1.5 rounded-lg text-xs font-medium text-[#8C5D55] hover:bg-[#F4E7E4] transition-colors"
+                        className="px-3 py-1.5 rounded-lg text-xs font-medium text-[#8C5D55] border border-transparent hover:border-[#E4CAC5] hover:bg-[#F4E7E4] transition-all"
                       >
                         Delete
                       </button>
@@ -215,7 +207,7 @@ export default function MedicineTable({
 function StatusBadge({ status }) {
   const styles = {
     "In Stock":
-      "bg-[#E5F0E8] text-[#416B51] border-[#C9DECf]",
+      "bg-[#E5F0E8] text-[#416B51] border-[#C9DECF]",
 
     "Low Stock":
       "bg-[#F6EDDC] text-[#947039] border-[#E8D6AE]",
@@ -232,10 +224,14 @@ function StatusBadge({ status }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold ${styles[status]}`}
+      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold ${
+        styles[status]
+      }`}
     >
       <span
-        className={`w-1.5 h-1.5 rounded-full ${dots[status]}`}
+        className={`w-1.5 h-1.5 rounded-full ${
+          dots[status]
+        }`}
       />
 
       {status}
