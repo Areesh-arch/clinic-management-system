@@ -25,6 +25,7 @@ from app.models.mixins import (
 
 if TYPE_CHECKING:
     from app.models.tenant import Tenant
+    from app.models.prescription_item import PrescriptionItem
 
 
 class InventoryItem(Base, IDMixin, TimestampMixin):
@@ -86,4 +87,9 @@ class InventoryItem(Base, IDMixin, TimestampMixin):
     tenant: Mapped["Tenant"] = relationship(
         "Tenant",
         back_populates="inventory_items",
+    )
+    
+    prescription_items: Mapped[list["PrescriptionItem"]] = relationship(
+        "PrescriptionItem",
+        back_populates="inventory_item",
     )

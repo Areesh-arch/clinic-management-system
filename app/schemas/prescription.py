@@ -1,14 +1,19 @@
 from datetime import datetime
+from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
+
+# =========================================================
+# PRESCRIPTION ITEM
+# =========================================================
 
 class PrescriptionItemBase(BaseModel):
-    medicine_name: str
+    inventory_item_id: int
     dosage: str
     frequency: str
     duration: str
-    quantity: int
+    quantity: int = Field(gt=0)
     notes: str | None = None
 
 
@@ -16,13 +21,33 @@ class PrescriptionItemCreate(PrescriptionItemBase):
     pass
 
 
-class PrescriptionItemResponse(PrescriptionItemBase):
+class PrescriptionItemResponse(BaseModel):
     id: int
+
+    prescription_id: int
+
+    inventory_item_id: int | None = None
+
+    medicine_name: str
+
+    dosage: str
+    frequency: str
+    duration: str
+    quantity: int
+
+    unit_price: Decimal | None = None
+    total_amount: Decimal | None = None
+
+    notes: str | None = None
 
     model_config = ConfigDict(
         from_attributes=True,
     )
 
+
+# =========================================================
+# PRESCRIPTION
+# =========================================================
 
 class PrescriptionBase(BaseModel):
     visit_id: int

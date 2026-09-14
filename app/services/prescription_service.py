@@ -8,7 +8,9 @@ from app.crud.prescription import (
     delete_prescription,
 )
 
+from app.models.inventory_item import InventoryItem
 from app.models.prescription import Prescription
+from app.models.prescription_item import PrescriptionItem
 from app.models.visit import Visit
 
 from app.schemas.prescription import (
@@ -18,7 +20,7 @@ from app.schemas.prescription import (
 
 
 # =========================================================
-# CREATE PRESCRIPTION
+# CREATE PRESCRIPTION + ISSUE MEDICINES
 # =========================================================
 
 def create_prescription_service(
@@ -27,12 +29,17 @@ def create_prescription_service(
     tenant_id: int,
 ):
     """
-    Create a prescription after validating:
+    Create a prescription and issue medicines from inventory.
 
-    - Visit exists
-    - Visit belongs to current tenant
-    - Prescription doesn't already exist for the visit
+    Everything happens inside one database transaction.
+
+    If any medicine fails validation or stock is insufficient,
+    nothing is committed.
     """
+
+    # -----------------------------------------------------
+    # VALIDATE VISIT
+    # -----------------------------------------------------
 
     visit = (
         db.query(Visit)
@@ -46,16 +53,103 @@ def create_prescription_service(
     if visit is None:
         raise ValueError("Visit not found.")
 
+    # -----------------------------------------------------
+    # PREVENT DUPLICATE PRESCRIPTION
+    # -----------------------------------------------------
+
     if visit.prescription:
         raise ValueError(
             "Prescription already exists for this visit."
         )
 
-    return create_prescription(
+    # -----------------------------------------------------
+    # CREATE PRESCRIPTION
+    # -----------------------------------------------------
+
+    prescription = create_prescription(
         db=db,
         prescription_data=prescription_data,
         tenant_id=tenant_id,
     )
+
+    # -----------------------------------------------------
+    # PROCESS EACH MEDICINE
+    # -----------------------------------------------------
+
+    for item_data in prescription_data.items:
+
+        inventory_item = (
+            db.query(InventoryItem)
+            .filter(
+                InventoryItem.id
+                == item_data.inventory_item_id,
+                InventoryItem.tenant_id
+                == tenant_id,
+            )
+            .with_for_update()
+            .first()
+        )
+
+        if inventory_item is None:
+            raise ValueError(
+                "Selected medicine was not found in inventory."
+            )
+
+        # -------------------------------------------------
+        # STOCK VALIDATION
+        # -------------------------------------------------
+
+        if inventory_item.quantity < item_data.quantity:
+            raise ValueError(
+                f"Insufficient stock for "
+                f"'{inventory_item.name}'. "
+                f"Available: {inventory_item.quantity}, "
+                f"requested: {item_data.quantity}."
+            )
+
+        # -------------------------------------------------
+        # PRICE SNAPSHOT
+        # -------------------------------------------------
+
+        unit_price = inventory_item.selling_price
+
+        total_amount = (
+            unit_price * item_data.quantity
+        )
+
+        # -------------------------------------------------
+        # CREATE PRESCRIPTION ITEM
+        # -------------------------------------------------
+
+        prescription_item = PrescriptionItem(
+            prescription_id=prescription.id,
+            inventory_item_id=inventory_item.id,
+            medicine_name=inventory_item.name,
+            unit_price=unit_price,
+            total_amount=total_amount,
+            dosage=item_data.dosage,
+            frequency=item_data.frequency,
+            duration=item_data.duration,
+            quantity=item_data.quantity,
+            notes=item_data.notes,
+        )
+
+        db.add(prescription_item)
+
+        # -------------------------------------------------
+        # REDUCE INVENTORY
+        # -------------------------------------------------
+
+        inventory_item.quantity -= item_data.quantity
+
+    # -----------------------------------------------------
+    # COMMIT EVERYTHING TOGETHER
+    # -----------------------------------------------------
+
+    db.commit()
+    db.refresh(prescription)
+
+    return prescription
 
 
 # =========================================================
@@ -67,10 +161,6 @@ def get_prescription_service(
     prescription_id: int,
     tenant_id: int,
 ):
-    """
-    Get a prescription only if it belongs to
-    the current user's tenant.
-    """
 
     prescription = get_prescription_by_id(
         db=db,
@@ -94,10 +184,6 @@ def list_prescriptions_service(
     db: Session,
     tenant_id: int,
 ):
-    """
-    Return prescriptions belonging only
-    to the current tenant.
-    """
 
     return get_prescriptions(
         db=db,
@@ -114,6 +200,7 @@ def update_prescription_service(
     prescription: Prescription,
     prescription_data: PrescriptionUpdate,
 ):
+
     return update_prescription(
         db=db,
         prescription=prescription,
@@ -129,6 +216,7 @@ def delete_prescription_service(
     db: Session,
     prescription: Prescription,
 ):
+
     delete_prescription(
         db=db,
         prescription=prescription,

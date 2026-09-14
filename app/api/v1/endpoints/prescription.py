@@ -1,3 +1,4 @@
+
 from fastapi import (
     APIRouter,
     Depends,
@@ -28,8 +29,18 @@ from app.services.prescription_service import (
 )
 
 
+# =========================================================
+# ROUTER
+# =========================================================
+#
+# The /prescriptions prefix is already defined in:
+#
+# app/api/v1/routes.py
+#
+# Therefore DO NOT add another prefix here.
+#
+
 router = APIRouter(
-    prefix="/prescriptions",
     tags=["Prescriptions"],
 )
 

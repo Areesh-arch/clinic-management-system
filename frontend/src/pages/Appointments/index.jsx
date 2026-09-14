@@ -2,6 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useSearchParams } from "react-router-dom";
 
+import {
+  FiAlertTriangle,
+  FiTrash2,
+  FiX,
+} from "react-icons/fi";
+
 import Layout from "../../components/layout/Layout";
 
 import AppointmentHeader from "../../components/appointments/AppointmentHeader";
@@ -74,6 +80,15 @@ function Appointments() {
 
   const [selectedAppointment, setSelectedAppointment] =
     useState(null);
+
+  /*
+   * DELETE CONFIRMATION
+   */
+  const [appointmentToDelete, setAppointmentToDelete] =
+    useState(null);
+
+  const [deleting, setDeleting] =
+    useState(false);
 
   const [searchParams, setSearchParams] =
     useSearchParams();
@@ -251,38 +266,68 @@ function Appointments() {
 
 
   // ======================================================
-  // DELETE APPOINTMENT
+  // OPEN DELETE CONFIRMATION
   // ======================================================
 
-  const handleDeleteAppointment = async (
+  const handleDeleteAppointment = (
     appointment
   ) => {
-    const confirmed =
-      window.confirm(
-        `Are you sure you want to delete appointment #${appointment.id}?`
-      );
+    setError("");
 
-    if (!confirmed) {
+    setAppointmentToDelete(
+      appointment
+    );
+  };
+
+
+  // ======================================================
+  // CLOSE DELETE CONFIRMATION
+  // ======================================================
+
+  const closeDeleteConfirmation = () => {
+    if (deleting) {
+      return;
+    }
+
+    setAppointmentToDelete(null);
+  };
+
+
+  // ======================================================
+  // CONFIRM DELETE APPOINTMENT
+  // ======================================================
+
+  const confirmDeleteAppointment = async () => {
+    if (
+      !appointmentToDelete?.id ||
+      deleting
+    ) {
       return;
     }
 
     try {
+      setDeleting(true);
+      setError("");
+
       console.log(
         "Deleting appointment:",
-        appointment
+        appointmentToDelete
       );
 
       await deleteAppointment(
-        appointment.id
+        appointmentToDelete.id
       );
 
       setAppointments(
         (currentAppointments) =>
           currentAppointments.filter(
             (item) =>
-              item.id !== appointment.id
+              item.id !==
+              appointmentToDelete.id
           )
       );
+
+      setAppointmentToDelete(null);
 
     } catch (error) {
       console.error(
@@ -290,10 +335,13 @@ function Appointments() {
         error
       );
 
-      alert(
+      setError(
         error?.message ||
           "Failed to delete appointment."
       );
+
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -382,13 +430,6 @@ function Appointments() {
 
   // ======================================================
   // FILTER APPOINTMENTS FOR CALENDAR
-  //
-  // AppointmentTable already receives the filters
-  // directly.
-  //
-  // Calendar needs its own filtered list because
-  // Calendar does not know about search/status/date
-  // state.
   // ======================================================
 
   const filteredAppointments = useMemo(() => {
@@ -605,14 +646,6 @@ function Appointments() {
 
   // ======================================================
   // HANDLE URL PARAMETERS
-  //
-  // Examples:
-  //
-  // /appointments?new=true
-  //
-  // /appointments?patient_id=20
-  //
-  // /appointments?new=true&patient_id=20
   // ======================================================
 
   useEffect(() => {
@@ -694,6 +727,51 @@ function Appointments() {
 
 
         {/* =================================================
+            ERROR
+        ================================================= */}
+
+        {error && (
+          <div
+            className="
+              flex
+              items-start
+              gap-3
+              rounded-2xl
+              border
+              border-[#E7C7C0]
+              bg-[#FFF7F5]
+              px-5
+              py-4
+              text-sm
+              font-medium
+              text-[#984E42]
+              shadow-sm
+            "
+          >
+            <span
+              className="
+                mt-0.5
+                flex
+                h-5
+                w-5
+                shrink-0
+                items-center
+                justify-center
+                rounded-full
+                bg-[#F4DED9]
+                text-xs
+                font-bold
+              "
+            >
+              !
+            </span>
+
+            <span>{error}</span>
+          </div>
+        )}
+
+
+        {/* =================================================
             TABLE / CALENDAR
         ================================================= */}
 
@@ -749,7 +827,7 @@ function Appointments() {
 
 
       {/* ===================================================
-          MODAL
+          APPOINTMENT MODAL
       =================================================== */}
 
       {showModal && (
@@ -829,6 +907,328 @@ function Appointments() {
 
         </AppointmentModal>
 
+      )}
+
+
+      {/* ===================================================
+          PROFESSIONAL DELETE CONFIRMATION
+      =================================================== */}
+
+      {appointmentToDelete && (
+        <div
+          className="
+            fixed
+            inset-0
+            z-100
+            flex
+            items-center
+            justify-center
+            bg-[#173B32]/55
+            px-4
+            py-6
+            backdrop-blur-sm
+          "
+          onMouseDown={(event) => {
+            if (
+              event.target === event.currentTarget &&
+              !deleting
+            ) {
+              closeDeleteConfirmation();
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-appointment-title"
+            aria-describedby="delete-appointment-description"
+            className="
+              relative
+              w-full
+              max-w-md
+              overflow-hidden
+              rounded-3xl
+              border
+              border-[#E3DED2]
+              bg-[#FFFDF8]
+              shadow-[0_25px_70px_rgba(23,59,50,0.24)]
+            "
+          >
+
+            {/* GOLD TOP LINE */}
+
+            <div
+              className="
+                h-1.5
+                w-full
+                bg-[#B4935A]
+              "
+            />
+
+
+            {/* CLOSE BUTTON */}
+
+            <button
+              type="button"
+              onClick={
+                closeDeleteConfirmation
+              }
+              disabled={
+                deleting
+              }
+              aria-label="Close confirmation"
+              className="
+                absolute
+                right-5
+                top-5
+                flex
+                h-9
+                w-9
+                items-center
+                justify-center
+                rounded-full
+                text-[#78857E]
+                transition
+                hover:bg-[#F2EFE7]
+                hover:text-[#173B32]
+                disabled:cursor-not-allowed
+                disabled:opacity-50
+              "
+            >
+              <FiX size={18} />
+            </button>
+
+
+            {/* CONTENT */}
+
+            <div
+              className="
+                px-6
+                pb-6
+                pt-7
+                sm:px-8
+                sm:pb-8
+              "
+            >
+
+              {/* WARNING ICON */}
+
+              <div
+                className="
+                  flex
+                  h-14
+                  w-14
+                  items-center
+                  justify-center
+                  rounded-2xl
+                  border
+                  border-[#E7CFC9]
+                  bg-[#FBF1EF]
+                  text-[#A15D50]
+                "
+              >
+                <FiAlertTriangle
+                  size={25}
+                  strokeWidth={1.8}
+                />
+              </div>
+
+
+              {/* TITLE */}
+
+              <h2
+                id="delete-appointment-title"
+                className="
+                  mt-5
+                  pr-8
+                  text-xl
+                  font-bold
+                  tracking-tight
+                  text-[#173B32]
+                "
+              >
+                Delete Appointment?
+              </h2>
+
+
+              {/* DESCRIPTION */}
+
+              <p
+                id="delete-appointment-description"
+                className="
+                  mt-2
+                  text-sm
+                  leading-6
+                  text-[#68766E]
+                "
+              >
+                Are you sure you want to permanently
+                delete this appointment? This action
+                cannot be undone.
+              </p>
+
+
+              {/* APPOINTMENT INFO */}
+
+              <div
+                className="
+                  mt-5
+                  rounded-2xl
+                  border
+                  border-[#E4DED1]
+                  bg-[#F8F5ED]
+                  px-4
+                  py-3.5
+                "
+              >
+                <p
+                  className="
+                    text-[10px]
+                    font-bold
+                    uppercase
+                    tracking-[0.15em]
+                    text-[#8A958E]
+                  "
+                >
+                  Appointment record
+                </p>
+
+                <p
+                  className="
+                    mt-1.5
+                    truncate
+                    text-sm
+                    font-semibold
+                    text-[#173B32]
+                  "
+                >
+                  {appointmentToDelete?.patient_name ||
+                    appointmentToDelete?.patient?.full_name ||
+                    appointmentToDelete?.patient?.name ||
+                    "Unknown patient"}
+                </p>
+
+                <p
+                  className="
+                    mt-0.5
+                    truncate
+                    text-xs
+                    text-[#77847D]
+                  "
+                >
+                  Appointment #
+                  {appointmentToDelete?.id}
+                  {appointmentToDelete?.reason
+                    ? ` • ${appointmentToDelete.reason}`
+                    : ""}
+                </p>
+              </div>
+
+
+              {/* ACTIONS */}
+
+              <div
+                className="
+                  mt-7
+                  flex
+                  flex-col-reverse
+                  gap-3
+                  sm:flex-row
+                  sm:justify-end
+                "
+              >
+
+                {/* CANCEL */}
+
+                <button
+                  type="button"
+                  onClick={
+                    closeDeleteConfirmation
+                  }
+                  disabled={
+                    deleting
+                  }
+                  className="
+                    inline-flex
+                    h-11
+                    items-center
+                    justify-center
+                    rounded-xl
+                    border
+                    border-[#D8DED9]
+                    bg-[#F5F7F5]
+                    px-5
+                    text-sm
+                    font-semibold
+                    text-[#36564A]
+                    transition
+                    hover:border-[#B8C8BF]
+                    hover:bg-[#EAF0EC]
+                    disabled:cursor-not-allowed
+                    disabled:opacity-60
+                  "
+                >
+                  Cancel
+                </button>
+
+
+                {/* DELETE */}
+
+                <button
+                  type="button"
+                  onClick={
+                    confirmDeleteAppointment
+                  }
+                  disabled={
+                    deleting
+                  }
+                  className="
+                    inline-flex
+                    h-11
+                    items-center
+                    justify-center
+                    gap-2
+                    rounded-xl
+                    bg-[#9A4E43]
+                    px-5
+                    text-sm
+                    font-semibold
+                    text-white
+                    shadow-[0_5px_14px_rgba(154,78,67,0.18)]
+                    transition
+                    hover:bg-[#863F35]
+                    hover:shadow-[0_7px_18px_rgba(154,78,67,0.24)]
+                    disabled:cursor-not-allowed
+                    disabled:opacity-60
+                  "
+                >
+                  {deleting ? (
+                    <>
+                      <span
+                        className="
+                          h-4
+                          w-4
+                          animate-spin
+                          rounded-full
+                          border-2
+                          border-white/40
+                          border-t-white
+                        "
+                      />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <FiTrash2 size={15} />
+                      Delete Appointment
+                    </>
+                  )}
+                </button>
+
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
     </Layout>

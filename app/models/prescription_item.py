@@ -1,9 +1,14 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from sqlalchemy import (
     Column,
     Integer,
     ForeignKey,
     String,
     Text,
+    Numeric,
 )
 
 from sqlalchemy.orm import relationship
@@ -16,19 +21,71 @@ from app.models.mixins import (
 from app.models.base import Base
 
 
-class PrescriptionItem(Base, IDMixin, TimestampMixin):
+if TYPE_CHECKING:
+    from app.models.prescription import Prescription
+    from app.models.inventory_item import InventoryItem
+
+
+class PrescriptionItem(
+    Base,
+    IDMixin,
+    TimestampMixin,
+):
     __tablename__ = "prescription_items"
+
+    # =========================================================
+    # PRESCRIPTION
+    # =========================================================
 
     prescription_id = Column(
         Integer,
-        ForeignKey("prescriptions.id"),
+        ForeignKey(
+            "prescriptions.id",
+            ondelete="CASCADE",
+        ),
         nullable=False,
     )
+
+    # =========================================================
+    # INVENTORY MEDICINE
+    # =========================================================
+
+    inventory_item_id = Column(
+        Integer,
+        ForeignKey(
+            "inventory_items.id",
+            ondelete="RESTRICT",
+        ),
+        nullable=True,
+        index=True,
+    )
+
+    # =========================================================
+    # MEDICINE SNAPSHOT
+    # =========================================================
 
     medicine_name = Column(
         String(255),
         nullable=False,
     )
+
+    # =========================================================
+    # PRICING SNAPSHOT
+    # =========================================================
+
+    unit_price = Column(
+        Numeric(10, 2),
+        nullable=True,
+    )
+
+    total_amount = Column(
+        Numeric(10, 2),
+        nullable=True,
+    )
+
+    # =========================================================
+    # DOSAGE INFORMATION
+    # =========================================================
 
     dosage = Column(
         String(100),
@@ -55,7 +112,16 @@ class PrescriptionItem(Base, IDMixin, TimestampMixin):
         nullable=True,
     )
 
+    # =========================================================
+    # RELATIONSHIPS
+    # =========================================================
+
     prescription = relationship(
         "Prescription",
         back_populates="items",
+    )
+
+    inventory_item = relationship(
+        "InventoryItem",
+        back_populates="prescription_items",
     )

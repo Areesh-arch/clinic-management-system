@@ -7,6 +7,12 @@ import {
   useSearchParams,
 } from "react-router-dom";
 
+import {
+  FiAlertTriangle,
+  FiTrash2,
+  FiX,
+} from "react-icons/fi";
+
 import Layout from "../../components/layout/Layout";
 
 import TreatmentHeader from "../../components/treatments/TreatmentHeader";
@@ -41,6 +47,20 @@ function Treatments() {
     editingTreatment,
     setEditingTreatment,
   ] = useState(null);
+
+  // =====================================================
+  // DELETE CONFIRMATION
+  // =====================================================
+
+  const [
+    treatmentToDelete,
+    setTreatmentToDelete,
+  ] = useState(null);
+
+  const [
+    deleting,
+    setDeleting,
+  ] = useState(false);
 
   const [
     searchParams,
@@ -368,25 +388,50 @@ function Treatments() {
 
 
   // =====================================================
-  // DELETE
+  // OPEN DELETE CONFIRMATION
   // =====================================================
 
-  const handleDelete = async (treatment) => {
-    const confirmed =
-      window.confirm(
-        "Are you sure you want to delete this treatment?"
-      );
+  const handleDelete = (treatment) => {
+    setError("");
 
-    if (!confirmed) {
+    setTreatmentToDelete(treatment);
+  };
+
+
+  // =====================================================
+  // CLOSE DELETE CONFIRMATION
+  // =====================================================
+
+  const closeDeleteConfirmation = () => {
+    if (deleting) {
+      return;
+    }
+
+    setTreatmentToDelete(null);
+  };
+
+
+  // =====================================================
+  // CONFIRM DELETE
+  // =====================================================
+
+  const confirmDelete = async () => {
+    if (
+      !treatmentToDelete?.id ||
+      deleting
+    ) {
       return;
     }
 
     try {
+      setDeleting(true);
       setError("");
 
       await deleteTreatment(
-        treatment.id
+        treatmentToDelete.id
       );
+
+      setTreatmentToDelete(null);
 
       await loadTreatments();
 
@@ -400,6 +445,9 @@ function Treatments() {
         err?.message ||
         "Failed to delete treatment."
       );
+
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -698,6 +746,297 @@ function Treatments() {
         onSuccess={handleTreatmentSuccess}
         treatment={editingTreatment}
       />
+
+
+      {/* =================================================
+          PROFESSIONAL DELETE CONFIRMATION
+          ================================================= */}
+
+      {treatmentToDelete && (
+        <div
+          className="
+            fixed
+            inset-0
+            z-100
+            flex
+            items-center
+            justify-center
+            bg-[#173B32]/55
+            px-4
+            py-6
+            backdrop-blur-sm
+          "
+          onMouseDown={(event) => {
+            if (
+              event.target === event.currentTarget &&
+              !deleting
+            ) {
+              closeDeleteConfirmation();
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-treatment-title"
+            aria-describedby="delete-treatment-description"
+            className="
+              relative
+              w-full
+              max-w-md
+              overflow-hidden
+              rounded-3xl
+              border
+              border-[#E3DED2]
+              bg-[#FFFDF8]
+              shadow-[0_25px_70px_rgba(23,59,50,0.24)]
+            "
+          >
+
+            {/* GOLD TOP LINE */}
+
+            <div
+              className="
+                h-1.5
+                w-full
+                bg-[#B4935A]
+              "
+            />
+
+
+            {/* CLOSE BUTTON */}
+
+            <button
+              type="button"
+              onClick={closeDeleteConfirmation}
+              disabled={deleting}
+              aria-label="Close confirmation"
+              className="
+                absolute
+                right-5
+                top-5
+                flex
+                h-9
+                w-9
+                items-center
+                justify-center
+                rounded-full
+                text-[#78857E]
+                transition
+                hover:bg-[#F2EFE7]
+                hover:text-[#173B32]
+                disabled:cursor-not-allowed
+                disabled:opacity-50
+              "
+            >
+              <FiX size={18} />
+            </button>
+
+
+            {/* CONTENT */}
+
+            <div className="px-6 pb-6 pt-7 sm:px-8 sm:pb-8">
+
+              {/* WARNING ICON */}
+
+              <div
+                className="
+                  flex
+                  h-14
+                  w-14
+                  items-center
+                  justify-center
+                  rounded-2xl
+                  border
+                  border-[#E7CFC9]
+                  bg-[#FBF1EF]
+                  text-[#A15D50]
+                "
+              >
+                <FiAlertTriangle
+                  size={25}
+                  strokeWidth={1.8}
+                />
+              </div>
+
+
+              {/* TITLE */}
+
+              <h2
+                id="delete-treatment-title"
+                className="
+                  mt-5
+                  pr-8
+                  text-xl
+                  font-bold
+                  tracking-tight
+                  text-[#173B32]
+                "
+              >
+                Delete Treatment?
+              </h2>
+
+
+              {/* DESCRIPTION */}
+
+              <p
+                id="delete-treatment-description"
+                className="
+                  mt-2
+                  text-sm
+                  leading-6
+                  text-[#68766E]
+                "
+              >
+                Are you sure you want to permanently
+                delete this treatment record? This
+                action cannot be undone.
+              </p>
+
+
+              {/* TREATMENT INFO */}
+
+              <div
+                className="
+                  mt-5
+                  rounded-2xl
+                  border
+                  border-[#E4DED1]
+                  bg-[#F8F5ED]
+                  px-4
+                  py-3.5
+                "
+              >
+                <p
+                  className="
+                    text-[10px]
+                    font-bold
+                    uppercase
+                    tracking-[0.15em]
+                    text-[#8A958E]
+                  "
+                >
+                  Treatment record
+                </p>
+
+                <p
+                  className="
+                    mt-1.5
+                    truncate
+                    text-sm
+                    font-semibold
+                    text-[#173B32]
+                  "
+                >
+                  {treatmentToDelete?.patient_name ||
+                    "Unknown patient"}
+                </p>
+
+                <p
+                  className="
+                    mt-0.5
+                    truncate
+                    text-xs
+                    text-[#77847D]
+                  "
+                >
+                  {treatmentToDelete?.treatment ||
+                    treatmentToDelete?.diagnosis ||
+                    "Treatment record"}
+                </p>
+              </div>
+
+
+              {/* ACTIONS */}
+
+              <div
+                className="
+                  mt-7
+                  flex
+                  flex-col-reverse
+                  gap-3
+                  sm:flex-row
+                  sm:justify-end
+                "
+              >
+                <button
+                  type="button"
+                  onClick={closeDeleteConfirmation}
+                  disabled={deleting}
+                  className="
+                    inline-flex
+                    h-11
+                    items-center
+                    justify-center
+                    rounded-xl
+                    border
+                    border-[#D8DED9]
+                    bg-[#F5F7F5]
+                    px-5
+                    text-sm
+                    font-semibold
+                    text-[#36564A]
+                    transition
+                    hover:border-[#B8C8BF]
+                    hover:bg-[#EAF0EC]
+                    disabled:cursor-not-allowed
+                    disabled:opacity-60
+                  "
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={confirmDelete}
+                  disabled={deleting}
+                  className="
+                    inline-flex
+                    h-11
+                    items-center
+                    justify-center
+                    gap-2
+                    rounded-xl
+                    bg-[#9A4E43]
+                    px-5
+                    text-sm
+                    font-semibold
+                    text-white
+                    shadow-[0_5px_14px_rgba(154,78,67,0.18)]
+                    transition
+                    hover:bg-[#863F35]
+                    hover:shadow-[0_7px_18px_rgba(154,78,67,0.24)]
+                    disabled:cursor-not-allowed
+                    disabled:opacity-60
+                  "
+                >
+                  {deleting ? (
+                    <>
+                      <span
+                        className="
+                          h-4
+                          w-4
+                          animate-spin
+                          rounded-full
+                          border-2
+                          border-white/40
+                          border-t-white
+                        "
+                      />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <FiTrash2 size={15} />
+                      Delete Treatment
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

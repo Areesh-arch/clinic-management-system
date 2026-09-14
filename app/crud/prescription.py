@@ -1,8 +1,6 @@
 from sqlalchemy.orm import Session
 
 from app.models.prescription import Prescription
-from app.models.prescription_item import PrescriptionItem
-
 from app.schemas.prescription import (
     PrescriptionCreate,
     PrescriptionUpdate,
@@ -28,23 +26,6 @@ def create_prescription(
     db.add(prescription)
     db.flush()
 
-    for item in prescription_data.items:
-
-        prescription_item = PrescriptionItem(
-            prescription_id=prescription.id,
-            medicine_name=item.medicine_name,
-            dosage=item.dosage,
-            frequency=item.frequency,
-            duration=item.duration,
-            quantity=item.quantity,
-            notes=item.notes,
-        )
-
-        db.add(prescription_item)
-
-    db.commit()
-    db.refresh(prescription)
-
     return prescription
 
 
@@ -57,10 +38,6 @@ def get_prescription_by_id(
     prescription_id: int,
     tenant_id: int,
 ):
-    """
-    Get prescription only from the current tenant.
-    """
-
     return (
         db.query(Prescription)
         .filter(
@@ -72,7 +49,7 @@ def get_prescription_by_id(
 
 
 # =========================================================
-# GET ALL PRESCRIPTIONS FOR TENANT
+# GET ALL PRESCRIPTIONS
 # =========================================================
 
 def get_prescriptions(

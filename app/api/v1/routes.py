@@ -13,6 +13,9 @@ from app.api.v1.endpoints.treatment_photo import router as treatment_photo_route
 from app.api.v1.endpoints.payment import router as payment_router
 from app.api.v1.endpoints.expense import router as expense_router
 from app.api.v1.endpoints.inventory import router as inventory_router
+from app.api.v1.endpoints.medicine_log import (
+    router as medicine_log_router
+)
 from app.api.v1.endpoints.outstanding import router as outstanding_router
 from app.api.v1.endpoints.dashboard import router as dashboard_router
 from app.api.v1.endpoints.lead import router as lead_router
@@ -151,6 +154,15 @@ api_router.include_router(
     tags=["Inventory"],
 )
 
+# =========================================================
+# MEDICINE LOG
+# =========================================================
+
+api_router.include_router(
+    medicine_log_router,
+    prefix="/inventory",
+    tags=["Medicine Log"],
+)
 
 # =========================================================
 # PAYMENTS

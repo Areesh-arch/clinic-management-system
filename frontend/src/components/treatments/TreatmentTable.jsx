@@ -1,5 +1,5 @@
-import TreatmentRow from "./TreatmentRow";
 
+import TreatmentRow from "./TreatmentRow";
 
 function TreatmentTable({
   treatments,
@@ -34,10 +34,9 @@ function TreatmentTable({
         item?.diagnosis ||
         "";
 
-      const searchValue =
-        String(search || "")
-          .toLowerCase()
-          .trim();
+      const searchValue = String(search || "")
+        .toLowerCase()
+        .trim();
 
       const matchesSearch =
         patientName
@@ -50,29 +49,22 @@ function TreatmentTable({
           .toLowerCase()
           .includes(searchValue);
 
-      const normalizedStatus =
-        String(item?.status || "")
-          .trim()
-          .toUpperCase()
-          .replace(/-/g, "_");
+      const normalizedStatus = String(item?.status || "")
+        .trim()
+        .toUpperCase()
+        .replace(/-/g, "_");
 
-      const normalizedFilter =
-        String(status || "All")
-          .trim()
-          .toUpperCase()
-          .replace(/-/g, "_");
+      const normalizedFilter = String(status || "All")
+        .trim()
+        .toUpperCase()
+        .replace(/-/g, "_");
 
       const matchesStatus =
         normalizedFilter === "ALL" ||
-        normalizedStatus ===
-          normalizedFilter;
+        normalizedStatus === normalizedFilter;
 
-      return (
-        matchesSearch &&
-        matchesStatus
-      );
+      return matchesSearch && matchesStatus;
     });
-
 
   return (
     <div
@@ -85,11 +77,9 @@ function TreatmentTable({
         shadow-[0_4px_18px_rgba(23,59,50,0.05)]
       "
     >
-
       {/* =================================================
           TABLE HEADER
           ================================================= */}
-
       <div
         className="
           flex
@@ -123,9 +113,20 @@ function TreatmentTable({
               Treatment Records
             </h3>
 
+            {/* Gold accent line */}
+            <div
+              className="
+                mt-2
+                h-0.5
+                w-16
+                rounded-full
+                bg-[#B4935A]
+              "
+            />
+
             <p
               className="
-                mt-0.5
+                mt-2
                 text-xs
                 text-[#87918C]
               "
@@ -156,11 +157,9 @@ function TreatmentTable({
         </div>
       </div>
 
-
       {/* =================================================
           RESPONSIVE TABLE
           ================================================= */}
-
       <div className="overflow-x-auto">
         <table
           className="
@@ -171,13 +170,15 @@ function TreatmentTable({
         >
           <thead
             className="
-              bg-[#F1F5F2]
+              bg-[#173B32]
             "
           >
             <tr>
               <th
                 className="
                   whitespace-nowrap
+                  border-b
+                  border-[#B4935A]
                   px-6
                   py-4
                   text-left
@@ -185,7 +186,7 @@ function TreatmentTable({
                   font-bold
                   uppercase
                   tracking-[0.12em]
-                  text-[#617169]
+                  text-[#FFFDF8]
                 "
               >
                 Patient
@@ -194,6 +195,8 @@ function TreatmentTable({
               <th
                 className="
                   whitespace-nowrap
+                  border-b
+                  border-[#B4935A]
                   px-5
                   py-4
                   text-left
@@ -201,7 +204,7 @@ function TreatmentTable({
                   font-bold
                   uppercase
                   tracking-[0.12em]
-                  text-[#617169]
+                  text-[#FFFDF8]
                 "
               >
                 Treatment
@@ -210,6 +213,8 @@ function TreatmentTable({
               <th
                 className="
                   whitespace-nowrap
+                  border-b
+                  border-[#B4935A]
                   px-5
                   py-4
                   text-left
@@ -217,7 +222,7 @@ function TreatmentTable({
                   font-bold
                   uppercase
                   tracking-[0.12em]
-                  text-[#617169]
+                  text-[#FFFDF8]
                 "
               >
                 Date
@@ -226,6 +231,8 @@ function TreatmentTable({
               <th
                 className="
                   whitespace-nowrap
+                  border-b
+                  border-[#B4935A]
                   px-5
                   py-4
                   text-left
@@ -233,7 +240,7 @@ function TreatmentTable({
                   font-bold
                   uppercase
                   tracking-[0.12em]
-                  text-[#617169]
+                  text-[#FFFDF8]
                 "
               >
                 Cost
@@ -242,6 +249,8 @@ function TreatmentTable({
               <th
                 className="
                   whitespace-nowrap
+                  border-b
+                  border-[#B4935A]
                   px-5
                   py-4
                   text-left
@@ -249,7 +258,7 @@ function TreatmentTable({
                   font-bold
                   uppercase
                   tracking-[0.12em]
-                  text-[#617169]
+                  text-[#FFFDF8]
                 "
               >
                 Status
@@ -258,6 +267,8 @@ function TreatmentTable({
               <th
                 className="
                   whitespace-nowrap
+                  border-b
+                  border-[#B4935A]
                   px-5
                   py-4
                   text-left
@@ -265,14 +276,13 @@ function TreatmentTable({
                   font-bold
                   uppercase
                   tracking-[0.12em]
-                  text-[#617169]
+                  text-[#FFFDF8]
                 "
               >
                 Actions
               </th>
             </tr>
           </thead>
-
 
           <tbody>
             {filteredTreatments.length === 0 ? (
@@ -335,34 +345,22 @@ function TreatmentTable({
                 </td>
               </tr>
             ) : (
-              filteredTreatments.map(
-                (treatment) => (
-                  <TreatmentRow
-                    key={
-                      treatment.id
-                    }
-                    treatment={
-                      treatment
-                    }
-                    onEdit={
-                      onEdit
-                    }
-                    onDelete={
-                      onDelete
-                    }
-                  />
-                )
-              )
+              filteredTreatments.map((treatment) => (
+                <TreatmentRow
+                  key={treatment.id}
+                  treatment={treatment}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                />
+              ))
             )}
           </tbody>
         </table>
       </div>
 
-
       {/* =================================================
           MOBILE HINT
           ================================================= */}
-
       {filteredTreatments.length > 0 && (
         <div
           className="
@@ -384,6 +382,5 @@ function TreatmentTable({
     </div>
   );
 }
-
 
 export default TreatmentTable;
