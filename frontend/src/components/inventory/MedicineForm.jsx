@@ -4,11 +4,17 @@ const INITIAL_STATE = {
   name: "",
   category: "",
   brand: "",
+
   unit: "",
+  issue_unit: "",
+  units_per_stock_unit: "1",
+
   quantity: "",
   minimum_stock: "",
+
   purchase_price: "",
   selling_price: "",
+
   expiry_date: "",
 };
 
@@ -38,6 +44,31 @@ export default function MedicineForm({
     }
   };
 
+  const handleStockUnitChange = (e) => {
+    const value = e.target.value;
+
+    setMedicine((previous) => ({
+      ...previous,
+      unit: value,
+
+      // For same-unit medicines, automatically
+      // use the same sale unit.
+      issue_unit:
+        previous.issue_unit ||
+        value,
+
+      // Same unit = 1 sale unit per stock unit.
+      units_per_stock_unit:
+        previous.issue_unit === previous.unit
+          ? "1"
+          : previous.units_per_stock_unit,
+    }));
+
+    if (error) {
+      setError("");
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -48,6 +79,11 @@ export default function MedicineForm({
 
     const minimumStock =
       Number(medicine.minimum_stock);
+
+    const unitsPerStockUnit =
+      Number(
+        medicine.units_per_stock_unit
+      );
 
     const purchasePrice =
       Number(medicine.purchase_price);
@@ -71,7 +107,26 @@ export default function MedicineForm({
 
     if (!medicine.unit.trim()) {
       setError(
-        "Please enter the medicine unit."
+        "Please select the stock unit."
+      );
+      return;
+    }
+
+    if (!medicine.issue_unit.trim()) {
+      setError(
+        "Please select the sale unit."
+      );
+      return;
+    }
+
+    if (
+      !Number.isInteger(
+        unitsPerStockUnit
+      ) ||
+      unitsPerStockUnit < 1
+    ) {
+      setError(
+        "Units per stock unit must be at least 1."
       );
       return;
     }
@@ -104,16 +159,52 @@ export default function MedicineForm({
       return;
     }
 
+    /*
+     * If stock unit and sale unit are the same,
+     * conversion must always be 1.
+     */
+    if (
+      medicine.unit ===
+        medicine.issue_unit &&
+      unitsPerStockUnit !== 1
+    ) {
+      setError(
+        "When stock unit and sale unit are the same, units per stock unit must be 1."
+      );
+      return;
+    }
+
     const payload = {
       name: medicine.name.trim(),
-      category: medicine.category.trim(),
+
+      category:
+        medicine.category.trim(),
+
       brand:
         medicine.brand.trim() || null,
+
       unit: medicine.unit.trim(),
+
+      issue_unit:
+        medicine.issue_unit.trim(),
+
       quantity,
-      minimum_stock: minimumStock,
-      purchase_price: purchasePrice,
-      selling_price: sellingPrice,
+
+      minimum_stock:
+        minimumStock,
+
+      units_per_stock_unit:
+        unitsPerStockUnit,
+
+      // New medicines start without loose stock.
+      loose_quantity: 0,
+
+      purchase_price:
+        purchasePrice,
+
+      selling_price:
+        sellingPrice,
+
       expiry_date:
         medicine.expiry_date || null,
     };
@@ -139,9 +230,9 @@ export default function MedicineForm({
       onSubmit={handleSubmit}
       className="space-y-5"
     >
-      {/* ================================================= */}
-      {/* ERROR */}
-      {/* ================================================= */}
+      {/* =================================================
+          ERROR
+      ================================================= */}
 
       {error && (
         <div className="rounded-xl border border-[#E4CAC5] bg-[#F8ECE9] px-4 py-3">
@@ -151,10 +242,9 @@ export default function MedicineForm({
         </div>
       )}
 
-
-      {/* ================================================= */}
-      {/* BASIC INFORMATION */}
-      {/* ================================================= */}
+      {/* =================================================
+          MEDICINE INFORMATION
+      ================================================= */}
 
       <div>
         <div className="mb-4">
@@ -163,7 +253,8 @@ export default function MedicineForm({
           </h3>
 
           <p className="mt-1 text-xs text-[#89928D]">
-            Add the medicine to your clinic stock.
+            Add the medicine and define how it is
+            stocked and sold.
           </p>
         </div>
 
@@ -181,12 +272,11 @@ export default function MedicineForm({
               value={medicine.name}
               onChange={handleChange}
               type="text"
-              placeholder="e.g. Amoxicillin"
+              placeholder="e.g. Panadol"
               required
               className={inputClass}
             />
           </Field>
-
 
           {/* Category */}
 
@@ -199,12 +289,11 @@ export default function MedicineForm({
               value={medicine.category}
               onChange={handleChange}
               type="text"
-              placeholder="e.g. Antibiotic"
+              placeholder="e.g. Painkiller"
               required
               className={inputClass}
             />
           </Field>
-
 
           {/* Brand */}
 
@@ -219,22 +308,23 @@ export default function MedicineForm({
             />
           </Field>
 
-
-          {/* Unit */}
+          {/* Stock Unit */}
 
           <Field
-            label="Unit"
+            label="Stock Unit"
             required
           >
             <select
               name="unit"
               value={medicine.unit}
-              onChange={handleChange}
+              onChange={
+                handleStockUnitChange
+              }
               required
               className={inputClass}
             >
               <option value="">
-                Select unit
+                Select stock unit
               </option>
 
               <option value="Tablet">
@@ -279,6 +369,97 @@ export default function MedicineForm({
             </select>
           </Field>
 
+          {/* Sale Unit */}
+
+          <Field
+            label="Sale / Issue Unit"
+            required
+          >
+            <select
+              name="issue_unit"
+              value={medicine.issue_unit}
+              onChange={handleChange}
+              required
+              className={inputClass}
+            >
+              <option value="">
+                Select sale unit
+              </option>
+
+              <option value="Tablet">
+                Tablet
+              </option>
+
+              <option value="Capsule">
+                Capsule
+              </option>
+
+              <option value="Bottle">
+                Bottle
+              </option>
+
+              <option value="Box">
+                Box
+              </option>
+
+              <option value="Tube">
+                Tube
+              </option>
+
+              <option value="Vial">
+                Vial
+              </option>
+
+              <option value="Ampoule">
+                Ampoule
+              </option>
+
+              <option value="Sachet">
+                Sachet
+              </option>
+
+              <option value="Pack">
+                Pack
+              </option>
+
+              <option value="Piece">
+                Piece
+              </option>
+            </select>
+          </Field>
+
+          {/* Conversion */}
+
+          <Field
+            label="Sale Units per Stock Unit"
+            required
+            className="sm:col-span-2"
+          >
+            <div className="space-y-2">
+              <input
+                name="units_per_stock_unit"
+                value={
+                  medicine.units_per_stock_unit
+                }
+                onChange={handleChange}
+                type="number"
+                min="1"
+                step="1"
+                placeholder="e.g. 10"
+                required
+                className={inputClass}
+              />
+
+              <p className="text-[11px] leading-5 text-[#89928D]">
+                Example: If 1 Box contains
+                10 Packs, enter{" "}
+                <span className="font-semibold text-[#52645B]">
+                  10
+                </span>
+                .
+              </p>
+            </div>
+          </Field>
 
           {/* Expiry */}
 
@@ -291,14 +472,12 @@ export default function MedicineForm({
               className={inputClass}
             />
           </Field>
-
         </div>
       </div>
 
-
-      {/* ================================================= */}
-      {/* STOCK */}
-      {/* ================================================= */}
+      {/* =================================================
+          STOCK & PRICING
+      ================================================= */}
 
       <div className="border-t border-[#E7E1D5] pt-5">
 
@@ -308,7 +487,9 @@ export default function MedicineForm({
           </h3>
 
           <p className="mt-1 text-xs text-[#89928D]">
-            Set the current stock and medicine prices.
+            Enter stock in complete stock units.
+            The system calculates sale-unit stock
+            automatically.
           </p>
         </div>
 
@@ -317,7 +498,11 @@ export default function MedicineForm({
           {/* Quantity */}
 
           <Field
-            label="Current Quantity"
+            label={`Current Quantity${
+              medicine.unit
+                ? ` (${medicine.unit})`
+                : ""
+            }`}
             required
           >
             <input
@@ -327,17 +512,20 @@ export default function MedicineForm({
               type="number"
               min="0"
               step="1"
-              placeholder="0"
+              placeholder="e.g. 5"
               required
               className={inputClass}
             />
           </Field>
 
-
           {/* Minimum Stock */}
 
           <Field
-            label="Minimum Stock"
+            label={`Minimum Stock${
+              medicine.unit
+                ? ` (${medicine.unit})`
+                : ""
+            }`}
             required
           >
             <input
@@ -347,17 +535,20 @@ export default function MedicineForm({
               type="number"
               min="0"
               step="1"
-              placeholder="e.g. 10"
+              placeholder="e.g. 2"
               required
               className={inputClass}
             />
           </Field>
 
-
           {/* Purchase Price */}
 
           <Field
-            label="Purchase Price"
+            label={`Purchase Price${
+              medicine.unit
+                ? ` / ${medicine.unit}`
+                : ""
+            }`}
             required
           >
             <div className="relative">
@@ -381,11 +572,14 @@ export default function MedicineForm({
             </div>
           </Field>
 
-
           {/* Selling Price */}
 
           <Field
-            label="Selling Price"
+            label={`Selling Price${
+              medicine.unit
+                ? ` / ${medicine.unit}`
+                : ""
+            }`}
             required
           >
             <div className="relative">
@@ -408,14 +602,61 @@ export default function MedicineForm({
               />
             </div>
           </Field>
-
         </div>
+
+        {/* Conversion Preview */}
+
+        {medicine.unit &&
+          medicine.issue_unit &&
+          Number(
+            medicine.units_per_stock_unit
+          ) > 0 && (
+            <div className="mt-4 rounded-xl border border-[#DDE5DF] bg-[#F4F7F3] px-4 py-3">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-[#173C32]">
+                    Stock conversion
+                  </p>
+
+                  <p className="mt-0.5 text-[11px] text-[#718078]">
+                    1{" "}
+                    {medicine.unit}{" "}
+                    ={" "}
+                    {
+                      medicine.units_per_stock_unit
+                    }{" "}
+                    {
+                      medicine.issue_unit
+                    }
+                  </p>
+                </div>
+
+                {medicine.selling_price &&
+                  Number(
+                    medicine.units_per_stock_unit
+                  ) > 0 && (
+                    <p className="text-xs font-semibold text-[#A58B52]">
+                      Approx. Rs.{" "}
+                      {(
+                        Number(
+                          medicine.selling_price
+                        ) /
+                        Number(
+                          medicine.units_per_stock_unit
+                        )
+                      ).toFixed(2)}
+                      {" / "}
+                      {medicine.issue_unit}
+                    </p>
+                  )}
+              </div>
+            </div>
+          )}
       </div>
 
-
-      {/* ================================================= */}
-      {/* ACTIONS */}
-      {/* ================================================= */}
+      {/* =================================================
+          ACTIONS
+      ================================================= */}
 
       <div className="flex flex-col-reverse gap-3 border-t border-[#E7E1D5] pt-5 sm:flex-row sm:justify-end">
 
@@ -437,7 +678,6 @@ export default function MedicineForm({
             ? "Saving..."
             : "Save Medicine"}
         </button>
-
       </div>
     </form>
   );

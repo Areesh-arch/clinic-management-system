@@ -22,9 +22,44 @@ def create_inventory_service(
     tenant_id: int,
 ):
     """
-    Create an inventory item after checking
-    whether the item already exists for this tenant.
+    Create an inventory item.
+
+    User-friendly stock setup:
+
+        Stock Unit: Box
+        Sale Unit: Pack
+        Units per Box: 10
+        Quantity: 5
+
+    The system internally understands:
+
+        5 Boxes = 50 Packs
     """
+
+    if inventory_data.units_per_stock_unit < 1:
+        raise ValueError(
+            "Units per stock unit must be at least 1."
+        )
+
+    if inventory_data.quantity < 0:
+        raise ValueError(
+            "Quantity cannot be negative."
+        )
+
+    if inventory_data.minimum_stock < 0:
+        raise ValueError(
+            "Minimum stock cannot be negative."
+        )
+
+    if inventory_data.purchase_price < 0:
+        raise ValueError(
+            "Purchase price cannot be negative."
+        )
+
+    if inventory_data.selling_price < 0:
+        raise ValueError(
+            "Selling price cannot be negative."
+        )
 
     existing_item = (
         db.query(InventoryItem)
@@ -81,6 +116,52 @@ def update_inventory_service(
     inventory_item: InventoryItem,
     inventory_data: InventoryUpdate,
 ):
+    """
+    Update inventory.
+
+    Existing loose stock is preserved.
+    """
+
+    if (
+        inventory_data.units_per_stock_unit is not None
+        and inventory_data.units_per_stock_unit < 1
+    ):
+        raise ValueError(
+            "Units per stock unit must be at least 1."
+        )
+
+    if (
+        inventory_data.quantity is not None
+        and inventory_data.quantity < 0
+    ):
+        raise ValueError(
+            "Quantity cannot be negative."
+        )
+
+    if (
+        inventory_data.minimum_stock is not None
+        and inventory_data.minimum_stock < 0
+    ):
+        raise ValueError(
+            "Minimum stock cannot be negative."
+        )
+
+    if (
+        inventory_data.purchase_price is not None
+        and inventory_data.purchase_price < 0
+    ):
+        raise ValueError(
+            "Purchase price cannot be negative."
+        )
+
+    if (
+        inventory_data.selling_price is not None
+        and inventory_data.selling_price < 0
+    ):
+        raise ValueError(
+            "Selling price cannot be negative."
+        )
+
     return update_inventory_item(
         db=db,
         inventory_item=inventory_item,

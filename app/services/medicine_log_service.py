@@ -5,15 +5,36 @@ from app.models.prescription import Prescription
 from app.models.prescription_item import PrescriptionItem
 from app.models.visit import Visit
 
+from app.schemas.medicine_log import MedicineLogResponse
+
 
 def get_medicine_log_service(
     db: Session,
     tenant_id: int,
 ):
+    """
+    Return medicine issue history for the current clinic.
+
+    Medicine Log is built from:
+
+        PrescriptionItem
+            -> Prescription
+            -> Visit
+            -> Patient
+    """
+
     rows = (
         db.query(
             PrescriptionItem.id.label(
                 "prescription_item_id"
+            ),
+
+            Prescription.id.label(
+                "prescription_id"
+            ),
+
+            Visit.id.label(
+                "visit_id"
             ),
 
             Patient.id.label(
@@ -40,12 +61,20 @@ def get_medicine_log_service(
                 "medicine_name"
             ),
 
+            PrescriptionItem.medicine_unit.label(
+                "medicine_unit"
+            ),
+
             PrescriptionItem.quantity.label(
                 "quantity"
             ),
 
             PrescriptionItem.dosage.label(
                 "dosage"
+            ),
+
+            PrescriptionItem.frequency.label(
+                "frequency"
             ),
 
             PrescriptionItem.duration.label(
@@ -72,12 +101,9 @@ def get_medicine_log_service(
             == Visit.patient_id,
         )
         .filter(
-            Prescription.tenant_id
-            == tenant_id,
-            Visit.tenant_id
-            == tenant_id,
-            Patient.tenant_id
-            == tenant_id,
+            Prescription.tenant_id == tenant_id,
+            Visit.tenant_id == tenant_id,
+            Patient.tenant_id == tenant_id,
         )
         .order_by(
             Visit.visit_time.desc(),
@@ -89,55 +115,56 @@ def get_medicine_log_service(
     result = []
 
     for row in rows:
-        first_name = (
-            row.first_name or ""
-        ).strip()
 
-        last_name = (
-            row.last_name or ""
+        patient_name = (
+            f"{row.first_name or ''} "
+            f"{row.last_name or ''}"
         ).strip()
-
-        patient_name = " ".join(
-            part
-            for part in [
-                first_name,
-                last_name,
-            ]
-            if part
-        )
 
         result.append(
-            {
-                "prescription_item_id":
-                    row.prescription_item_id,
+            MedicineLogResponse(
+                prescription_item_id=(
+                    row.prescription_item_id
+                ),
 
-                "patient_id":
-                    row.patient_id,
+                prescription_id=(
+                    row.prescription_id
+                ),
 
-                "patient_name":
-                    patient_name,
+                visit_id=(
+                    row.visit_id
+                ),
 
-                "medical_record_number":
-                    row.medical_record_number,
+                patient_id=(
+                    row.patient_id
+                ),
 
-                "date":
-                    row.date,
+                patient_name=patient_name,
 
-                "medicine_name":
-                    row.medicine_name,
+                medical_record_number=(
+                    row.medical_record_number
+                ),
 
-                "quantity":
-                    row.quantity,
+                date=row.date,
 
-                "dosage":
-                    row.dosage,
+                medicine_name=(
+                    row.medicine_name
+                ),
 
-                "duration":
-                    row.duration,
+                medicine_unit=(
+                    row.medicine_unit or "unit"
+                ),
 
-                "amount":
-                    row.amount,
-            }
+                quantity=row.quantity,
+
+                dosage=row.dosage,
+
+                frequency=row.frequency,
+
+                duration=row.duration,
+
+                amount=row.amount,
+            )
         )
 
     return result

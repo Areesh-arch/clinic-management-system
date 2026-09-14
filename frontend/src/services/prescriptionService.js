@@ -34,3 +34,53 @@ export async function getPrescription(
     `/prescriptions/${prescriptionId}`
   );
 }
+
+
+// =========================================================
+// UPDATE ONE MEDICINE
+// =========================================================
+
+export async function updatePrescriptionItem(
+  itemId,
+  itemData
+) {
+  return apiRequest(
+    `/prescriptions/items/${itemId}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(itemData),
+    }
+  );
+}
+
+
+// =========================================================
+// DELETE ONE MEDICINE
+// =========================================================
+
+export async function deletePrescriptionItem(
+  itemId
+) {
+  return apiRequest(
+    `/prescriptions/items/${itemId}`,
+    {
+      method: "DELETE",
+    }
+  );
+}
+
+
+// =========================================================
+// DELETE WHOLE PRESCRIPTION
+// =========================================================
+
+export async function deletePrescription(
+  prescriptionId
+) {
+  return apiRequest(
+    `/prescriptions/${prescriptionId}`,
+    {
+      method: "DELETE",
+    }
+  );
+}

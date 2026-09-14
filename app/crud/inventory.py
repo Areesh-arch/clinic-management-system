@@ -16,14 +16,23 @@ def create_inventory_item(
 
     inventory_item = InventoryItem(
         tenant_id=tenant_id,
+
         name=inventory_data.name,
         category=inventory_data.category,
         brand=inventory_data.brand,
+
         unit=inventory_data.unit,
+        issue_unit=inventory_data.issue_unit,
+        units_per_stock_unit=inventory_data.units_per_stock_unit,
+
         quantity=inventory_data.quantity,
+        loose_quantity=0,
+
         minimum_stock=inventory_data.minimum_stock,
+
         purchase_price=inventory_data.purchase_price,
         selling_price=inventory_data.selling_price,
+
         expiry_date=inventory_data.expiry_date,
     )
 
@@ -68,7 +77,7 @@ def update_inventory_item(
     inventory_data: InventoryUpdate,
 ):
     update_data = inventory_data.model_dump(
-        exclude_unset=True
+        exclude_unset=True,
     )
 
     for key, value in update_data.items():

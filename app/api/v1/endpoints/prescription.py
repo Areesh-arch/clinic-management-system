@@ -1,16 +1,8 @@
-
-from fastapi import (
-    APIRouter,
-    Depends,
-    HTTPException,
-    status,
-)
-
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.api.permissions import require_roles
-
 from app.models.enums import UserRole
 from app.models.user import User
 
@@ -18,6 +10,8 @@ from app.schemas.prescription import (
     PrescriptionCreate,
     PrescriptionUpdate,
     PrescriptionResponse,
+    PrescriptionItemUpdate,
+    PrescriptionItemResponse,
 )
 
 from app.services.prescription_service import (
@@ -26,28 +20,18 @@ from app.services.prescription_service import (
     list_prescriptions_service,
     update_prescription_service,
     delete_prescription_service,
+    update_prescription_item_service,
+    delete_prescription_item_service,
 )
 
-
-# =========================================================
-# ROUTER
-# =========================================================
-#
-# The /prescriptions prefix is already defined in:
-#
-# app/api/v1/routes.py
-#
-# Therefore DO NOT add another prefix here.
-#
 
 router = APIRouter(
-    tags=["Prescriptions"],
+    tags=["Prescriptions"]
 )
 
 
 # =========================================================
-# CREATE PRESCRIPTION
-# OWNER + STAFF + SUPER_ADMIN
+# CREATE
 # =========================================================
 
 @router.post(
@@ -62,7 +46,6 @@ def create_prescription(
         require_roles(
             UserRole.OWNER,
             UserRole.STAFF,
-            UserRole.SUPER_ADMIN,
         )
     ),
 ):
@@ -75,14 +58,13 @@ def create_prescription(
 
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
             detail=str(e),
         )
 
 
 # =========================================================
-# LIST PRESCRIPTIONS
-# OWNER + STAFF + SUPER_ADMIN
+# LIST
 # =========================================================
 
 @router.get(
@@ -95,7 +77,6 @@ def list_prescriptions(
         require_roles(
             UserRole.OWNER,
             UserRole.STAFF,
-            UserRole.SUPER_ADMIN,
         )
     ),
 ):
@@ -106,8 +87,7 @@ def list_prescriptions(
 
 
 # =========================================================
-# GET SINGLE PRESCRIPTION
-# OWNER + STAFF + SUPER_ADMIN
+# GET SINGLE
 # =========================================================
 
 @router.get(
@@ -121,7 +101,6 @@ def get_prescription(
         require_roles(
             UserRole.OWNER,
             UserRole.STAFF,
-            UserRole.SUPER_ADMIN,
         )
     ),
 ):
@@ -134,14 +113,13 @@ def get_prescription(
 
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=404,
             detail=str(e),
         )
 
 
 # =========================================================
-# UPDATE PRESCRIPTION
-# OWNER + STAFF + SUPER_ADMIN
+# UPDATE PRESCRIPTION INSTRUCTIONS
 # =========================================================
 
 @router.put(
@@ -156,33 +134,26 @@ def update_prescription(
         require_roles(
             UserRole.OWNER,
             UserRole.STAFF,
-            UserRole.SUPER_ADMIN,
         )
     ),
 ):
     try:
-        prescription = get_prescription_service(
-            db=db,
-            prescription_id=prescription_id,
-            tenant_id=current_user.tenant_id,
-        )
-
         return update_prescription_service(
             db=db,
-            prescription=prescription,
+            prescription_id=prescription_id,
             prescription_data=prescription_data,
+            tenant_id=current_user.tenant_id,
         )
 
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=404,
             detail=str(e),
         )
 
 
 # =========================================================
-# DELETE PRESCRIPTION
-# OWNER + STAFF + SUPER_ADMIN
+# DELETE WHOLE PRESCRIPTION
 # =========================================================
 
 @router.delete(
@@ -196,25 +167,87 @@ def delete_prescription(
         require_roles(
             UserRole.OWNER,
             UserRole.STAFF,
-            UserRole.SUPER_ADMIN,
         )
     ),
 ):
     try:
-        prescription = get_prescription_service(
+        delete_prescription_service(
             db=db,
             prescription_id=prescription_id,
             tenant_id=current_user.tenant_id,
         )
 
-        delete_prescription_service(
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e),
+        )
+
+    return None
+
+
+# =========================================================
+# EDIT ONE MEDICINE
+# =========================================================
+
+@router.put(
+    "/items/{item_id}",
+    response_model=PrescriptionItemResponse,
+)
+def update_prescription_item(
+    item_id: int,
+    item_data: PrescriptionItemUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+        )
+    ),
+):
+    try:
+        return update_prescription_item_service(
             db=db,
-            prescription=prescription,
+            item_id=item_id,
+            item_data=item_data,
+            tenant_id=current_user.tenant_id,
         )
 
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=400,
+            detail=str(e),
+        )
+
+
+# =========================================================
+# DELETE ONE MEDICINE
+# =========================================================
+
+@router.delete(
+    "/items/{item_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_prescription_item(
+    item_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+        )
+    ),
+):
+    try:
+        delete_prescription_item_service(
+            db=db,
+            item_id=item_id,
+            tenant_id=current_user.tenant_id,
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
             detail=str(e),
         )
 

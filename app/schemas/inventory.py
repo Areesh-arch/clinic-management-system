@@ -1,17 +1,51 @@
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+)
 
 
 class InventoryBase(BaseModel):
     name: str
     category: str
     brand: str | None = None
+
+    # Stock unit
     unit: str
-    quantity: int
-    minimum_stock: int
-    purchase_price: float
-    selling_price: float
+
+    # Sale/issue unit
+    issue_unit: str = "unit"
+
+    # Example:
+    # 1 Box = 10 Packs
+    units_per_stock_unit: int = Field(
+        default=1,
+        ge=1,
+    )
+
+    # Complete stock units
+    quantity: int = Field(
+        default=0,
+        ge=0,
+    )
+
+    # Minimum stock in complete stock units
+    minimum_stock: int = Field(
+        default=0,
+        ge=0,
+    )
+
+    # Prices are for one complete stock unit
+    purchase_price: float = Field(
+        ge=0,
+    )
+
+    selling_price: float = Field(
+        ge=0,
+    )
+
     expiry_date: date | None = None
 
 
@@ -23,17 +57,44 @@ class InventoryUpdate(BaseModel):
     name: str | None = None
     category: str | None = None
     brand: str | None = None
+
     unit: str | None = None
-    quantity: int | None = None
-    minimum_stock: int | None = None
-    purchase_price: float | None = None
-    selling_price: float | None = None
+    issue_unit: str | None = None
+
+    units_per_stock_unit: int | None = Field(
+        default=None,
+        ge=1,
+    )
+
+    quantity: int | None = Field(
+        default=None,
+        ge=0,
+    )
+
+    minimum_stock: int | None = Field(
+        default=None,
+        ge=0,
+    )
+
+    purchase_price: float | None = Field(
+        default=None,
+        ge=0,
+    )
+
+    selling_price: float | None = Field(
+        default=None,
+        ge=0,
+    )
+
     expiry_date: date | None = None
 
 
 class InventoryResponse(InventoryBase):
     id: int
     tenant_id: int
+
+    loose_quantity: int
+
     created_at: datetime
     updated_at: datetime
 

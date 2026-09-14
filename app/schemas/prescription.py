@@ -21,18 +21,27 @@ class PrescriptionItemCreate(PrescriptionItemBase):
     pass
 
 
+class PrescriptionItemUpdate(BaseModel):
+    inventory_item_id: int
+    dosage: str
+    frequency: str
+    duration: str
+    quantity: int = Field(gt=0)
+    notes: str | None = None
+
+
 class PrescriptionItemResponse(BaseModel):
     id: int
-
     prescription_id: int
-
     inventory_item_id: int | None = None
 
     medicine_name: str
+    medicine_unit: str
 
     dosage: str
     frequency: str
     duration: str
+
     quantity: int
 
     unit_price: Decimal | None = None
@@ -41,7 +50,7 @@ class PrescriptionItemResponse(BaseModel):
     notes: str | None = None
 
     model_config = ConfigDict(
-        from_attributes=True,
+        from_attributes=True
     )
 
 
@@ -71,5 +80,5 @@ class PrescriptionResponse(PrescriptionBase):
     items: list[PrescriptionItemResponse]
 
     model_config = ConfigDict(
-        from_attributes=True,
+        from_attributes=True
     )

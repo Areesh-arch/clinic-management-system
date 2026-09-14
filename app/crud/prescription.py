@@ -86,7 +86,9 @@ def update_prescription(
             value,
         )
 
-    db.commit()
+    # Do NOT commit here.
+    # The service controls the complete transaction.
+    db.flush()
     db.refresh(prescription)
 
     return prescription
@@ -102,4 +104,4 @@ def delete_prescription(
 ):
 
     db.delete(prescription)
-    db.commit()
+    db.flush()
