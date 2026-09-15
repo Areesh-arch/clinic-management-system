@@ -9,6 +9,7 @@ from sqlalchemy import (
     Enum,
     Text,
     Numeric,
+    Boolean,
 )
 
 from sqlalchemy.orm import (
@@ -121,6 +122,18 @@ class Visit(Base, IDMixin, TimestampMixin):
         Numeric(10, 2),
         nullable=False,
         default=0,
+    )
+
+        # =====================================================
+    # ARCHIVE / SOFT DELETE
+    # =====================================================
+
+    is_archived: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+        index=True,
     )
 
     # =====================================================

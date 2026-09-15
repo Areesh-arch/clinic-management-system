@@ -10,6 +10,7 @@ class OutstandingResponse(BaseModel):
 
     patient_id: int
     patient_name: str
+    medical_record_number: str | None = None
 
     visit_id: int
 

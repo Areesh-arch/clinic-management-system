@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.database.session import get_db
+from app.models import user
 from app.models.user import User
 
 oauth2_scheme = OAuth2PasswordBearer(
@@ -50,6 +51,11 @@ def get_current_user(
     )
 
     print("\n========== USER ==========")
+    print("\n========== USER ==========")
+    print("USER ID:", user.id if user else None)
+    print("USER EMAIL:", user.email if user else None)
+    print("USER ROLE:", repr(user.role) if user else None)
+    print("TENANT ID:", user.tenant_id if user else None)
     print(user)
 
     if user is None:

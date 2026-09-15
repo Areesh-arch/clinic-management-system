@@ -1,11 +1,14 @@
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
+
 from sqlalchemy import Enum, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
 from app.models.enums import TenantStatus
 from app.models.mixins import IDMixin, TimestampMixin
+
 
 if TYPE_CHECKING:
     from app.models.subscription import Subscription
@@ -20,7 +23,8 @@ if TYPE_CHECKING:
     from app.models.payment import Payment
     from app.models.expense import Expense
     from app.models.outstanding import Outstanding
-    
+
+
 class Tenant(Base, IDMixin, TimestampMixin):
     """
     Represents a dermatology clinic (tenant) in the SaaS platform.
@@ -46,7 +50,15 @@ class Tenant(Base, IDMixin, TimestampMixin):
         nullable=False,
     )
 
-        # Relationships
+    profile_image_url: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+    )
+
+    # ============================================================
+    # RELATIONSHIPS
+    # ============================================================
+
     users: Mapped[list["User"]] = relationship(
         "User",
         back_populates="tenant",
@@ -67,54 +79,58 @@ class Tenant(Base, IDMixin, TimestampMixin):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
-    
+
     staff: Mapped[list["Staff"]] = relationship(
-    "Staff",
-    back_populates="tenant",
-    cascade="all, delete-orphan",
-    lazy="selectin",
-)
+        "Staff",
+        back_populates="tenant",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
     appointments: Mapped[list["Appointment"]] = relationship(
-    "Appointment",
-    back_populates="tenant",
-    cascade="all, delete-orphan",
-)
+        "Appointment",
+        back_populates="tenant",
+        cascade="all, delete-orphan",
+    )
+
     visits: Mapped[list["Visit"]] = relationship(
-    "Visit",
-    back_populates="tenant",
-    cascade="all, delete-orphan",
-)
-    
+        "Visit",
+        back_populates="tenant",
+        cascade="all, delete-orphan",
+    )
+
     prescriptions: Mapped[list["Prescription"]] = relationship(
-    "Prescription",
-    back_populates="tenant",
-    cascade="all, delete-orphan",
-)
-    
+        "Prescription",
+        back_populates="tenant",
+        cascade="all, delete-orphan",
+    )
+
     photos: Mapped[list["TreatmentPhoto"]] = relationship(
-    "TreatmentPhoto",
-    back_populates="tenant",
-    cascade="all, delete-orphan",
-)
-    
+        "TreatmentPhoto",
+        back_populates="tenant",
+        cascade="all, delete-orphan",
+    )
+
     inventory_items: Mapped[list["InventoryItem"]] = relationship(
-    "InventoryItem",
-    back_populates="tenant",
-    cascade="all, delete-orphan",
-)
-    
+        "InventoryItem",
+        back_populates="tenant",
+        cascade="all, delete-orphan",
+    )
+
     payments: Mapped[list["Payment"]] = relationship(
-    "Payment",
-    back_populates="tenant",
-    cascade="all, delete-orphan",
-)
+        "Payment",
+        back_populates="tenant",
+        cascade="all, delete-orphan",
+    )
+
     expenses: Mapped[list["Expense"]] = relationship(
-    "Expense",
-    back_populates="tenant",
-    cascade="all, delete-orphan",
-)
+        "Expense",
+        back_populates="tenant",
+        cascade="all, delete-orphan",
+    )
+
     outstandings: Mapped[list["Outstanding"]] = relationship(
-    "Outstanding",
-    back_populates="tenant",
-    cascade="all, delete-orphan",
-)
+        "Outstanding",
+        back_populates="tenant",
+        cascade="all, delete-orphan",
+    )

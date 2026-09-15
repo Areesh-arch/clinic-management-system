@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 
 import {
   FiAlertTriangle,
+  FiCalendar,
   FiTrash2,
   FiX,
 } from "react-icons/fi";
@@ -18,6 +19,7 @@ import AppointmentCalendar from "../../components/appointments/AppointmentCalend
 import AppointmentModal from "../../components/appointments/AppointmentModal";
 import AppointmentForm from "../../components/appointments/AppointmentForm";
 import AppointmentDetails from "../../components/appointments/AppointmentDetails";
+import AppointmentLogModal from "../../components/appointments/AppointmentLogModal";
 
 import {
   getAppointments,
@@ -27,7 +29,6 @@ import {
 import {
   getPatients,
 } from "../../services/patientService";
-
 
 function Appointments() {
   const [appointments, setAppointments] =
@@ -45,6 +46,7 @@ function Appointments() {
    * patient_name
    * medical_record_number
    */
+
   const [patients, setPatients] =
     useState([]);
 
@@ -66,12 +68,14 @@ function Appointments() {
   /*
    * TABLE / CALENDAR
    */
+
   const [viewMode, setViewMode] =
     useState("table");
 
   /*
    * MODAL
    */
+
   const [showModal, setShowModal] =
     useState(false);
 
@@ -84,15 +88,22 @@ function Appointments() {
   /*
    * DELETE CONFIRMATION
    */
+
   const [appointmentToDelete, setAppointmentToDelete] =
     useState(null);
 
   const [deleting, setDeleting] =
     useState(false);
 
+  /*
+   * APPOINTMENT LOG
+   */
+
+  const [showAppointmentLog, setShowAppointmentLog] =
+    useState(false);
+
   const [searchParams, setSearchParams] =
     useSearchParams();
-
 
   // ======================================================
   // NORMALIZE API LIST
@@ -113,7 +124,6 @@ function Appointments() {
 
     return [];
   };
-
 
   // ======================================================
   // LOAD APPOINTMENTS + PATIENTS
@@ -167,6 +177,7 @@ function Appointments() {
       /*
        * Patients are only needed by AppointmentForm.
        */
+
       setPatients(
         patientList
       );
@@ -177,6 +188,7 @@ function Appointments() {
        * AppointmentResponse already contains
        * patient_name and medical_record_number.
        */
+
       setAppointments(
         appointmentList
       );
@@ -185,7 +197,6 @@ function Appointments() {
         "Appointments with backend patient data:",
         appointmentList
       );
-
     } catch (error) {
       console.error(
         "Failed to load appointments:",
@@ -196,12 +207,10 @@ function Appointments() {
         error?.message ||
           "Failed to load appointments."
       );
-
     } finally {
       setLoading(false);
     }
   };
-
 
   // ======================================================
   // INITIAL LOAD
@@ -210,7 +219,6 @@ function Appointments() {
   useEffect(() => {
     loadAppointments();
   }, []);
-
 
   // ======================================================
   // ADD APPOINTMENT
@@ -221,7 +229,6 @@ function Appointments() {
     setModalMode("create");
     setShowModal(true);
   };
-
 
   // ======================================================
   // VIEW APPOINTMENT
@@ -243,7 +250,6 @@ function Appointments() {
     setShowModal(true);
   };
 
-
   // ======================================================
   // EDIT APPOINTMENT
   // ======================================================
@@ -264,7 +270,6 @@ function Appointments() {
     setShowModal(true);
   };
 
-
   // ======================================================
   // OPEN DELETE CONFIRMATION
   // ======================================================
@@ -279,7 +284,6 @@ function Appointments() {
     );
   };
 
-
   // ======================================================
   // CLOSE DELETE CONFIRMATION
   // ======================================================
@@ -291,7 +295,6 @@ function Appointments() {
 
     setAppointmentToDelete(null);
   };
-
 
   // ======================================================
   // CONFIRM DELETE APPOINTMENT
@@ -328,7 +331,6 @@ function Appointments() {
       );
 
       setAppointmentToDelete(null);
-
     } catch (error) {
       console.error(
         "Failed to delete appointment:",
@@ -339,12 +341,10 @@ function Appointments() {
         error?.message ||
           "Failed to delete appointment."
       );
-
     } finally {
       setDeleting(false);
     }
   };
-
 
   // ======================================================
   // AFTER SAVE
@@ -363,7 +363,6 @@ function Appointments() {
 
       setShowModal(false);
       setSelectedAppointment(null);
-
     } catch (error) {
       console.error(
         "Failed to refresh appointments after save:",
@@ -376,7 +375,6 @@ function Appointments() {
       );
     }
   };
-
 
   // ======================================================
   // CLOSE MODAL
@@ -396,6 +394,7 @@ function Appointments() {
      * This prevents the form from automatically opening
      * again after the user closes it.
      */
+
     if (
       searchParams.has("patient_id") ||
       searchParams.has("new")
@@ -403,7 +402,6 @@ function Appointments() {
       setSearchParams({});
     }
   };
-
 
   // ======================================================
   // STATUS OPTIONS
@@ -426,7 +424,6 @@ function Appointments() {
         statusValue !== ""
     );
   }, [appointments]);
-
 
   // ======================================================
   // FILTER APPOINTMENTS FOR CALENDAR
@@ -496,7 +493,6 @@ function Appointments() {
           }
         }
 
-
         // ----------------------------------------------
         // STATUS
         // ----------------------------------------------
@@ -516,12 +512,14 @@ function Appointments() {
             normalizedStatus;
 
           const normalizedAppointmentStatus =
-            appointmentStatus === "pending"
+            appointmentStatus ===
+            "pending"
               ? "scheduled"
               : appointmentStatus;
 
           const normalizedSelectedStatus =
-            selectedStatus === "pending"
+            selectedStatus ===
+            "pending"
               ? "scheduled"
               : selectedStatus;
 
@@ -532,7 +530,6 @@ function Appointments() {
             return false;
           }
         }
-
 
         // ----------------------------------------------
         // DATE
@@ -569,17 +566,15 @@ function Appointments() {
             0
           );
 
-
           const normalizedDate =
             String(date)
               .trim()
               .toLowerCase();
 
-
           // Today
           if (
             normalizedDate ===
-              "today"
+            "today"
           ) {
             if (
               appointmentDateObject.getTime() !==
@@ -589,11 +584,10 @@ function Appointments() {
             }
           }
 
-
           // Upcoming
           else if (
             normalizedDate ===
-              "upcoming"
+            "upcoming"
           ) {
             if (
               appointmentDateObject.getTime() <
@@ -603,11 +597,10 @@ function Appointments() {
             }
           }
 
-
           // Past
           else if (
             normalizedDate ===
-              "past"
+            "past"
           ) {
             if (
               appointmentDateObject.getTime() >=
@@ -616,7 +609,6 @@ function Appointments() {
               return false;
             }
           }
-
 
           // Specific date value
           else if (
@@ -643,7 +635,6 @@ function Appointments() {
     date,
   ]);
 
-
   // ======================================================
   // HANDLE URL PARAMETERS
   // ======================================================
@@ -667,14 +658,12 @@ function Appointments() {
     searchParams,
   ]);
 
-
   // ======================================================
   // RENDER
   // ======================================================
 
   return (
     <Layout>
-
       <div className="space-y-8">
 
         {/* =================================================
@@ -693,7 +682,6 @@ function Appointments() {
           }
         />
 
-
         {/* =================================================
             SEARCH
         ================================================= */}
@@ -703,19 +691,12 @@ function Appointments() {
           setSearch={setSearch}
         />
 
-
         {/* =================================================
-            FILTERS
+            FILTERS + APPOINTMENT LOG
         ================================================= */}
 
-        <div
-          className="
-            flex flex-col
-            lg:flex-row
-            justify-between
-            gap-4
-          "
-        >
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+
           <AppointmentFilters
             status={status}
             setStatus={setStatus}
@@ -723,8 +704,23 @@ function Appointments() {
             setDate={setDate}
             statuses={statusOptions}
           />
-        </div>
 
+          <button
+            type="button"
+            onClick={() =>
+              setShowAppointmentLog(true)
+            }
+            className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl border border-[#B4935A] bg-[#FFFDF8] px-5 py-3 text-sm font-semibold text-[#173C32] shadow-[0_4px_14px_rgba(23,60,50,0.05)] transition-all hover:border-[#A1844F] hover:bg-[#F9F4E9] hover:shadow-[0_6px_18px_rgba(23,60,50,0.08)] lg:w-auto"
+          >
+            <span className="flex h-5 w-5 items-center justify-center rounded-md bg-[#173C32] text-white">
+              <FiCalendar
+                size={12}
+              />
+            </span>
+
+            Appointment Log
+          </button>
+        </div>
 
         {/* =================================================
             ERROR
@@ -770,13 +766,11 @@ function Appointments() {
           </div>
         )}
 
-
         {/* =================================================
             TABLE / CALENDAR
         ================================================= */}
 
         {viewMode === "table" ? (
-
           <AppointmentTable
             appointments={
               appointments
@@ -809,9 +803,7 @@ function Appointments() {
               loadAppointments
             }
           />
-
         ) : (
-
           <AppointmentCalendar
             appointments={
               filteredAppointments
@@ -820,18 +812,14 @@ function Appointments() {
               handleViewAppointment
             }
           />
-
         )}
-
       </div>
-
 
       {/* ===================================================
           APPOINTMENT MODAL
       =================================================== */}
 
       {showModal && (
-
         <AppointmentModal
           open={
             showModal
@@ -840,13 +828,11 @@ function Appointments() {
             handleCloseModal
           }
         >
-
           {/* =================================================
               VIEW
           ================================================= */}
 
           {modalMode === "view" && (
-
             <AppointmentDetails
               appointment={
                 selectedAppointment
@@ -860,9 +846,7 @@ function Appointments() {
                 );
               }}
             />
-
           )}
-
 
           {/* =================================================
               CREATE / EDIT
@@ -870,45 +854,51 @@ function Appointments() {
 
           {(modalMode === "create" ||
             modalMode === "edit") && (
-
             <AppointmentForm
               mode={
                 modalMode
               }
-
               appointment={
                 selectedAppointment
               }
-
               patients={
                 patients
               }
-
               appointments={
                 appointments
               }
-
               initialPatientId={
                 searchParams.get(
                   "patient_id"
                 ) || ""
               }
-
               onSuccess={
                 handleAppointmentSaved
               }
-
               onCancel={
                 handleCloseModal
               }
             />
-
           )}
-
         </AppointmentModal>
-
       )}
 
+      {/* ===================================================
+          APPOINTMENT LOG
+      =================================================== */}
+
+      {showAppointmentLog && (
+        <AppointmentLogModal
+          appointments={
+            appointments
+          }
+          onClose={() =>
+            setShowAppointmentLog(
+              false
+            )
+          }
+        />
+      )}
 
       {/* ===================================================
           PROFESSIONAL DELETE CONFIRMATION
@@ -930,7 +920,8 @@ function Appointments() {
           "
           onMouseDown={(event) => {
             if (
-              event.target === event.currentTarget &&
+              event.target ===
+                event.currentTarget &&
               !deleting
             ) {
               closeDeleteConfirmation();
@@ -954,7 +945,6 @@ function Appointments() {
               shadow-[0_25px_70px_rgba(23,59,50,0.24)]
             "
           >
-
             {/* GOLD TOP LINE */}
 
             <div
@@ -964,7 +954,6 @@ function Appointments() {
                 bg-[#B4935A]
               "
             />
-
 
             {/* CLOSE BUTTON */}
 
@@ -998,7 +987,6 @@ function Appointments() {
               <FiX size={18} />
             </button>
 
-
             {/* CONTENT */}
 
             <div
@@ -1010,7 +998,6 @@ function Appointments() {
                 sm:pb-8
               "
             >
-
               {/* WARNING ICON */}
 
               <div
@@ -1033,7 +1020,6 @@ function Appointments() {
                 />
               </div>
 
-
               {/* TITLE */}
 
               <h2
@@ -1047,9 +1033,8 @@ function Appointments() {
                   text-[#173B32]
                 "
               >
-                Delete Appointment?
+                Archive Appointment?
               </h2>
-
 
               {/* DESCRIPTION */}
 
@@ -1062,11 +1047,9 @@ function Appointments() {
                   text-[#68766E]
                 "
               >
-                Are you sure you want to permanently
-                delete this appointment? This action
-                cannot be undone.
+                This appointment will be moved to Archive.
+You can restore it later if needed.
               </p>
-
 
               {/* APPOINTMENT INFO */}
 
@@ -1118,12 +1101,12 @@ function Appointments() {
                 >
                   Appointment #
                   {appointmentToDelete?.id}
+
                   {appointmentToDelete?.reason
                     ? ` • ${appointmentToDelete.reason}`
                     : ""}
                 </p>
               </div>
-
 
               {/* ACTIONS */}
 
@@ -1137,7 +1120,6 @@ function Appointments() {
                   sm:justify-end
                 "
               >
-
                 {/* CANCEL */}
 
                 <button
@@ -1170,7 +1152,6 @@ function Appointments() {
                 >
                   Cancel
                 </button>
-
 
                 {/* DELETE */}
 
@@ -1215,25 +1196,23 @@ function Appointments() {
                           border-t-white
                         "
                       />
-                      Deleting...
+
+                      Archiving...
                     </>
                   ) : (
                     <>
                       <FiTrash2 size={15} />
-                      Delete Appointment
+                      Archive Appointment
                     </>
                   )}
                 </button>
-
               </div>
             </div>
           </div>
         </div>
       )}
-
     </Layout>
   );
 }
-
 
 export default Appointments;

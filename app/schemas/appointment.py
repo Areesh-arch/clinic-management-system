@@ -27,26 +27,10 @@ class AppointmentCreate(BaseModel):
 
     reason: str | None = None
 
-    # None means:
-    # let the backend automatically determine
-    # whether this is a follow-up.
-    #
-    # True means:
-    # staff explicitly wants follow-up.
-    #
-    # False means:
-    # staff explicitly wants a normal/new appointment.
     is_follow_up: bool | None = None
 
     notes: str | None = None
 
-    # Appointment origin.
-    #
-    # Existing clinic-created appointments default
-    # to CLINIC.
-    #
-    # Public website appointments will be forced
-    # to WEBSITE by the public appointment service.
     source: AppointmentSource = AppointmentSource.CLINIC
 
 
@@ -87,8 +71,6 @@ class PublicAppointmentCreate(BaseModel):
         max_length=2000,
     )
 
-    # Required because the existing PatientCreate schema
-    # requires these fields for a new patient.
     gender: Gender
 
     date_of_birth: date
@@ -127,17 +109,7 @@ class AppointmentUpdate(BaseModel):
 
     notes: str | None = None
 
-    # IMPORTANT:
-    # source is intentionally NOT included here.
-    #
-    # Appointment source represents how the appointment
-    # originally entered the system:
-    #
-    # CLINIC
-    # WEBSITE
-    # WALK_IN
-    #
-    # It should remain immutable after creation.
+    # source intentionally remains immutable.
 
 
 # =========================================================
@@ -150,10 +122,6 @@ class AppointmentResponse(BaseModel):
     tenant_id: int
 
     patient_id: int
-
-    # Patient information is returned directly
-    # with the appointment so Super Admin can see
-    # patients belonging to different tenants.
 
     patient_name: str | None = None
 
@@ -174,6 +142,12 @@ class AppointmentResponse(BaseModel):
     is_follow_up: bool
 
     notes: str | None
+
+    # =====================================================
+    # ARCHIVE
+    # =====================================================
+
+    is_archived: bool
 
     model_config = ConfigDict(
         from_attributes=True,

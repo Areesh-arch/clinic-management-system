@@ -7,180 +7,163 @@ import ProfileSettings from "../../components/settings/ProfileSettings";
 import WebsiteSettings from "../../components/settings/WebsiteSettings";
 import SecuritySettings from "../../components/settings/SecuritySettings";
 import NotificationSettings from "../../components/settings/NotificationSettings";
-import SaveButton from "../../components/settings/SaveButton";
+
+import { getCurrentUser } from "../../services/settingsService";
 
 import {
-  getCurrentUser,
-  getTenant,
-  updateTenant,
-  updateUser,
-} from "../../services/settingsService";
+  getSelectedTenantName,
+  subscribeToTenantChanges,
+} from "../../utils/tenantContext";
 
 export default function Settings() {
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-
-  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const [user, setUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
 
   const [profile, setProfile] = useState({
     clinicName: "",
     administrator: "",
     email: "",
     phone: "",
+    profileImageUrl: null,
   });
-
-  useEffect(() => {
-    loadSettings();
-  }, []);
 
   const loadSettings = async () => {
     try {
       setLoading(true);
       setError("");
 
-      const currentUser = await getCurrentUser();
+      const user = await getCurrentUser();
 
-      setUser(currentUser);
+      console.log("Settings current user:", user);
 
-      const tenant = await getTenant(
-        currentUser.tenant_id
-      );
+      setCurrentUser(user);
 
       setProfile({
         clinicName:
-          tenant.business_name || "",
+          getSelectedTenantName() || "",
 
         administrator:
-          currentUser.name || "",
+          user?.name || "",
 
         email:
-          currentUser.email || "",
+          user?.email || "",
 
-        phone: "",
+        phone:
+          user?.phone || "",
+
+        profileImageUrl:
+          user?.profile_image_url || null,
       });
     } catch (err) {
       console.error(
-        "Failed to load settings:",
+        "Failed to load profile settings:",
         err
       );
 
       setError(
         err?.message ||
-          "Failed to load settings."
+          "Failed to load your profile."
       );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSave = async () => {
-    if (!user) return;
+  useEffect(() => {
+    loadSettings();
+  }, []);
 
-    try {
-      setSaving(true);
-      setError("");
-      setMessage("");
+  useEffect(() => {
+    const unsubscribe =
+      subscribeToTenantChanges(
+        (selectedTenant) => {
+          setProfile((previous) => ({
+            ...previous,
 
-      await updateTenant(
-        user.tenant_id,
-        {
-          business_name:
-            profile.clinicName,
+            clinicName:
+              selectedTenant?.business_name ||
+              getSelectedTenantName() ||
+              "",
+          }));
         }
       );
 
-      await updateUser(
-        user.id,
-        {
-          full_name:
-            profile.administrator,
+    return unsubscribe;
+  }, []);
 
-          email:
-            profile.email,
-        }
-      );
+  // =====================================================
+  // ROLE
+  // =====================================================
 
-      setMessage(
-        "Clinic settings saved successfully."
-      );
+  const userRole = String(
+    currentUser?.role || ""
+  )
+    .toLowerCase()
+    .trim();
 
-      await loadSettings();
-    } catch (err) {
-      console.error(
-        "Failed to save settings:",
-        err
-      );
-
-      setError(
-        err?.message ||
-          "Failed to save settings."
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
+  const isSuperAdmin =
+    userRole === "super_admin";
 
   return (
     <Layout>
       <div className="space-y-8">
+
         <SettingsHeader />
 
+        {/* =================================================
+            LOADING
+        ================================================= */}
+
         {loading && (
-          <div className="rounded-xl border border-[#d8cdb5] bg-[#fffdf7] p-5 text-[#23483a]">
-            Loading your clinic settings...
+          <div className="rounded-2xl border border-[#d8cdb5] bg-[#fffdf7] p-5 text-[#23483a] shadow-sm">
+            Loading your profile...
           </div>
         )}
 
+        {/* =================================================
+            ERROR
+        ================================================= */}
+
         {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
             {error}
           </div>
         )}
 
-        {message && (
-          <div className="rounded-xl border border-[#c7d8c9] bg-[#edf5ed] p-4 text-[#23483a]">
-            {message}
-          </div>
-        )}
+        {/* =================================================
+            SETTINGS CONTENT
+        ================================================= */}
 
-        {!loading && (
+        {!loading && !error && (
           <>
-            {/* =================================================
-                CLINIC PROFILE
-            ================================================= */}
+            {/* =============================================
+                PROFILE
+                Everyone can see this
+            ============================================= */}
 
             <ProfileSettings
               profile={profile}
               setProfile={setProfile}
             />
 
-            <SaveButton
-              onSave={handleSave}
-              saving={saving}
-            />
+            {/* =============================================
+                SUPER ADMIN ONLY
+            ============================================= */}
 
-            {/* =================================================
-                WEBSITE
-            ================================================= */}
+            {isSuperAdmin && (
+              <>
+                <WebsiteSettings />
 
-            <WebsiteSettings />
+                <SecuritySettings />
 
-            {/* =================================================
-                SECURITY
-            ================================================= */}
-
-            <SecuritySettings />
-
-            {/* =================================================
-                NOTIFICATIONS
-            ================================================= */}
-
-            <NotificationSettings />
+                <NotificationSettings />
+              </>
+            )}
           </>
         )}
+
       </div>
     </Layout>
   );

@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from datetime import date, time
@@ -113,6 +112,22 @@ class Appointment(Base, IDMixin, TimestampMixin):
         Text,
         nullable=True,
     )
+
+    # =====================================================
+    # ARCHIVE
+    # =====================================================
+
+    is_archived: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+        index=True,
+    )
+
+    # =====================================================
+    # RELATIONSHIPS
+    # =====================================================
 
     tenant: Mapped["Tenant"] = relationship(
         "Tenant",

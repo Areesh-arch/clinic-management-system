@@ -16,7 +16,6 @@ from app.database.session import get_db
 
 from app.models.enums import UserRole
 from app.models.user import User
-from app.models.visit import Visit
 
 from app.schemas.visit import (
     VisitCreate,
@@ -29,7 +28,11 @@ from app.services.visit_service import (
     delete_visit_service,
     get_visit_service,
     list_visits_service,
+    list_archived_visits_service,
     update_visit_service,
+    archive_visit_service,
+    restore_visit_service,
+    permanently_delete_visit_service,
 )
 
 
@@ -37,7 +40,7 @@ router = APIRouter()
 
 
 # =========================================================
-# GET ALL VISITS
+# GET ALL ACTIVE VISITS
 # =========================================================
 
 @router.get(
@@ -72,7 +75,38 @@ def list_visits(
 
 
 # =========================================================
-# GET SINGLE VISIT
+# GET ARCHIVED VISITS
+# IMPORTANT: Must come before /{visit_id}
+# =========================================================
+
+@router.get(
+    "/archived",
+    response_model=list[VisitResponse],
+)
+def list_archived_visits(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
+    ),
+    _: User = Depends(
+        require_feature(Feature.VISITS)
+    ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
+):
+    return list_archived_visits_service(
+        db=db,
+        tenant_id=tenant_id,
+    )
+
+
+# =========================================================
+# GET SINGLE ACTIVE VISIT
 # =========================================================
 
 @router.get(
@@ -96,21 +130,6 @@ def get_visit(
         get_effective_tenant_id
     ),
 ):
-    visit = (
-        db.query(Visit)
-        .filter(
-            Visit.id == visit_id,
-            Visit.tenant_id == tenant_id,
-        )
-        .first()
-    )
-
-    if visit is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Visit not found.",
-        )
-
     try:
         return get_visit_service(
             db=db,
@@ -197,38 +216,101 @@ def update_visit(
         get_effective_tenant_id
     ),
 ):
-    visit = (
-        db.query(Visit)
-        .filter(
-            Visit.id == visit_id,
-            Visit.tenant_id == tenant_id,
-        )
-        .first()
-    )
-
-    if visit is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Visit not found.",
-        )
-
     try:
         return update_visit_service(
             db=db,
-            visit=visit,
+            visit_id=visit_id,
             visit_data=visit_data,
             tenant_id=tenant_id,
         )
 
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
         )
 
 
 # =========================================================
-# DELETE VISIT
+# ARCHIVE VISIT
+# =========================================================
+
+@router.post(
+    "/{visit_id}/archive",
+    response_model=VisitResponse,
+)
+def archive_visit(
+    visit_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
+    ),
+    _: User = Depends(
+        require_feature(Feature.VISITS)
+    ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
+):
+    try:
+        return archive_visit_service(
+            db=db,
+            visit_id=visit_id,
+            tenant_id=tenant_id,
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+
+
+# =========================================================
+# RESTORE VISIT
+# =========================================================
+
+@router.post(
+    "/{visit_id}/restore",
+    response_model=VisitResponse,
+)
+def restore_visit(
+    visit_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
+    ),
+    _: User = Depends(
+        require_feature(Feature.VISITS)
+    ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
+):
+    try:
+        return restore_visit_service(
+            db=db,
+            visit_id=visit_id,
+            tenant_id=tenant_id,
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+
+
+# =========================================================
+# NORMAL DELETE → ARCHIVE
 # =========================================================
 
 @router.delete(
@@ -252,25 +334,52 @@ def delete_visit(
         get_effective_tenant_id
     ),
 ):
-    visit = (
-        db.query(Visit)
-        .filter(
-            Visit.id == visit_id,
-            Visit.tenant_id == tenant_id,
-        )
-        .first()
-    )
-
-    if visit is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Visit not found.",
-        )
-
     try:
         delete_visit_service(
             db=db,
-            visit=visit,
+            visit_id=visit_id,
+            tenant_id=tenant_id,
+        )
+
+        return None
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+
+
+# =========================================================
+# PERMANENT DELETE
+# ONLY ARCHIVED VISITS CAN BE PERMANENTLY DELETED
+# =========================================================
+
+@router.delete(
+    "/{visit_id}/permanent",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def permanently_delete_visit(
+    visit_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
+    ),
+    _: User = Depends(
+        require_feature(Feature.VISITS)
+    ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
+):
+    try:
+        permanently_delete_visit_service(
+            db=db,
+            visit_id=visit_id,
             tenant_id=tenant_id,
         )
 

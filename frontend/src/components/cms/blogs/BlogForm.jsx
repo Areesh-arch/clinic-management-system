@@ -1,4 +1,10 @@
 import { useState } from "react";
+import {
+  FiUpload,
+  FiImage,
+  FiX,
+} from "react-icons/fi";
+import cmsService from "../../../services/cmsService";
 
 function createSlug(value) {
   return value
@@ -26,6 +32,10 @@ function BlogForm({
     is_published: true,
   });
 
+  const [imagePreview, setImagePreview] = useState("");
+  const [uploadingImage, setUploadingImage] =
+    useState(false);
+
   const handleChange = (event) => {
     const { name, value } = event.target;
 
@@ -44,6 +54,104 @@ function BlogForm({
       slug: createSlug(title),
     }));
   };
+
+  // =========================================================
+  // UPLOAD FEATURED IMAGE
+  // =========================================================
+
+  const handleImageUpload = async (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      alert(
+        "Please upload a JPG, PNG, or WEBP image."
+      );
+
+      event.target.value = "";
+      return;
+    }
+
+    const maxSize = 10 * 1024 * 1024;
+
+    if (file.size > maxSize) {
+      alert("Image size must be 10 MB or less.");
+
+      event.target.value = "";
+      return;
+    }
+
+    try {
+      setUploadingImage(true);
+
+      const localPreview =
+        URL.createObjectURL(file);
+
+      setImagePreview(localPreview);
+
+      const result =
+        await cmsService.uploadImage(file);
+
+      if (!result?.image_url) {
+        throw new Error(
+          "Image upload succeeded but no image URL was returned."
+        );
+      }
+
+      setForm((previous) => ({
+        ...previous,
+        featured_image_url:
+          result.image_url,
+      }));
+
+      setImagePreview(result.image_url);
+
+      URL.revokeObjectURL(localPreview);
+    } catch (error) {
+      console.error(
+        "Failed to upload blog image:",
+        error
+      );
+
+      setImagePreview(
+        form.featured_image_url || ""
+      );
+
+      alert(
+        error.message ||
+          "Failed to upload featured image."
+      );
+    } finally {
+      setUploadingImage(false);
+      event.target.value = "";
+    }
+  };
+
+  // =========================================================
+  // REMOVE IMAGE
+  // =========================================================
+
+  const removeImage = () => {
+    setForm((previous) => ({
+      ...previous,
+      featured_image_url: "",
+    }));
+
+    setImagePreview("");
+  };
+
+  // =========================================================
+  // SUBMIT
+  // =========================================================
 
   const handleSubmit = async () => {
     const title = form.title.trim();
@@ -74,6 +182,13 @@ function BlogForm({
 
     if (!content) {
       alert("Please enter article content.");
+      return;
+    }
+
+    if (uploadingImage) {
+      alert(
+        "Please wait for the image upload to finish."
+      );
       return;
     }
 
@@ -114,7 +229,7 @@ function BlogForm({
           type="button"
           className="cms-close-button"
           onClick={onCancel}
-          disabled={saving}
+          disabled={saving || uploadingImage}
         >
           ×
         </button>
@@ -193,20 +308,147 @@ function BlogForm({
       </div>
 
       {/* =================================================
-          FEATURED IMAGE
+          FEATURED IMAGE UPLOAD
       ================================================= */}
 
       <div className="cms-field">
-        <label>Featured Image URL</label>
+        <label>Featured Picture</label>
 
-        <input
-          name="featured_image_url"
-          type="text"
-          value={form.featured_image_url}
-          onChange={handleChange}
-          placeholder="https://example.com/blog-image.jpg"
-          disabled={saving}
-        />
+        <div
+          style={{
+            border: "1px dashed #b4935a",
+            borderRadius: "14px",
+            padding: "16px",
+            background: "#fffdf8",
+          }}
+        >
+          {imagePreview ? (
+            <div
+              style={{
+                position: "relative",
+                width: "100%",
+                maxWidth: "520px",
+              }}
+            >
+              <img
+                src={imagePreview}
+                alt="Blog featured preview"
+                style={{
+                  width: "100%",
+                  height: "240px",
+                  objectFit: "cover",
+                  borderRadius: "12px",
+                  display: "block",
+                }}
+                onError={() => {
+                  setImagePreview("");
+                }}
+              />
+
+              <button
+                type="button"
+                onClick={removeImage}
+                disabled={
+                  saving || uploadingImage
+                }
+                title="Remove image"
+                style={{
+                  position: "absolute",
+                  top: "10px",
+                  right: "10px",
+                  width: "34px",
+                  height: "34px",
+                  border: "none",
+                  borderRadius: "50%",
+                  background: "#173B32",
+                  color: "#fff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                }}
+              >
+                <FiX />
+              </button>
+            </div>
+          ) : (
+            <label
+              htmlFor="blog-image-upload"
+              style={{
+                minHeight: "150px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                cursor:
+                  saving || uploadingImage
+                    ? "not-allowed"
+                    : "pointer",
+                color: "#173B32",
+                textAlign: "center",
+              }}
+            >
+              <FiImage size={32} />
+
+              <strong>
+                {uploadingImage
+                  ? "Uploading picture..."
+                  : "Upload Featured Picture"}
+              </strong>
+
+              <small>
+                JPG, PNG or WEBP • Maximum 10 MB
+              </small>
+
+              {!uploadingImage && (
+                <span
+                  className="cms-primary-button"
+                  style={{
+                    marginTop: "6px",
+                    display: "inline-flex",
+                  }}
+                >
+                  <FiUpload />
+                  Choose Picture
+                </span>
+              )}
+            </label>
+          )}
+
+          <input
+            id="blog-image-upload"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handleImageUpload}
+            disabled={saving || uploadingImage}
+            style={{ display: "none" }}
+          />
+
+          {imagePreview && (
+            <label
+              htmlFor="blog-image-upload"
+              style={{
+                marginTop: "12px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "7px",
+                cursor:
+                  saving || uploadingImage
+                    ? "not-allowed"
+                    : "pointer",
+                color: "#173B32",
+                fontWeight: 600,
+              }}
+            >
+              <FiUpload />
+
+              {uploadingImage
+                ? "Uploading..."
+                : "Change Picture"}
+            </label>
+          )}
+        </div>
       </div>
 
       {/* =================================================
@@ -297,7 +539,7 @@ function BlogForm({
           type="button"
           className="cms-secondary-button"
           onClick={onCancel}
-          disabled={saving}
+          disabled={saving || uploadingImage}
         >
           Cancel
         </button>
@@ -306,7 +548,7 @@ function BlogForm({
           type="button"
           className="cms-primary-button"
           onClick={handleSubmit}
-          disabled={saving}
+          disabled={saving || uploadingImage}
         >
           {saving
             ? "Saving..."

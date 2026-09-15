@@ -2,7 +2,7 @@ import { apiRequest } from "./api";
 
 
 // =========================================================
-// GET ALL APPOINTMENTS
+// GET ALL ACTIVE APPOINTMENTS
 // =========================================================
 
 export async function getAppointments() {
@@ -11,12 +11,23 @@ export async function getAppointments() {
 
 
 // =========================================================
-// GET SINGLE APPOINTMENT
+// GET SINGLE ACTIVE APPOINTMENT
 // =========================================================
 
 export async function getAppointment(appointmentId) {
   return apiRequest(
     `/appointments/${appointmentId}`
+  );
+}
+
+
+// =========================================================
+// GET ARCHIVED APPOINTMENTS
+// =========================================================
+
+export async function getArchivedAppointments() {
+  return apiRequest(
+    "/appointments/archived"
   );
 }
 
@@ -32,7 +43,9 @@ export async function createAppointment(
     "/appointments/",
     {
       method: "POST",
-      body: JSON.stringify(appointmentData),
+      body: JSON.stringify(
+        appointmentData
+      ),
     }
   );
 }
@@ -50,14 +63,64 @@ export async function updateAppointment(
     `/appointments/${appointmentId}`,
     {
       method: "PUT",
-      body: JSON.stringify(appointmentData),
+      body: JSON.stringify(
+        appointmentData
+      ),
     }
   );
 }
 
 
 // =========================================================
-// DELETE APPOINTMENT
+// ARCHIVE APPOINTMENT
+// =========================================================
+
+export async function archiveAppointment(
+  appointmentId
+) {
+  return apiRequest(
+    `/appointments/${appointmentId}/archive`,
+    {
+      method: "POST",
+    }
+  );
+}
+
+
+// =========================================================
+// RESTORE APPOINTMENT
+// =========================================================
+
+export async function restoreAppointment(
+  appointmentId
+) {
+  return apiRequest(
+    `/appointments/${appointmentId}/restore`,
+    {
+      method: "POST",
+    }
+  );
+}
+
+
+// =========================================================
+// PERMANENT DELETE
+// =========================================================
+
+export async function permanentlyDeleteAppointment(
+  appointmentId
+) {
+  return apiRequest(
+    `/appointments/${appointmentId}/permanent`,
+    {
+      method: "DELETE",
+    }
+  );
+}
+
+
+// =========================================================
+// DELETE = ARCHIVE
 // =========================================================
 
 export async function deleteAppointment(

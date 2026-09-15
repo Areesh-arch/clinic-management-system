@@ -4,8 +4,11 @@ from app.crud.visit import (
     create_visit,
     get_visit_by_id,
     get_visits,
+    get_archived_visits,
     update_visit,
-    delete_visit,
+    archive_visit,
+    restore_visit,
+    permanently_delete_visit,
 )
 
 from app.models.visit import Visit
@@ -23,118 +26,35 @@ from app.schemas.visit import (
 )
 
 
-# =========================================================
+# ============================================================
 # SYNC APPOINTMENT STATUS
-# =========================================================
+# ============================================================
 
 def sync_appointment_status(
     db: Session,
-    visit: Visit,
-    tenant_id: int,
-):
-    """
-    Synchronize the appointment status with the visit.
+    appointment: Appointment,
+    visit_status: VisitStatus,
+) -> None:
 
-    Appointment workflow:
-
-        SCHEDULED
-            |
-            | patient attends / visit is completed
-            v
-        COMPLETED
-
-    Payment is NOT required for an appointment to become
-    COMPLETED.
-
-    Payment belongs to billing/financial workflow and should
-    not determine whether the appointment happened.
-    """
-
-    # -----------------------------------------------------
-    # Visit must belong to an appointment
-    # -----------------------------------------------------
-
-    if visit.appointment_id is None:
-        return
-
-    # -----------------------------------------------------
-    # Find appointment
-    # -----------------------------------------------------
-
-    appointment = (
-        db.query(Appointment)
-        .filter(
-            Appointment.id == visit.appointment_id,
-            Appointment.tenant_id == tenant_id,
-        )
-        .first()
-    )
-
-    if appointment is None:
-        return
-
-    # -----------------------------------------------------
-    # Do not overwrite final appointment statuses
-    # -----------------------------------------------------
-    #
-    # If an appointment was explicitly marked:
-    #
-    #   CANCELLED
-    #   NO_SHOW
-    #
-    # a visit update should not automatically change it
-    # back to SCHEDULED or COMPLETED.
-    #
-    # This protects the appointment workflow.
-    # -----------------------------------------------------
-
-    if appointment.status in (
-        AppointmentStatus.CANCELLED,
-        AppointmentStatus.NO_SHOW,
-    ):
-        db.commit()
-        db.refresh(appointment)
-        return
-
-    # -----------------------------------------------------
-    # COMPLETED VISIT = COMPLETED APPOINTMENT
-    # -----------------------------------------------------
-
-    if visit.status == VisitStatus.COMPLETED:
+    if visit_status == VisitStatus.COMPLETED:
         appointment.status = AppointmentStatus.COMPLETED
 
-    # -----------------------------------------------------
-    # Other visit statuses
-    # -----------------------------------------------------
-    #
-    # If visit is IN_PROGRESS, appointment remains
-    # SCHEDULED because the appointment has happened but
-    # the visit has not been completed yet.
-    #
-    # We intentionally do NOT change a completed appointment
-    # back to scheduled here.
-    # -----------------------------------------------------
+    elif visit_status == VisitStatus.CANCELLED:
+        appointment.status = AppointmentStatus.CANCELLED
 
-    db.commit()
-    db.refresh(appointment)
+    elif visit_status == VisitStatus.NO_SHOW:
+        appointment.status = AppointmentStatus.NO_SHOW
 
 
-# =========================================================
+# ============================================================
 # CREATE VISIT
-# =========================================================
+# ============================================================
 
 def create_visit_service(
     db: Session,
     visit_data: VisitCreate,
     tenant_id: int,
-):
-    """
-    Create a visit from an existing appointment.
-    """
-
-    # -----------------------------------------------------
-    # Find appointment
-    # -----------------------------------------------------
+) -> Visit:
 
     appointment = (
         db.query(Appointment)
@@ -145,41 +65,8 @@ def create_visit_service(
         .first()
     )
 
-    if appointment is None:
-        raise ValueError(
-            "Appointment not found."
-        )
-
-    # -----------------------------------------------------
-    # Appointment must be scheduled
-    # -----------------------------------------------------
-
-    if appointment.status != AppointmentStatus.SCHEDULED:
-        raise ValueError(
-            "Visit can only be started from a scheduled appointment."
-        )
-
-    # -----------------------------------------------------
-    # Prevent duplicate visit
-    # -----------------------------------------------------
-
-    existing_visit = (
-        db.query(Visit)
-        .filter(
-            Visit.appointment_id == appointment.id,
-            Visit.tenant_id == tenant_id,
-        )
-        .first()
-    )
-
-    if existing_visit is not None:
-        raise ValueError(
-            "Visit already exists for this appointment."
-        )
-
-    # -----------------------------------------------------
-    # Verify patient
-    # -----------------------------------------------------
+    if not appointment:
+        raise ValueError("Appointment not found.")
 
     patient = (
         db.query(Patient)
@@ -190,110 +77,88 @@ def create_visit_service(
         .first()
     )
 
-    if patient is None:
-        raise ValueError(
-            "Patient associated with this appointment was not found."
-        )
-
-    # -----------------------------------------------------
-    # Create visit
-    # -----------------------------------------------------
+    if not patient:
+        raise ValueError("Patient not found.")
 
     visit = create_visit(
         db=db,
         visit_data=visit_data,
         tenant_id=tenant_id,
-        patient_id=appointment.patient_id,
-    )
-
-    # -----------------------------------------------------
-    # Synchronize appointment status
-    # -----------------------------------------------------
-    #
-    # Normally a newly created visit will be IN_PROGRESS.
-    #
-    # If the VisitCreate data creates it directly as
-    # COMPLETED, the appointment should immediately become
-    # COMPLETED as well.
-    # -----------------------------------------------------
-
-    sync_appointment_status(
-        db=db,
-        visit=visit,
-        tenant_id=tenant_id,
+        patient_id=patient.id,
     )
 
     return visit
 
 
-# =========================================================
-# GET ONE
-# =========================================================
+# ============================================================
+# GET SINGLE ACTIVE VISIT
+# ============================================================
 
 def get_visit_service(
     db: Session,
     visit_id: int,
     tenant_id: int,
-):
+) -> Visit:
+
     visit = get_visit_by_id(
         db=db,
         visit_id=visit_id,
     )
 
-    if visit is None:
-        raise ValueError(
-            "Visit not found."
-        )
-
-    if visit.tenant_id != tenant_id:
-        raise ValueError(
-            "Visit does not belong to this clinic."
-        )
+    if not visit or visit.tenant_id != tenant_id:
+        raise ValueError("Visit not found.")
 
     return visit
 
 
-# =========================================================
-# GET ALL
-# =========================================================
+# ============================================================
+# GET ACTIVE VISITS
+# ============================================================
 
 def list_visits_service(
     db: Session,
     tenant_id: int,
-):
+) -> list[Visit]:
+
     return get_visits(
         db=db,
         tenant_id=tenant_id,
     )
 
 
-# =========================================================
-# UPDATE
-# =========================================================
+# ============================================================
+# GET ARCHIVED VISITS
+# ============================================================
+
+def list_archived_visits_service(
+    db: Session,
+    tenant_id: int,
+) -> list[Visit]:
+
+    return get_archived_visits(
+        db=db,
+        tenant_id=tenant_id,
+    )
+
+
+# ============================================================
+# UPDATE VISIT
+# ============================================================
 
 def update_visit_service(
     db: Session,
-    visit: Visit,
+    visit_id: int,
     visit_data: VisitUpdate,
     tenant_id: int,
-):
-    """
-    Update visit and automatically synchronize
-    the connected appointment.
-    """
+) -> Visit:
 
-    # -----------------------------------------------------
-    # Tenant validation
-    # -----------------------------------------------------
+    visit = get_visit_by_id(
+        db=db,
+        visit_id=visit_id,
+    )
 
-    if visit.tenant_id != tenant_id:
-        raise ValueError(
-            "Visit does not belong to this clinic."
-        )
-
-    # -----------------------------------------------------
-    # Update visit
-    # -----------------------------------------------------
+    if not visit or visit.tenant_id != tenant_id:
+        raise ValueError("Visit not found.")
 
     updated_visit = update_visit(
         db=db,
@@ -301,42 +166,126 @@ def update_visit_service(
         visit_data=visit_data,
     )
 
-    # -----------------------------------------------------
-    # Synchronize appointment
-    # -----------------------------------------------------
+    # Keep appointment status synchronized when
+    # the visit status changes.
+    if visit_data.status is not None:
 
-    sync_appointment_status(
-        db=db,
-        visit=updated_visit,
-        tenant_id=tenant_id,
-    )
+        appointment = (
+            db.query(Appointment)
+            .filter(
+                Appointment.id == visit.appointment_id,
+                Appointment.tenant_id == tenant_id,
+            )
+            .first()
+        )
+
+        if appointment:
+            sync_appointment_status(
+                db=db,
+                appointment=appointment,
+                visit_status=visit_data.status,
+            )
+
+            db.commit()
+            db.refresh(updated_visit)
 
     return updated_visit
 
 
-# =========================================================
-# DELETE
-# =========================================================
+# ============================================================
+# ARCHIVE VISIT
+# ============================================================
+
+def archive_visit_service(
+    db: Session,
+    visit_id: int,
+    tenant_id: int,
+) -> Visit:
+
+    visit = get_visit_by_id(
+        db=db,
+        visit_id=visit_id,
+    )
+
+    if not visit or visit.tenant_id != tenant_id:
+        raise ValueError("Visit not found.")
+
+    return archive_visit(
+        db=db,
+        visit=visit,
+    )
+
+
+# ============================================================
+# RESTORE VISIT
+# ============================================================
+
+def restore_visit_service(
+    db: Session,
+    visit_id: int,
+    tenant_id: int,
+) -> Visit:
+
+    visit = (
+        db.query(Visit)
+        .filter(
+            Visit.id == visit_id,
+            Visit.tenant_id == tenant_id,
+            Visit.is_archived.is_(True),
+        )
+        .first()
+    )
+
+    if not visit:
+        raise ValueError("Archived visit not found.")
+
+    return restore_visit(
+        db=db,
+        visit=visit,
+    )
+
+
+# ============================================================
+# PERMANENT DELETE
+# ============================================================
+
+def permanently_delete_visit_service(
+    db: Session,
+    visit_id: int,
+    tenant_id: int,
+) -> None:
+
+    visit = (
+        db.query(Visit)
+        .filter(
+            Visit.id == visit_id,
+            Visit.tenant_id == tenant_id,
+            Visit.is_archived.is_(True),
+        )
+        .first()
+    )
+
+    if not visit:
+        raise ValueError("Archived visit not found.")
+
+    permanently_delete_visit(
+        db=db,
+        visit=visit,
+    )
+
+
+# ============================================================
+# DELETE → ARCHIVE
+# ============================================================
 
 def delete_visit_service(
     db: Session,
-    visit: Visit,
+    visit_id: int,
     tenant_id: int,
-):
-    # -----------------------------------------------------
-    # Tenant validation
-    # -----------------------------------------------------
+) -> Visit:
 
-    if visit.tenant_id != tenant_id:
-        raise ValueError(
-            "Visit does not belong to this clinic."
-        )
-
-    # -----------------------------------------------------
-    # Delete visit
-    # -----------------------------------------------------
-
-    delete_visit(
+    return archive_visit_service(
         db=db,
-        visit=visit,
+        visit_id=visit_id,
+        tenant_id=tenant_id,
     )

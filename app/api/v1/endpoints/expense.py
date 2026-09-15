@@ -1,5 +1,3 @@
-from sqlalchemy.orm import Session
-
 from fastapi import (
     APIRouter,
     Depends,
@@ -7,8 +5,11 @@ from fastapi import (
     status,
 )
 
+from sqlalchemy.orm import Session
+
 from app.database.session import get_db
 from app.api.permissions import require_roles
+from app.api.tenant_context import get_effective_tenant_id
 
 from app.models.enums import UserRole
 from app.models.user import User
@@ -21,10 +22,14 @@ from app.schemas.expense import (
 
 from app.services.expense_service import (
     create_expense_service,
-    get_expense_service,
     list_expenses_service,
+    list_archived_expenses_service,
+    get_expense_service,
+    get_archived_expense_service,
     update_expense_service,
-    delete_expense_service,
+    archive_expense_service,
+    restore_expense_service,
+    permanently_delete_expense_service,
 )
 
 
@@ -36,7 +41,7 @@ router = APIRouter(
 
 # =========================================================
 # CREATE EXPENSE
-# OWNER + SUPER_ADMIN
+# SUPER_ADMIN + OWNER + STAFF
 # =========================================================
 
 @router.post(
@@ -50,15 +55,19 @@ def create_expense(
     current_user: User = Depends(
         require_roles(
             UserRole.OWNER,
+            UserRole.STAFF,
             UserRole.SUPER_ADMIN,
         )
+    ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
     ),
 ):
     try:
         return create_expense_service(
             db=db,
+            tenant_id=tenant_id,
             expense_data=expense_data,
-            tenant_id=current_user.tenant_id,
         )
 
     except ValueError as e:
@@ -69,8 +78,7 @@ def create_expense(
 
 
 # =========================================================
-# LIST EXPENSES
-# OWNER + SUPER_ADMIN
+# LIST ACTIVE EXPENSES
 # =========================================================
 
 @router.get(
@@ -82,19 +90,49 @@ def list_expenses(
     current_user: User = Depends(
         require_roles(
             UserRole.OWNER,
+            UserRole.STAFF,
             UserRole.SUPER_ADMIN,
         )
+    ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
     ),
 ):
     return list_expenses_service(
         db=db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=tenant_id,
     )
 
 
 # =========================================================
-# GET SINGLE EXPENSE
-# OWNER + SUPER_ADMIN
+# LIST ARCHIVED EXPENSES
+# =========================================================
+
+@router.get(
+    "/archived",
+    response_model=list[ExpenseResponse],
+)
+def list_archived_expenses(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
+    ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
+):
+    return list_archived_expenses_service(
+        db=db,
+        tenant_id=tenant_id,
+    )
+
+
+# =========================================================
+# GET ACTIVE EXPENSE
 # =========================================================
 
 @router.get(
@@ -107,13 +145,17 @@ def get_expense(
     current_user: User = Depends(
         require_roles(
             UserRole.OWNER,
+            UserRole.STAFF,
             UserRole.SUPER_ADMIN,
         )
+    ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
     ),
 ):
     expense = get_expense_service(
         db=db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=tenant_id,
         expense_id=expense_id,
     )
 
@@ -127,8 +169,7 @@ def get_expense(
 
 
 # =========================================================
-# UPDATE EXPENSE
-# OWNER + SUPER_ADMIN
+# UPDATE ACTIVE EXPENSE
 # =========================================================
 
 @router.put(
@@ -142,13 +183,17 @@ def update_expense(
     current_user: User = Depends(
         require_roles(
             UserRole.OWNER,
+            UserRole.STAFF,
             UserRole.SUPER_ADMIN,
         )
+    ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
     ),
 ):
     expense = update_expense_service(
         db=db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=tenant_id,
         expense_id=expense_id,
         expense_data=expense_data,
     )
@@ -163,8 +208,119 @@ def update_expense(
 
 
 # =========================================================
-# DELETE EXPENSE
-# OWNER + SUPER_ADMIN
+# ARCHIVE EXPENSE
+# =========================================================
+
+@router.post(
+    "/{expense_id}/archive",
+    response_model=ExpenseResponse,
+)
+def archive_expense(
+    expense_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
+    ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
+):
+    expense = archive_expense_service(
+        db=db,
+        tenant_id=tenant_id,
+        expense_id=expense_id,
+    )
+
+    if expense is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Expense not found.",
+        )
+
+    return expense
+
+
+# =========================================================
+# RESTORE ARCHIVED EXPENSE
+# =========================================================
+
+@router.post(
+    "/{expense_id}/restore",
+    response_model=ExpenseResponse,
+)
+def restore_expense(
+    expense_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
+    ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
+):
+    expense = restore_expense_service(
+        db=db,
+        tenant_id=tenant_id,
+        expense_id=expense_id,
+    )
+
+    if expense is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Archived expense not found.",
+        )
+
+    return expense
+
+
+# =========================================================
+# PERMANENT DELETE EXPENSE
+# ARCHIVED ONLY
+# =========================================================
+
+@router.delete(
+    "/{expense_id}/permanent",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def permanently_delete_expense(
+    expense_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
+    ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
+):
+    expense = permanently_delete_expense_service(
+        db=db,
+        tenant_id=tenant_id,
+        expense_id=expense_id,
+    )
+
+    if expense is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Archived expense not found.",
+        )
+
+    return None
+
+
+# =========================================================
+# LEGACY DELETE → ARCHIVE
 # =========================================================
 
 @router.delete(
@@ -177,13 +333,25 @@ def delete_expense(
     current_user: User = Depends(
         require_roles(
             UserRole.OWNER,
+            UserRole.STAFF,
             UserRole.SUPER_ADMIN,
         )
     ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
 ):
-    expense = delete_expense_service(
+    """
+    Existing DELETE endpoint is kept for frontend
+    compatibility.
+
+    It now ARCHIVES the expense instead of permanently
+    deleting it.
+    """
+
+    expense = archive_expense_service(
         db=db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=tenant_id,
         expense_id=expense_id,
     )
 

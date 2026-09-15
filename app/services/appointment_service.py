@@ -8,15 +8,22 @@ from app.crud.appointment import (
     create_appointment,
     get_appointment_by_id,
     get_appointments,
+    get_archived_appointments,
+    get_archived_appointment_by_id,
     update_appointment,
     delete_appointment,
+    archive_appointment,
+    restore_appointment,
+    permanently_delete_appointment,
 )
 
 from app.models.appointment import Appointment
+
 from app.models.enums import (
     AppointmentSource,
     AppointmentStatus,
 )
+
 from app.models.patient import Patient
 from app.models.user import User
 
@@ -42,6 +49,7 @@ def _validate_patient(
     patient_id: int,
     tenant_id: int,
 ) -> Patient:
+
     patient = (
         db.query(Patient)
         .filter(
@@ -68,11 +76,6 @@ def _validate_future_datetime(
     appointment_date,
     appointment_time,
 ) -> None:
-    """
-    Validate that the appointment date/time is in the future.
-
-    Appointment date/time represents clinic-local time.
-    """
 
     appointment_datetime = datetime.combine(
         appointment_date,
@@ -100,6 +103,7 @@ def _validate_future_datetime(
 def _validate_duration(
     duration_minutes: int,
 ) -> None:
+
     if duration_minutes <= 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -119,11 +123,13 @@ def _check_overlap(
     duration_minutes: int,
     exclude_appointment_id: int | None = None,
 ) -> None:
+
     appointments = (
         db.query(Appointment)
         .filter(
             Appointment.tenant_id == tenant_id,
             Appointment.appointment_date == appointment_date,
+            Appointment.is_archived.is_(False),
         )
         .all()
     )
@@ -145,8 +151,6 @@ def _check_overlap(
         ):
             continue
 
-        # Cancelled and no-show appointments do not
-        # block the appointment slot.
         if appointment.status in (
             AppointmentStatus.CANCELLED,
             AppointmentStatus.NO_SHOW,
@@ -190,6 +194,7 @@ def _has_previous_appointment(
             Appointment.tenant_id == tenant_id,
             Appointment.patient_id == patient_id,
             Appointment.appointment_date < appointment_date,
+            Appointment.is_archived.is_(False),
         )
     )
 
@@ -487,16 +492,8 @@ def _get_or_create_public_patient(
         phone=phone,
     )
 
-    # -----------------------------------------------------
-    # EXISTING PATIENT
-    # -----------------------------------------------------
-
     if patient is not None:
         return patient
-
-    # -----------------------------------------------------
-    # NEW PATIENT
-    # -----------------------------------------------------
 
     first_name, last_name = _split_full_name(
         public_data.full_name
@@ -529,24 +526,11 @@ def create_public_appointment_service(
     tenant_id: int,
 ) -> Appointment:
 
-    # -----------------------------------------------------
-    # FIND OR CREATE PATIENT
-    # -----------------------------------------------------
-
     patient = _get_or_create_public_patient(
         db=db,
         public_data=appointment_data,
         tenant_id=tenant_id,
     )
-
-    # -----------------------------------------------------
-    # BUILD NORMAL APPOINTMENT DATA
-    # -----------------------------------------------------
-    #
-    # IMPORTANT:
-    # source is NOT accepted from the frontend.
-    # It is always controlled by the backend.
-    #
 
     normal_appointment_data = AppointmentCreate(
         patient_id=patient.id,
@@ -559,10 +543,6 @@ def create_public_appointment_service(
         notes=None,
     )
 
-    # -----------------------------------------------------
-    # REUSE EXISTING APPOINTMENT BUSINESS LOGIC
-    # -----------------------------------------------------
-
     appointment = create_appointment_service(
         db=db,
         appointment_data=normal_appointment_data,
@@ -574,7 +554,7 @@ def create_public_appointment_service(
 
 
 # =========================================================
-# GET
+# GET SINGLE ACTIVE APPOINTMENT
 # =========================================================
 
 def get_appointment_service(
@@ -608,7 +588,7 @@ def get_appointment_service(
 
 
 # =========================================================
-# LIST
+# LIST ACTIVE APPOINTMENTS
 # =========================================================
 
 def list_appointments_service(
@@ -629,7 +609,28 @@ def list_appointments_service(
 
 
 # =========================================================
-# UPDATE
+# LIST ARCHIVED APPOINTMENTS
+# =========================================================
+
+def list_archived_appointments_service(
+    db: Session,
+    current_user: User,
+    tenant_id: int,
+) -> list[Appointment]:
+
+    appointments = get_archived_appointments(
+        db=db,
+        tenant_id=tenant_id,
+    )
+
+    return _attach_patient_data_to_list(
+        db,
+        appointments,
+    )
+
+
+# =========================================================
+# UPDATE APPOINTMENT
 # =========================================================
 
 def update_appointment_service(
@@ -661,10 +662,6 @@ def update_appointment_service(
         exclude_unset=True,
     )
 
-    # -----------------------------------------------------
-    # STATUS
-    # -----------------------------------------------------
-
     if "status" in update_data:
 
         new_status = update_data["status"]
@@ -673,10 +670,6 @@ def update_appointment_service(
             current_status=appointment.status,
             new_status=new_status,
         )
-
-    # -----------------------------------------------------
-    # PATIENT
-    # -----------------------------------------------------
 
     patient_id = update_data.get(
         "patient_id",
@@ -688,10 +681,6 @@ def update_appointment_service(
         patient_id=patient_id,
         tenant_id=tenant_id,
     )
-
-    # -----------------------------------------------------
-    # DATE / TIME / DURATION
-    # -----------------------------------------------------
 
     appointment_date = update_data.get(
         "appointment_date",
@@ -722,10 +711,6 @@ def update_appointment_service(
         duration_minutes
     )
 
-    # -----------------------------------------------------
-    # OVERLAP
-    # -----------------------------------------------------
-
     if (
         "appointment_date" in update_data
         or "appointment_time" in update_data
@@ -741,10 +726,6 @@ def update_appointment_service(
             duration_minutes=duration_minutes,
             exclude_appointment_id=appointment.id,
         )
-
-    # -----------------------------------------------------
-    # FOLLOW-UP
-    # -----------------------------------------------------
 
     if (
         "patient_id" in update_data
@@ -766,10 +747,6 @@ def update_appointment_service(
             exclude_appointment_id=appointment.id,
         )
 
-    # -----------------------------------------------------
-    # APPLY UPDATE
-    # -----------------------------------------------------
-
     updated_data = AppointmentUpdate(
         **update_data
     )
@@ -787,7 +764,119 @@ def update_appointment_service(
 
 
 # =========================================================
-# DELETE
+# ARCHIVE APPOINTMENT
+# =========================================================
+
+def archive_appointment_service(
+    db: Session,
+    appointment_id: int,
+    current_user: User,
+    tenant_id: int,
+) -> Appointment:
+
+    appointment = get_appointment_by_id(
+        db=db,
+        appointment_id=appointment_id,
+    )
+
+    if appointment is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Appointment not found.",
+        )
+
+    if appointment.tenant_id != tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Appointment not found in the selected clinic.",
+        )
+
+    appointment = archive_appointment(
+        db=db,
+        appointment=appointment,
+    )
+
+    return _attach_patient_data(
+        db,
+        appointment,
+    )
+
+
+# =========================================================
+# RESTORE APPOINTMENT
+# =========================================================
+
+def restore_appointment_service(
+    db: Session,
+    appointment_id: int,
+    current_user: User,
+    tenant_id: int,
+) -> Appointment:
+
+    appointment = get_archived_appointment_by_id(
+        db=db,
+        appointment_id=appointment_id,
+    )
+
+    if appointment is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Archived appointment not found.",
+        )
+
+    if appointment.tenant_id != tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Appointment not found in the selected clinic.",
+        )
+
+    appointment = restore_appointment(
+        db=db,
+        appointment=appointment,
+    )
+
+    return _attach_patient_data(
+        db,
+        appointment,
+    )
+
+
+# =========================================================
+# PERMANENT DELETE APPOINTMENT
+# =========================================================
+
+def permanently_delete_appointment_service(
+    db: Session,
+    appointment_id: int,
+    current_user: User,
+    tenant_id: int,
+) -> None:
+
+    appointment = get_archived_appointment_by_id(
+        db=db,
+        appointment_id=appointment_id,
+    )
+
+    if appointment is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Archived appointment not found.",
+        )
+
+    if appointment.tenant_id != tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Appointment not found in the selected clinic.",
+        )
+
+    permanently_delete_appointment(
+        db=db,
+        appointment=appointment,
+    )
+
+
+# =========================================================
+# DELETE = ARCHIVE
 # =========================================================
 
 def delete_appointment_service(

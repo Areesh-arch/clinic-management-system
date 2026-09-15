@@ -4,6 +4,7 @@ from fastapi import (
     HTTPException,
     status,
 )
+
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
@@ -22,8 +23,12 @@ from app.services.inventory_service import (
     create_inventory_service,
     get_inventory_service,
     list_inventory_service,
+    list_archived_inventory_service,
     update_inventory_service,
     delete_inventory_service,
+    archive_inventory_service,
+    restore_inventory_service,
+    permanently_delete_inventory_service,
 )
 
 
@@ -35,7 +40,6 @@ router = APIRouter(
 
 # =========================================================
 # CREATE INVENTORY ITEM
-# SUPER_ADMIN + OWNER + STAFF
 # =========================================================
 
 @router.post(
@@ -69,8 +73,7 @@ def create_inventory(
 
 
 # =========================================================
-# LIST INVENTORY
-# SUPER_ADMIN + OWNER + STAFF
+# LIST ACTIVE INVENTORY
 # =========================================================
 
 @router.get(
@@ -94,8 +97,134 @@ def list_inventory(
 
 
 # =========================================================
-# GET SINGLE INVENTORY ITEM
-# SUPER_ADMIN + OWNER + STAFF
+# LIST ARCHIVED INVENTORY
+# IMPORTANT: BEFORE /{inventory_item_id}
+# =========================================================
+
+@router.get(
+    "/archived",
+    response_model=list[InventoryResponse],
+)
+def list_archived_inventory(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.SUPER_ADMIN,
+            UserRole.OWNER,
+            UserRole.STAFF,
+        )
+    ),
+):
+    return list_archived_inventory_service(
+        db=db,
+        tenant_id=current_user.tenant_id,
+    )
+
+
+# =========================================================
+# ARCHIVE INVENTORY ITEM
+# =========================================================
+
+@router.post(
+    "/{inventory_item_id}/archive",
+    response_model=InventoryResponse,
+)
+def archive_inventory(
+    inventory_item_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.SUPER_ADMIN,
+            UserRole.OWNER,
+            UserRole.STAFF,
+        )
+    ),
+):
+    try:
+        return archive_inventory_service(
+            db=db,
+            inventory_item_id=inventory_item_id,
+            tenant_id=current_user.tenant_id,
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+
+
+# =========================================================
+# RESTORE INVENTORY ITEM
+# =========================================================
+
+@router.post(
+    "/{inventory_item_id}/restore",
+    response_model=InventoryResponse,
+)
+def restore_inventory(
+    inventory_item_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.SUPER_ADMIN,
+            UserRole.OWNER,
+            UserRole.STAFF,
+        )
+    ),
+):
+    try:
+        return restore_inventory_service(
+            db=db,
+            inventory_item_id=inventory_item_id,
+            tenant_id=current_user.tenant_id,
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+
+
+# =========================================================
+# PERMANENT DELETE
+# IMPORTANT: BEFORE /{inventory_item_id}
+# =========================================================
+
+@router.delete(
+    "/{inventory_item_id}/permanent",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def permanently_delete_inventory(
+    inventory_item_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.SUPER_ADMIN,
+            UserRole.OWNER,
+            UserRole.STAFF,
+        )
+    ),
+):
+    try:
+        permanently_delete_inventory_service(
+            db=db,
+            inventory_item_id=inventory_item_id,
+            tenant_id=current_user.tenant_id,
+        )
+
+        return None
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+
+
+# =========================================================
+# GET SINGLE ACTIVE INVENTORY ITEM
 # =========================================================
 
 @router.get(
@@ -129,7 +258,6 @@ def get_inventory(
 
 # =========================================================
 # UPDATE INVENTORY ITEM
-# SUPER_ADMIN + OWNER + STAFF
 # =========================================================
 
 @router.put(
@@ -169,8 +297,7 @@ def update_inventory(
 
 
 # =========================================================
-# DELETE INVENTORY ITEM
-# SUPER_ADMIN + OWNER + STAFF
+# DELETE = ARCHIVE
 # =========================================================
 
 @router.delete(

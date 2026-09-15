@@ -17,8 +17,13 @@ import PatientProfile from "../pages/PatientProfile";
 
 import Staff from "../pages/Staff";
 import Treatments from "../pages/Treatments";
+import TreatmentArchive from "../pages/TreatmentArchive";
+
 import Appointments from "../pages/Appointments";
+import AppointmentArchive from "../pages/AppointmentArchive";
+
 import Billing from "../pages/Billing";
+import Archive from "../pages/Archive";
 import Inventory from "../pages/Inventory";
 import Settings from "../pages/Settings";
 import Photos from "../pages/Photos";
@@ -26,6 +31,7 @@ import CRM from "../pages/CRM";
 import CMS from "../pages/CMS";
 
 import ProtectedRoute from "../components/auth/ProtectedRoute";
+
 
 function AppRouter() {
   return (
@@ -99,6 +105,7 @@ function AppRouter() {
           />
 
           {/* PATIENT PROFILE */}
+
           <Route
             path="/patients/:patientId"
             element={<PatientProfile />}
@@ -109,9 +116,29 @@ function AppRouter() {
             element={<Staff />}
           />
 
+
+          {/* ===================================================
+              APPOINTMENTS
+          =================================================== */}
+
+          <Route
+            path="/appointments/archive"
+            element={<AppointmentArchive />}
+          />
+
           <Route
             path="/appointments"
             element={<Appointments />}
+          />
+
+
+          {/* ===================================================
+              TREATMENTS
+          =================================================== */}
+
+          <Route
+            path="/treatments/archive"
+            element={<TreatmentArchive />}
           />
 
           <Route
@@ -119,25 +146,60 @@ function AppRouter() {
             element={<Treatments />}
           />
 
+
+          {/* ===================================================
+              PHOTOS
+          =================================================== */}
+
           <Route
             path="/photos"
             element={<Photos />}
           />
+
+
+          {/* ===================================================
+              INVENTORY
+          =================================================== */}
 
           <Route
             path="/inventory"
             element={<Inventory />}
           />
 
+
+          {/* ===================================================
+              BILLING
+          =================================================== */}
+
           <Route
             path="/billing"
             element={<Billing />}
           />
 
+
+          {/* ===================================================
+              ARCHIVE
+          =================================================== */}
+
+          <Route
+            path="/archive"
+            element={<Archive />}
+          />
+
+
+          {/* ===================================================
+              CRM
+          =================================================== */}
+
           <Route
             path="/crm"
             element={<CRM />}
           />
+
+
+          {/* ===================================================
+              CMS
+          =================================================== */}
 
           <Route
             path="/cms"

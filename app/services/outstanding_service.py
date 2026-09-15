@@ -16,7 +16,12 @@ from app.crud.outstanding import (
 from app.models.outstanding import Outstanding
 from app.models.visit import Visit
 from app.models.payment import Payment
+from app.models.patient import Patient
 
+
+# =========================================================
+# CALCULATE VISIT OUTSTANDING
+# =========================================================
 
 def calculate_visit_outstanding(
     db: Session,
@@ -29,12 +34,18 @@ def calculate_visit_outstanding(
         total_paid
         outstanding_amount
 
-    for a single visit.
+    Only ACTIVE payments are included.
+
+    Archived payments are ignored.
     """
 
     total_charge = Decimal(
         str(visit.charge or 0)
     )
+
+    # -----------------------------------------------------
+    # ACTIVE PAYMENTS ONLY
+    # -----------------------------------------------------
 
     total_paid = (
         db.query(
@@ -46,6 +57,7 @@ def calculate_visit_outstanding(
         .filter(
             Payment.visit_id == visit.id,
             Payment.tenant_id == visit.tenant_id,
+            Payment.is_archived.is_(False),
         )
         .scalar()
     )
@@ -58,7 +70,7 @@ def calculate_visit_outstanding(
         total_charge - total_paid
     )
 
-    # Never allow outstanding to become negative.
+    # Never allow negative outstanding.
     if outstanding_amount < 0:
         outstanding_amount = Decimal("0.00")
 
@@ -69,14 +81,17 @@ def calculate_visit_outstanding(
     )
 
 
+# =========================================================
+# CREATE / UPDATE OUTSTANDING
+# =========================================================
+
 def create_or_update_outstanding_service(
     db: Session,
     visit: Visit,
     tenant_id: int,
 ):
     """
-    Create or update the outstanding record
-    for a visit.
+    Create or update the outstanding record for a visit.
     """
 
     if visit.tenant_id != tenant_id:
@@ -120,40 +135,105 @@ def create_or_update_outstanding_service(
     )
 
 
+# =========================================================
+# BUILD OUTSTANDING RESPONSE
+# =========================================================
+
 def build_outstanding_response(
+    db: Session,
     outstanding: Outstanding,
 ):
     """
-    Convert an Outstanding model into the response
-    expected by the frontend.
+    Build the frontend Outstanding response.
 
-    Includes both patient_id and patient_name.
+    Includes:
+        - Patient Name
+        - Medical Record Number
+        - Patient ID for backend compatibility
     """
 
-    patient = outstanding.patient
+    # -----------------------------------------------------
+    # Get patient using tenant-safe lookup
+    # -----------------------------------------------------
+
+    patient = (
+        db.query(Patient)
+        .filter(
+            Patient.id == outstanding.patient_id,
+            Patient.tenant_id == outstanding.tenant_id,
+        )
+        .first()
+    )
+
+    # -----------------------------------------------------
+    # Patient name
+    # -----------------------------------------------------
 
     if patient is None:
         patient_name = "Unknown Patient"
+        medical_record_number = None
     else:
-        patient_name = (
-            f"{patient.first_name} {patient.last_name}"
+        first_name = (
+            getattr(patient, "first_name", "")
+            or ""
         ).strip()
+
+        last_name = (
+            getattr(patient, "last_name", "")
+            or ""
+        ).strip()
+
+        patient_name = " ".join(
+            part
+            for part in [first_name, last_name]
+            if part
+        ).strip()
+
+        if not patient_name:
+            patient_name = (
+                getattr(patient, "name", None)
+                or getattr(patient, "full_name", None)
+                or "Unknown Patient"
+            )
+
+        medical_record_number = getattr(
+            patient,
+            "medical_record_number",
+            None,
+        )
+
+    # -----------------------------------------------------
+    # Response
+    # -----------------------------------------------------
 
     return {
         "id": outstanding.id,
         "tenant_id": outstanding.tenant_id,
+
         "patient_id": outstanding.patient_id,
         "patient_name": patient_name,
+        "medical_record_number": medical_record_number,
+
         "visit_id": outstanding.visit_id,
-        "total_charge": float(outstanding.total_charge),
-        "total_paid": float(outstanding.total_paid),
+
+        "total_charge": float(
+            outstanding.total_charge
+        ),
+        "total_paid": float(
+            outstanding.total_paid
+        ),
         "outstanding_amount": float(
             outstanding.outstanding_amount
         ),
+
         "created_at": outstanding.created_at,
         "updated_at": outstanding.updated_at,
     }
 
+
+# =========================================================
+# GET ONE OUTSTANDING
+# =========================================================
 
 def get_outstanding_service(
     db: Session,
@@ -178,6 +258,10 @@ def get_outstanding_service(
 
     return outstanding
 
+
+# =========================================================
+# GET OUTSTANDING BY VISIT
+# =========================================================
 
 def get_outstanding_by_visit_service(
     db: Session,
@@ -206,6 +290,10 @@ def get_outstanding_by_visit_service(
     )
 
 
+# =========================================================
+# LIST OUTSTANDING
+# =========================================================
+
 def list_outstanding_service(
     db: Session,
     tenant_id: int,
@@ -217,10 +305,17 @@ def list_outstanding_service(
     )
 
     return [
-        build_outstanding_response(outstanding)
+        build_outstanding_response(
+            db=db,
+            outstanding=outstanding,
+        )
         for outstanding in outstandings
     ]
 
+
+# =========================================================
+# LIST ALL OUTSTANDING
+# =========================================================
 
 def list_all_outstanding_service(
     db: Session,
@@ -233,10 +328,17 @@ def list_all_outstanding_service(
     )
 
     return [
-        build_outstanding_response(outstanding)
+        build_outstanding_response(
+            db=db,
+            outstanding=outstanding,
+        )
         for outstanding in outstandings
     ]
 
+
+# =========================================================
+# REFRESH OUTSTANDING FOR VISIT
+# =========================================================
 
 def refresh_outstanding_for_visit(
     db: Session,
@@ -264,6 +366,10 @@ def refresh_outstanding_for_visit(
         tenant_id=tenant_id,
     )
 
+
+# =========================================================
+# DELETE OUTSTANDING
+# =========================================================
 
 def delete_outstanding_service(
     db: Session,

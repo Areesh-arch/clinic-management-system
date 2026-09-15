@@ -95,6 +95,8 @@ class InventoryResponse(InventoryBase):
 
     loose_quantity: int
 
+    is_archived: bool
+
     created_at: datetime
     updated_at: datetime
 

@@ -30,6 +30,75 @@ from app.services.outstanding_service import (
 
 
 # =========================================================
+# PAYMENT DISPLAY DATA
+# =========================================================
+
+def attach_patient_display_data(
+    db: Session,
+    payment: Payment,
+):
+    """
+    Attach patient name and medical record number to a
+    Payment ORM object so PaymentResponse can expose them.
+    """
+
+    patient = (
+        db.query(Patient)
+        .filter(
+            Patient.id == payment.patient_id,
+            Patient.tenant_id == payment.tenant_id,
+        )
+        .first()
+    )
+
+    if patient is None:
+        payment.patient_name = None
+        payment.medical_record_number = None
+        return payment
+
+    first_name = (patient.first_name or "").strip()
+    last_name = (patient.last_name or "").strip()
+
+    full_name = " ".join(
+        part
+        for part in [first_name, last_name]
+        if part
+    ).strip()
+
+    payment.patient_name = (
+        full_name
+        or getattr(patient, "name", None)
+        or getattr(patient, "full_name", None)
+        or None
+    )
+
+    payment.medical_record_number = getattr(
+        patient,
+        "medical_record_number",
+        None,
+    )
+
+    return payment
+
+
+def attach_patient_display_data_to_list(
+    db: Session,
+    payments,
+):
+    """
+    Attach patient display information to a list of payments.
+    """
+
+    for payment in payments:
+        attach_patient_display_data(
+            db=db,
+            payment=payment,
+        )
+
+    return payments
+
+
+# =========================================================
 # APPOINTMENT STATUS SYNCHRONIZATION
 # =========================================================
 
@@ -45,28 +114,15 @@ def sync_appointment_status_from_visit_and_payment(
 
         Visit COMPLETED
         +
-        Payment fully paid
+        Active payments fully paid
         =
         Appointment COMPLETED
 
-    Otherwise:
-
-        Appointment remains SCHEDULED.
-
-    This makes the workflow easy for clinic staff.
-    They do not need to manually change appointment status.
+    Archived payments are ignored.
     """
-
-    # -----------------------------------------------------
-    # Visit must have an appointment
-    # -----------------------------------------------------
 
     if visit.appointment_id is None:
         return
-
-    # -----------------------------------------------------
-    # Find appointment
-    # -----------------------------------------------------
 
     appointment = (
         db.query(Appointment)
@@ -81,7 +137,7 @@ def sync_appointment_status_from_visit_and_payment(
         return
 
     # -----------------------------------------------------
-    # Calculate total paid for this visit
+    # Only ACTIVE payments count
     # -----------------------------------------------------
 
     total_paid = (
@@ -94,31 +150,20 @@ def sync_appointment_status_from_visit_and_payment(
         .filter(
             Payment.visit_id == visit.id,
             Payment.tenant_id == tenant_id,
+            Payment.is_archived.is_(False),
         )
         .scalar()
     )
 
     total_paid = float(total_paid or 0)
 
-    # -----------------------------------------------------
-    # Calculate visit charge
-    # -----------------------------------------------------
-
     visit_charge = float(
         visit.charge or 0
     )
 
-    # -----------------------------------------------------
-    # Determine whether payment is complete
-    # -----------------------------------------------------
-
     payment_completed = (
         total_paid >= visit_charge
     )
-
-    # -----------------------------------------------------
-    # FINAL BUSINESS RULE
-    # -----------------------------------------------------
 
     if (
         visit.status == VisitStatus.COMPLETED
@@ -127,10 +172,7 @@ def sync_appointment_status_from_visit_and_payment(
         appointment.status = (
             AppointmentStatus.COMPLETED
         )
-
     else:
-        # If treatment is not complete OR payment is
-        # not fully paid, appointment remains pending.
         appointment.status = (
             AppointmentStatus.SCHEDULED
         )
@@ -149,39 +191,20 @@ def create_payment_service(
     tenant_id: int,
 ):
     """
-    Create a payment after validating:
+    Create a payment.
 
-    1. Patient exists
-    2. Visit exists
-    3. Patient belongs to tenant
-    4. Visit belongs to tenant
-    5. Visit belongs to patient
-    6. Payment amount is positive
-    7. Payment does not exceed remaining balance
-
-    After creating the payment:
-
-        Outstanding is refreshed.
-
-    Then:
-
-        If Visit is COMPLETED
-        AND payment is fully paid
-        Appointment becomes COMPLETED automatically.
+    Archived payments are ignored when calculating
+    the remaining balance.
     """
-
-    # ----------------------------------
-    # Validate payment amount
-    # ----------------------------------
 
     if payment_data.amount <= 0:
         raise ValueError(
             "Payment amount must be greater than zero."
         )
 
-    # ----------------------------------
+    # -----------------------------------------------------
     # Check patient
-    # ----------------------------------
+    # -----------------------------------------------------
 
     patient = (
         db.query(Patient)
@@ -197,9 +220,9 @@ def create_payment_service(
             "Patient not found."
         )
 
-    # ----------------------------------
+    # -----------------------------------------------------
     # Check visit
-    # ----------------------------------
+    # -----------------------------------------------------
 
     visit = (
         db.query(Visit)
@@ -215,18 +238,18 @@ def create_payment_service(
             "Visit not found."
         )
 
-    # ----------------------------------
+    # -----------------------------------------------------
     # Make sure visit belongs to patient
-    # ----------------------------------
+    # -----------------------------------------------------
 
     if visit.patient_id != patient.id:
         raise ValueError(
             "Visit does not belong to this patient."
         )
 
-    # ----------------------------------
-    # Calculate already-paid amount
-    # ----------------------------------
+    # -----------------------------------------------------
+    # Calculate ACTIVE payments only
+    # -----------------------------------------------------
 
     already_paid = (
         db.query(
@@ -238,6 +261,7 @@ def create_payment_service(
         .filter(
             Payment.visit_id == visit.id,
             Payment.tenant_id == tenant_id,
+            Payment.is_archived.is_(False),
         )
         .scalar()
     )
@@ -246,18 +270,10 @@ def create_payment_service(
         already_paid or 0
     )
 
-    # ----------------------------------
-    # Calculate remaining balance
-    # ----------------------------------
-
     remaining_balance = (
         float(visit.charge)
         - already_paid
     )
-
-    # ----------------------------------
-    # Prevent overpayment
-    # ----------------------------------
 
     if remaining_balance <= 0:
         raise ValueError(
@@ -270,9 +286,9 @@ def create_payment_service(
             f"of Rs. {remaining_balance:,.2f}."
         )
 
-    # ----------------------------------
+    # -----------------------------------------------------
     # Create payment
-    # ----------------------------------
+    # -----------------------------------------------------
 
     payment = create_payment(
         db=db,
@@ -280,9 +296,9 @@ def create_payment_service(
         tenant_id=tenant_id,
     )
 
-    # ----------------------------------
+    # -----------------------------------------------------
     # Refresh Outstanding
-    # ----------------------------------
+    # -----------------------------------------------------
 
     refresh_outstanding_for_visit(
         db=db,
@@ -290,9 +306,9 @@ def create_payment_service(
         tenant_id=tenant_id,
     )
 
-    # ----------------------------------
-    # AUTOMATIC APPOINTMENT COMPLETION
-    # ----------------------------------
+    # -----------------------------------------------------
+    # Appointment status
+    # -----------------------------------------------------
 
     sync_appointment_status_from_visit_and_payment(
         db=db,
@@ -300,11 +316,16 @@ def create_payment_service(
         tenant_id=tenant_id,
     )
 
+    attach_patient_display_data(
+        db=db,
+        payment=payment,
+    )
+
     return payment
 
 
 # =========================================================
-# GET ONE PAYMENT
+# GET ONE ACTIVE PAYMENT
 # =========================================================
 
 def get_payment_service(
@@ -313,7 +334,10 @@ def get_payment_service(
     tenant_id: int,
 ):
     """
-    Get one payment belonging to the current tenant.
+    Get one ACTIVE payment.
+
+    Archived payments are intentionally hidden from
+    normal payment operations.
     """
 
     payment = get_payment_by_id(
@@ -331,11 +355,59 @@ def get_payment_service(
             "Payment does not belong to this clinic."
         )
 
+    if payment.is_archived:
+        raise ValueError(
+            "Payment not found."
+        )
+
+    attach_patient_display_data(
+        db=db,
+        payment=payment,
+    )
+
     return payment
 
 
 # =========================================================
-# LIST PAYMENTS
+# GET ARCHIVED PAYMENT
+# =========================================================
+
+def get_archived_payment_service(
+    db: Session,
+    payment_id: int,
+    tenant_id: int,
+):
+    """
+    Get one archived payment.
+
+    Used only by Archive operations.
+    """
+
+    payment = (
+        db.query(Payment)
+        .filter(
+            Payment.id == payment_id,
+            Payment.tenant_id == tenant_id,
+            Payment.is_archived.is_(True),
+        )
+        .first()
+    )
+
+    if payment is None:
+        raise ValueError(
+            "Archived payment not found."
+        )
+
+    attach_patient_display_data(
+        db=db,
+        payment=payment,
+    )
+
+    return payment
+
+
+# =========================================================
+# LIST ACTIVE PAYMENTS
 # =========================================================
 
 def list_payments_service(
@@ -343,12 +415,54 @@ def list_payments_service(
     tenant_id: int,
 ):
     """
-    Return all payments for the current tenant.
+    Return only ACTIVE payments.
     """
 
-    return get_payments(
+    payments = (
+        db.query(Payment)
+        .filter(
+            Payment.tenant_id == tenant_id,
+            Payment.is_archived.is_(False),
+        )
+        .all()
+    )
+
+    return attach_patient_display_data_to_list(
         db=db,
-        tenant_id=tenant_id,
+        payments=payments,
+    )
+
+
+# =========================================================
+# LIST ARCHIVED PAYMENTS
+# =========================================================
+
+def list_archived_payments_service(
+    db: Session,
+    tenant_id: int,
+):
+    """
+    Return only archived payments.
+
+    Includes patient name and medical record number
+    for Archive UI display.
+    """
+
+    payments = (
+        db.query(Payment)
+        .filter(
+            Payment.tenant_id == tenant_id,
+            Payment.is_archived.is_(True),
+        )
+        .order_by(
+            Payment.updated_at.desc()
+        )
+        .all()
+    )
+
+    return attach_patient_display_data_to_list(
+        db=db,
+        payments=payments,
     )
 
 
@@ -363,29 +477,27 @@ def update_payment_service(
     tenant_id: int,
 ):
     """
-    Update a payment while preventing overpayment.
+    Update an ACTIVE payment.
 
-    After updating:
-
-        Outstanding is refreshed.
-
-        Appointment status is recalculated automatically.
+    Archived payments cannot be edited from normal
+    Billing.
     """
-
-    # ----------------------------------
-    # Tenant validation
-    # ----------------------------------
 
     if payment.tenant_id != tenant_id:
         raise ValueError(
             "Payment does not belong to this clinic."
         )
 
+    if payment.is_archived:
+        raise ValueError(
+            "Archived payments cannot be updated."
+        )
+
     old_visit_id = payment.visit_id
 
-    # ----------------------------------
+    # -----------------------------------------------------
     # Determine new amount
-    # ----------------------------------
+    # -----------------------------------------------------
 
     new_amount = (
         payment_data.amount
@@ -398,10 +510,9 @@ def update_payment_service(
             "Payment amount must be greater than zero."
         )
 
-    # ----------------------------------
-    # Calculate other payments
-    # excluding current payment
-    # ----------------------------------
+    # -----------------------------------------------------
+    # Calculate OTHER ACTIVE payments
+    # -----------------------------------------------------
 
     other_payments = (
         db.query(
@@ -414,6 +525,7 @@ def update_payment_service(
             Payment.visit_id == payment.visit_id,
             Payment.tenant_id == tenant_id,
             Payment.id != payment.id,
+            Payment.is_archived.is_(False),
         )
         .scalar()
     )
@@ -422,18 +534,10 @@ def update_payment_service(
         other_payments or 0
     )
 
-    # ----------------------------------
-    # Calculate remaining balance
-    # ----------------------------------
-
     remaining_balance = (
         float(payment.visit.charge)
         - other_payments
     )
-
-    # ----------------------------------
-    # Prevent overpayment
-    # ----------------------------------
 
     if new_amount > remaining_balance:
         raise ValueError(
@@ -441,9 +545,9 @@ def update_payment_service(
             f"of Rs. {remaining_balance:,.2f}."
         )
 
-    # ----------------------------------
+    # -----------------------------------------------------
     # Update payment
-    # ----------------------------------
+    # -----------------------------------------------------
 
     updated_payment = update_payment(
         db=db,
@@ -451,9 +555,9 @@ def update_payment_service(
         payment_data=payment_data,
     )
 
-    # ----------------------------------
+    # -----------------------------------------------------
     # Refresh Outstanding
-    # ----------------------------------
+    # -----------------------------------------------------
 
     refresh_outstanding_for_visit(
         db=db,
@@ -461,9 +565,9 @@ def update_payment_service(
         tenant_id=tenant_id,
     )
 
-    # ----------------------------------
-    # Refresh visit object
-    # ----------------------------------
+    # -----------------------------------------------------
+    # Refresh visit
+    # -----------------------------------------------------
 
     visit = (
         db.query(Visit)
@@ -474,10 +578,6 @@ def update_payment_service(
         .first()
     )
 
-    # ----------------------------------
-    # AUTOMATIC APPOINTMENT STATUS
-    # ----------------------------------
-
     if visit is not None:
         sync_appointment_status_from_visit_and_payment(
             db=db,
@@ -485,55 +585,53 @@ def update_payment_service(
             tenant_id=tenant_id,
         )
 
+    attach_patient_display_data(
+        db=db,
+        payment=updated_payment,
+    )
+
     return updated_payment
 
 
 # =========================================================
-# DELETE PAYMENT
+# ARCHIVE PAYMENT
 # =========================================================
 
-def delete_payment_service(
+def archive_payment_service(
     db: Session,
     payment: Payment,
     tenant_id: int,
 ):
     """
-    Delete payment.
+    Soft-delete a payment.
 
-    After deleting:
+    The payment remains in the database and can be
+    restored from Archive.
 
-        Outstanding is recalculated.
-
-        Appointment status is recalculated automatically.
-
-    Therefore, if a fully-paid appointment becomes unpaid,
-    it will automatically return to Pending.
+    Archived payments are removed from active payment
+    calculations.
     """
-
-    # ----------------------------------
-    # Tenant validation
-    # ----------------------------------
 
     if payment.tenant_id != tenant_id:
         raise ValueError(
             "Payment does not belong to this clinic."
         )
 
-    # Save visit ID before deleting
+    if payment.is_archived:
+        raise ValueError(
+            "Payment is already archived."
+        )
+
     visit_id = payment.visit_id
 
-    # ----------------------------------
-    # Delete payment
-    # ----------------------------------
+    payment.is_archived = True
 
-    delete_payment(
-        db=db,
-        payment=payment,
-    )
+    db.commit()
+    db.refresh(payment)
 
-    # ----------------------------------
-    # Refresh Outstanding
-    # ----------------------------------
+    # -----------------------------------------------------
+    # Recalculate Outstanding
+    # -----------------------------------------------------
 
     refresh_outstanding_for_visit(
         db=db,
@@ -541,9 +639,9 @@ def delete_payment_service(
         tenant_id=tenant_id,
     )
 
-    # ----------------------------------
-    # Get visit
-    # ----------------------------------
+    # -----------------------------------------------------
+    # Recalculate Appointment
+    # -----------------------------------------------------
 
     visit = (
         db.query(Visit)
@@ -554,9 +652,187 @@ def delete_payment_service(
         .first()
     )
 
-    # ----------------------------------
-    # AUTOMATIC APPOINTMENT STATUS
-    # ----------------------------------
+    if visit is not None:
+        sync_appointment_status_from_visit_and_payment(
+            db=db,
+            visit=visit,
+            tenant_id=tenant_id,
+        )
+
+    attach_patient_display_data(
+        db=db,
+        payment=payment,
+    )
+
+    return payment
+
+
+# =========================================================
+# RESTORE PAYMENT
+# =========================================================
+
+def restore_payment_service(
+    db: Session,
+    payment: Payment,
+    tenant_id: int,
+):
+    """
+    Restore an archived payment.
+    """
+
+    if payment.tenant_id != tenant_id:
+        raise ValueError(
+            "Payment does not belong to this clinic."
+        )
+
+    if not payment.is_archived:
+        raise ValueError(
+            "Payment is already active."
+        )
+
+    # -----------------------------------------------------
+    # Make sure restoring will not create overpayment
+    # -----------------------------------------------------
+
+    visit = (
+        db.query(Visit)
+        .filter(
+            Visit.id == payment.visit_id,
+            Visit.tenant_id == tenant_id,
+        )
+        .first()
+    )
+
+    if visit is None:
+        raise ValueError(
+            "Visit not found."
+        )
+
+    active_paid = (
+        db.query(
+            func.coalesce(
+                func.sum(Payment.amount),
+                0,
+            )
+        )
+        .filter(
+            Payment.visit_id == payment.visit_id,
+            Payment.tenant_id == tenant_id,
+            Payment.is_archived.is_(False),
+        )
+        .scalar()
+    )
+
+    active_paid = float(
+        active_paid or 0
+    )
+
+    visit_charge = float(
+        visit.charge or 0
+    )
+
+    if active_paid + float(payment.amount) > visit_charge:
+        raise ValueError(
+            "This payment cannot be restored because "
+            "it would exceed the visit's remaining balance."
+        )
+
+    # -----------------------------------------------------
+    # Restore
+    # -----------------------------------------------------
+
+    payment.is_archived = False
+
+    db.commit()
+    db.refresh(payment)
+
+    # -----------------------------------------------------
+    # Refresh Outstanding
+    # -----------------------------------------------------
+
+    refresh_outstanding_for_visit(
+        db=db,
+        visit_id=payment.visit_id,
+        tenant_id=tenant_id,
+    )
+
+    # -----------------------------------------------------
+    # Recalculate Appointment
+    # -----------------------------------------------------
+
+    sync_appointment_status_from_visit_and_payment(
+        db=db,
+        visit=visit,
+        tenant_id=tenant_id,
+    )
+
+    attach_patient_display_data(
+        db=db,
+        payment=payment,
+    )
+
+    return payment
+
+
+# =========================================================
+# PERMANENT DELETE PAYMENT
+# =========================================================
+
+def permanently_delete_payment_service(
+    db: Session,
+    payment: Payment,
+    tenant_id: int,
+):
+    """
+    Permanently delete an archived payment.
+
+    Permanent deletion is only allowed for archived
+    payments.
+    """
+
+    if payment.tenant_id != tenant_id:
+        raise ValueError(
+            "Payment does not belong to this clinic."
+        )
+
+    if not payment.is_archived:
+        raise ValueError(
+            "Only archived payments can be permanently deleted."
+        )
+
+    visit_id = payment.visit_id
+
+    # -----------------------------------------------------
+    # Permanent database deletion
+    # -----------------------------------------------------
+
+    delete_payment(
+        db=db,
+        payment=payment,
+    )
+
+    # -----------------------------------------------------
+    # Refresh Outstanding
+    # -----------------------------------------------------
+
+    refresh_outstanding_for_visit(
+        db=db,
+        visit_id=visit_id,
+        tenant_id=tenant_id,
+    )
+
+    # -----------------------------------------------------
+    # Recalculate Appointment
+    # -----------------------------------------------------
+
+    visit = (
+        db.query(Visit)
+        .filter(
+            Visit.id == visit_id,
+            Visit.tenant_id == tenant_id,
+        )
+        .first()
+    )
 
     if visit is not None:
         sync_appointment_status_from_visit_and_payment(
@@ -566,3 +842,30 @@ def delete_payment_service(
         )
 
     return None
+
+
+# =========================================================
+# LEGACY DELETE FUNCTION
+# =========================================================
+
+def delete_payment_service(
+    db: Session,
+    payment: Payment,
+    tenant_id: int,
+):
+    """
+    Backward-compatible delete function.
+
+    IMPORTANT:
+    Existing frontend delete actions now become ARCHIVE
+    instead of permanent deletion.
+
+    Permanent deletion must use:
+        permanently_delete_payment_service()
+    """
+
+    return archive_payment_service(
+        db=db,
+        payment=payment,
+        tenant_id=tenant_id,
+    )

@@ -1,3 +1,4 @@
+
 import { apiRequest } from "./api";
 
 // =====================================================
@@ -30,8 +31,37 @@ export async function updatePayment(paymentId, data) {
   });
 }
 
+// Archive payment
+export async function archivePayment(paymentId) {
+  return apiRequest(`/payments/payments/${paymentId}/archive`, {
+    method: "POST",
+  });
+}
+
+// Keep old function working.
+// Existing Billing code can still call deletePayment(),
+// but it now archives instead of permanently deleting.
 export async function deletePayment(paymentId) {
-  return apiRequest(`/payments/payments/${paymentId}`, {
+  return archivePayment(paymentId);
+}
+
+// Get archived payments
+export async function getArchivedPayments() {
+  return apiRequest("/payments/payments/archived", {
+    method: "GET",
+  });
+}
+
+// Restore archived payment
+export async function restorePayment(paymentId) {
+  return apiRequest(`/payments/payments/${paymentId}/restore`, {
+    method: "POST",
+  });
+}
+
+// Permanently delete an archived payment
+export async function permanentlyDeletePayment(paymentId) {
+  return apiRequest(`/payments/payments/${paymentId}/permanent`, {
     method: "DELETE",
   });
 }
@@ -60,8 +90,37 @@ export async function updateExpense(expenseId, data) {
   });
 }
 
+// Archive expense
+export async function archiveExpense(expenseId) {
+  return apiRequest(`/expenses/expenses/${expenseId}/archive`, {
+    method: "POST",
+  });
+}
+
+// Keep old function working.
+// Existing Billing code can still call deleteExpense(),
+// but it now archives instead of permanently deleting.
 export async function deleteExpense(expenseId) {
-  return apiRequest(`/expenses/expenses/${expenseId}`, {
+  return archiveExpense(expenseId);
+}
+
+// Get archived expenses
+export async function getArchivedExpenses() {
+  return apiRequest("/expenses/expenses/archived", {
+    method: "GET",
+  });
+}
+
+// Restore archived expense
+export async function restoreExpense(expenseId) {
+  return apiRequest(`/expenses/expenses/${expenseId}/restore`, {
+    method: "POST",
+  });
+}
+
+// Permanently delete an archived expense
+export async function permanentlyDeleteExpense(expenseId) {
+  return apiRequest(`/expenses/expenses/${expenseId}/permanent`, {
     method: "DELETE",
   });
 }

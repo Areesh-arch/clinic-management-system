@@ -4,6 +4,10 @@ export async function getInventory() {
   return apiRequest("/inventory/");
 }
 
+export async function getArchivedInventory() {
+  return apiRequest("/inventory/archived");
+}
+
 export async function getInventoryItem(inventoryId) {
   return apiRequest(`/inventory/${inventoryId}`);
 }
@@ -83,11 +87,47 @@ export async function updateInventory(
   });
 }
 
-export async function deleteInventory(
+/*
+ * Existing DELETE endpoint now performs a soft archive.
+ */
+export async function deleteInventory(inventoryId) {
+  return apiRequest(`/inventory/${inventoryId}`, {
+    method: "DELETE",
+  });
+}
+
+/*
+ * Explicit archive endpoint.
+ */
+export async function archiveInventory(inventoryId) {
+  return apiRequest(
+    `/inventory/${inventoryId}/archive`,
+    {
+      method: "POST",
+    }
+  );
+}
+
+/*
+ * Restore an archived inventory item.
+ */
+export async function restoreInventory(inventoryId) {
+  return apiRequest(
+    `/inventory/${inventoryId}/restore`,
+    {
+      method: "POST",
+    }
+  );
+}
+
+/*
+ * Permanently delete an archived inventory item.
+ */
+export async function permanentlyDeleteInventory(
   inventoryId
 ) {
   return apiRequest(
-    `/inventory/${inventoryId}`,
+    `/inventory/${inventoryId}/permanent`,
     {
       method: "DELETE",
     }

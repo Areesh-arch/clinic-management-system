@@ -4,6 +4,7 @@ from datetime import date
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
+    Boolean,
     ForeignKey,
     String,
     Integer,
@@ -56,28 +57,17 @@ class InventoryItem(Base, IDMixin, TimestampMixin):
     # STOCK / SALE UNITS
     # -----------------------------------------------------
 
-    # Unit in which stock is purchased/stored.
-    # Example: Box
     unit: Mapped[str] = mapped_column(
         String(50),
         nullable=False,
     )
 
-    # Unit in which medicine is issued/sold.
-    # Example: Pack
     issue_unit: Mapped[str] = mapped_column(
         String(50),
         nullable=False,
         default="unit",
     )
 
-    # How many issue units are inside one stock unit.
-    #
-    # Example:
-    # 1 Box = 10 Packs
-    #
-    # For medicines already sold individually:
-    # 1 Tablet = 1 Tablet
     units_per_stock_unit: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
@@ -88,26 +78,12 @@ class InventoryItem(Base, IDMixin, TimestampMixin):
     # STOCK
     # -----------------------------------------------------
 
-    # Number of complete stock units.
-    #
-    # Example:
-    # 5 Boxes
-    #
-    # This preserves the meaning of the existing quantity
-    # column, so old inventory data remains safe.
     quantity: Mapped[int] = mapped_column(
         Integer,
         default=0,
         nullable=False,
     )
 
-    # Remaining loose issue units.
-    #
-    # Example:
-    # 4 Boxes + 9 Packs
-    #
-    # quantity = 4
-    # loose_quantity = 9
     loose_quantity: Mapped[int] = mapped_column(
         Integer,
         default=0,
@@ -120,11 +96,10 @@ class InventoryItem(Base, IDMixin, TimestampMixin):
         nullable=False,
     )
 
-    # Prices are prices for ONE complete stock unit.
-    #
-    # Example:
-    # Box purchase price = Rs.500
-    # Box selling price  = Rs.700
+    # -----------------------------------------------------
+    # PRICES
+    # -----------------------------------------------------
+
     purchase_price: Mapped[float] = mapped_column(
         Numeric(10, 2),
         nullable=False,
@@ -139,6 +114,22 @@ class InventoryItem(Base, IDMixin, TimestampMixin):
         Date,
         nullable=True,
     )
+
+    # -----------------------------------------------------
+    # ARCHIVE
+    # -----------------------------------------------------
+
+    is_archived: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+        index=True,
+    )
+
+    # -----------------------------------------------------
+    # RELATIONSHIPS
+    # -----------------------------------------------------
 
     tenant: Mapped["Tenant"] = relationship(
         "Tenant",

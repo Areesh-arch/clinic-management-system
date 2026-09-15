@@ -53,6 +53,9 @@ class VisitResponse(BaseModel):
 
     charge: float
 
+    # Archive state
+    is_archived: bool = False
+
     model_config = ConfigDict(
         from_attributes=True,
     )

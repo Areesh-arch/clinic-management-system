@@ -25,6 +25,7 @@ class UserUpdate(BaseModel):
 class UserResponse(UserBase):
     id: int
     tenant_id: int | None
+    profile_image_url: str | None = None
 
     model_config = ConfigDict(
         from_attributes=True,

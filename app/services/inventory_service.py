@@ -3,9 +3,14 @@ from sqlalchemy.orm import Session
 from app.crud.inventory import (
     create_inventory_item,
     get_inventory_item_by_id,
+    get_archived_inventory_item_by_id,
     get_inventory_items,
+    get_archived_inventory_items,
     update_inventory_item,
     delete_inventory_item,
+    archive_inventory_item,
+    restore_inventory_item,
+    permanently_delete_inventory_item,
 )
 
 from app.models.inventory_item import InventoryItem
@@ -16,6 +21,10 @@ from app.schemas.inventory import (
 )
 
 
+# =========================================================
+# CREATE
+# =========================================================
+
 def create_inventory_service(
     db: Session,
     inventory_data: InventoryCreate,
@@ -24,7 +33,7 @@ def create_inventory_service(
     """
     Create an inventory item.
 
-    User-friendly stock setup:
+    Example:
 
         Stock Unit: Box
         Sale Unit: Pack
@@ -82,6 +91,10 @@ def create_inventory_service(
     )
 
 
+# =========================================================
+# GET ONE ACTIVE
+# =========================================================
+
 def get_inventory_service(
     db: Session,
     inventory_item_id: int,
@@ -101,6 +114,10 @@ def get_inventory_service(
     return inventory_item
 
 
+# =========================================================
+# LIST ACTIVE
+# =========================================================
+
 def list_inventory_service(
     db: Session,
     tenant_id: int,
@@ -110,6 +127,24 @@ def list_inventory_service(
         tenant_id=tenant_id,
     )
 
+
+# =========================================================
+# LIST ARCHIVED
+# =========================================================
+
+def list_archived_inventory_service(
+    db: Session,
+    tenant_id: int,
+):
+    return get_archived_inventory_items(
+        db=db,
+        tenant_id=tenant_id,
+    )
+
+
+# =========================================================
+# UPDATE
+# =========================================================
 
 def update_inventory_service(
     db: Session,
@@ -169,11 +204,93 @@ def update_inventory_service(
     )
 
 
+# =========================================================
+# ARCHIVE
+# =========================================================
+
+def archive_inventory_service(
+    db: Session,
+    inventory_item_id: int,
+    tenant_id: int,
+):
+    inventory_item = get_inventory_item_by_id(
+        db=db,
+        inventory_item_id=inventory_item_id,
+        tenant_id=tenant_id,
+    )
+
+    if inventory_item is None:
+        raise ValueError(
+            "Inventory item not found."
+        )
+
+    return archive_inventory_item(
+        db=db,
+        inventory_item=inventory_item,
+    )
+
+
+# =========================================================
+# RESTORE
+# =========================================================
+
+def restore_inventory_service(
+    db: Session,
+    inventory_item_id: int,
+    tenant_id: int,
+):
+    inventory_item = get_archived_inventory_item_by_id(
+        db=db,
+        inventory_item_id=inventory_item_id,
+        tenant_id=tenant_id,
+    )
+
+    if inventory_item is None:
+        raise ValueError(
+            "Archived inventory item not found."
+        )
+
+    return restore_inventory_item(
+        db=db,
+        inventory_item=inventory_item,
+    )
+
+
+# =========================================================
+# PERMANENT DELETE
+# =========================================================
+
+def permanently_delete_inventory_service(
+    db: Session,
+    inventory_item_id: int,
+    tenant_id: int,
+):
+    inventory_item = get_archived_inventory_item_by_id(
+        db=db,
+        inventory_item_id=inventory_item_id,
+        tenant_id=tenant_id,
+    )
+
+    if inventory_item is None:
+        raise ValueError(
+            "Archived inventory item not found."
+        )
+
+    permanently_delete_inventory_item(
+        db=db,
+        inventory_item=inventory_item,
+    )
+
+
+# =========================================================
+# LEGACY DELETE = ARCHIVE
+# =========================================================
+
 def delete_inventory_service(
     db: Session,
     inventory_item: InventoryItem,
 ):
-    delete_inventory_item(
+    return delete_inventory_item(
         db=db,
         inventory_item=inventory_item,
     )

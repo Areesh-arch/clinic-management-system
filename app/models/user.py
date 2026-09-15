@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from app.models.tenant import Tenant
     from app.models.staff import Staff
 
+
 class User(Base, IDMixin, TimestampMixin):
     """
     Represents a user belonging to a tenant (clinic).
@@ -20,13 +21,13 @@ class User(Base, IDMixin, TimestampMixin):
     __tablename__ = "users"
 
     tenant_id: Mapped[int | None] = mapped_column(
-    ForeignKey(
-        "tenants.id",
-        ondelete="CASCADE",
-    ),
-    nullable=True,
-    index=True,
-)
+        ForeignKey(
+            "tenants.id",
+            ondelete="CASCADE",
+        ),
+        nullable=True,
+        index=True,
+    )
 
     full_name: Mapped[str] = mapped_column(
         String(255),
@@ -46,13 +47,13 @@ class User(Base, IDMixin, TimestampMixin):
     )
 
     role: Mapped[UserRole] = mapped_column(
-    Enum(
-        UserRole,
-        native_enum=False,
-    ),
-    default=UserRole.STAFF,
-    nullable=False,
-)
+        Enum(
+            UserRole,
+            native_enum=False,
+        ),
+        default=UserRole.STAFF,
+        nullable=False,
+    )
 
     is_active: Mapped[bool] = mapped_column(
         Boolean,
@@ -60,16 +61,28 @@ class User(Base, IDMixin, TimestampMixin):
         nullable=False,
     )
 
-    # Relationship
+    # =========================================================
+    # PROFILE IMAGE
+    # =========================================================
+
+    profile_image_url: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+    )
+
+    # =========================================================
+    # RELATIONSHIPS
+    # =========================================================
+
     tenant: Mapped["Tenant"] = relationship(
-    "Tenant",
-    back_populates="users",
-    lazy="selectin",
-)
+        "Tenant",
+        back_populates="users",
+        lazy="selectin",
+    )
+
     staff: Mapped["Staff"] = relationship(
-    "Staff",
-    back_populates="user",
-    uselist=False,
-    lazy="selectin",
-)
-   
+        "Staff",
+        back_populates="user",
+        uselist=False,
+        lazy="selectin",
+    )

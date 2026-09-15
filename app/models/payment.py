@@ -9,6 +9,7 @@ from sqlalchemy import (
     Date,
     Text,
     Enum,
+    Boolean,
 )
 
 from sqlalchemy.orm import (
@@ -74,6 +75,18 @@ class Payment(Base, IDMixin, TimestampMixin):
     notes: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
+    )
+
+    # ============================================================
+    # ARCHIVE / SOFT DELETE
+    # ============================================================
+
+    is_archived: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+        index=True,
     )
 
     tenant: Mapped["Tenant"] = relationship(

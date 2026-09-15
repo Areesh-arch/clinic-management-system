@@ -31,6 +31,17 @@ class PaymentResponse(PaymentBase):
     created_at: datetime
     updated_at: datetime
 
+    # -----------------------------------------------------
+    # PATIENT DISPLAY INFORMATION
+    # -----------------------------------------------------
+    # These are populated by the payment service.
+    # They are optional so existing payment operations
+    # remain backward compatible.
+    # -----------------------------------------------------
+
+    patient_name: str | None = None
+    medical_record_number: str | None = None
+
     model_config = ConfigDict(
         from_attributes=True,
     )

@@ -24,8 +24,12 @@ from app.services.payment_service import (
     create_payment_service,
     get_payment_service,
     list_payments_service,
+    list_archived_payments_service,
+    get_archived_payment_service,
     update_payment_service,
-    delete_payment_service,
+    archive_payment_service,
+    restore_payment_service,
+    permanently_delete_payment_service,
 )
 
 
@@ -74,7 +78,7 @@ def create_payment(
 
 
 # =========================================================
-# LIST PAYMENTS
+# LIST ACTIVE PAYMENTS
 # SUPER_ADMIN + OWNER + STAFF
 # =========================================================
 
@@ -102,8 +106,34 @@ def list_payments(
 
 
 # =========================================================
-# GET SINGLE PAYMENT
-# SUPER_ADMIN + OWNER + STAFF
+# LIST ARCHIVED PAYMENTS
+# =========================================================
+
+@router.get(
+    "/archived",
+    response_model=list[PaymentResponse],
+)
+def list_archived_payments(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
+    ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
+):
+    return list_archived_payments_service(
+        db=db,
+        tenant_id=tenant_id,
+    )
+
+
+# =========================================================
+# GET SINGLE ACTIVE PAYMENT
 # =========================================================
 
 @router.get(
@@ -139,8 +169,7 @@ def get_payment(
 
 
 # =========================================================
-# UPDATE PAYMENT
-# SUPER_ADMIN + OWNER + STAFF
+# UPDATE ACTIVE PAYMENT
 # =========================================================
 
 @router.put(
@@ -184,15 +213,14 @@ def update_payment(
 
 
 # =========================================================
-# DELETE PAYMENT
-# SUPER_ADMIN + OWNER + STAFF
+# ARCHIVE PAYMENT
 # =========================================================
 
-@router.delete(
-    "/{payment_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
+@router.post(
+    "/{payment_id}/archive",
+    response_model=PaymentResponse,
 )
-def delete_payment(
+def archive_payment(
     payment_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(
@@ -213,7 +241,144 @@ def delete_payment(
             tenant_id=tenant_id,
         )
 
-        delete_payment_service(
+        return archive_payment_service(
+            db=db,
+            payment=payment,
+            tenant_id=tenant_id,
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+
+
+# =========================================================
+# RESTORE ARCHIVED PAYMENT
+# =========================================================
+
+@router.post(
+    "/{payment_id}/restore",
+    response_model=PaymentResponse,
+)
+def restore_payment(
+    payment_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
+    ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
+):
+    try:
+        payment = get_archived_payment_service(
+            db=db,
+            payment_id=payment_id,
+            tenant_id=tenant_id,
+        )
+
+        return restore_payment_service(
+            db=db,
+            payment=payment,
+            tenant_id=tenant_id,
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+
+# =========================================================
+# PERMANENTLY DELETE PAYMENT
+# ARCHIVED PAYMENTS ONLY
+# =========================================================
+
+@router.delete(
+    "/{payment_id}/permanent",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def permanently_delete_payment(
+    payment_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
+    ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
+):
+    try:
+        payment = get_archived_payment_service(
+            db=db,
+            payment_id=payment_id,
+            tenant_id=tenant_id,
+        )
+
+        permanently_delete_payment_service(
+            db=db,
+            payment=payment,
+            tenant_id=tenant_id,
+        )
+
+        return None
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+
+
+# =========================================================
+# LEGACY DELETE → ARCHIVE
+# =========================================================
+
+@router.delete(
+    "/{payment_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_payment(
+    payment_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
+    ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
+):
+    """
+    Existing DELETE endpoint is intentionally kept
+    for frontend compatibility.
+
+    It now ARCHIVES the payment instead of permanently
+    deleting it.
+    """
+
+    try:
+        payment = get_payment_service(
+            db=db,
+            payment_id=payment_id,
+            tenant_id=tenant_id,
+        )
+
+        archive_payment_service(
             db=db,
             payment=payment,
             tenant_id=tenant_id,

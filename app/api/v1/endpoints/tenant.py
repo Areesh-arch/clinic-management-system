@@ -1,4 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    UploadFile,
+    status,
+)
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
@@ -19,6 +26,10 @@ from app.services.tenant_service import (
     get_tenants,
     remove_tenant,
     update_existing_tenant,
+)
+
+from app.services.profile_image_upload_service import (
+    save_clinic_image,
 )
 
 
@@ -132,6 +143,60 @@ def update_tenant(
         db_tenant=db_tenant,
         tenant=tenant,
     )
+
+
+# ============================================================
+# UPLOAD CLINIC PROFILE IMAGE
+# SUPER_ADMIN ONLY
+#
+# IMPORTANT:
+# This updates the SELECTED CLINIC/TENANT image.
+# It does NOT update the SUPER_ADMIN personal image.
+# ============================================================
+
+@router.post(
+    "/{tenant_id}/profile-image",
+)
+async def upload_tenant_profile_image(
+    tenant_id: int,
+    image: UploadFile = File(...),
+    current_user: User = Depends(
+        require_roles(UserRole.SUPER_ADMIN)
+    ),
+    db: Session = Depends(get_db),
+):
+    db_tenant = get_tenant_by_id(
+        db=db,
+        tenant_id=tenant_id,
+    )
+
+    if db_tenant is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tenant not found",
+        )
+
+    try:
+        image_url = await save_clinic_image(
+            upload_file=image,
+            tenant_id=tenant_id,
+        )
+
+        db_tenant.profile_image_url = image_url
+
+        db.commit()
+        db.refresh(db_tenant)
+
+        return {
+            "message": "Clinic profile picture updated successfully.",
+            "profile_image_url": db_tenant.profile_image_url,
+        }
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
 
 
 # ============================================================

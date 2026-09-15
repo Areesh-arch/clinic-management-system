@@ -1,3 +1,4 @@
+import TreatmentLogModal from "../../components/treatments/TreatmentLogModal";
 import {
   useEffect,
   useState,
@@ -9,7 +10,7 @@ import {
 
 import {
   FiAlertTriangle,
-  FiTrash2,
+  FiArchive,
   FiX,
 } from "react-icons/fi";
 
@@ -42,6 +43,7 @@ function Treatments() {
   const [status, setStatus] = useState("All");
 
   const [showModal, setShowModal] = useState(false);
+  const [showTreatmentLog, setShowTreatmentLog] = useState(false);
 
   const [
     editingTreatment,
@@ -412,7 +414,7 @@ function Treatments() {
 
 
   // =====================================================
-  // CONFIRM DELETE
+  // CONFIRM ARCHIVE
   // =====================================================
 
   const confirmDelete = async () => {
@@ -652,7 +654,35 @@ function Treatments() {
           search={search}
           setSearch={setSearch}
         />
-
+        <div className="flex justify-end">
+  <button
+    type="button"
+    onClick={() => setShowTreatmentLog(true)}
+    className="
+      inline-flex
+      h-11
+      items-center
+      justify-center
+      gap-2
+      rounded-xl
+      border
+      border-[#B4935A]
+      bg-[#FFFDF8]
+      px-5
+      text-sm
+      font-semibold
+      text-[#173B32]
+      shadow-[0_4px_14px_rgba(23,59,50,0.06)]
+      transition
+      hover:border-[#9F814E]
+      hover:bg-[#F8F4E9]
+      hover:shadow-[0_7px_18px_rgba(23,59,50,0.09)]
+    "
+  >
+    <span className="text-[#B4935A]">▣</span>
+    Treatment Log
+  </button>
+</div>
 
         {/* =================================================
             FILTERS
@@ -747,6 +777,12 @@ function Treatments() {
         treatment={editingTreatment}
       />
 
+      {showTreatmentLog && (
+  <TreatmentLogModal
+    treatments={treatments}
+    onClose={() => setShowTreatmentLog(false)}
+  />
+)}
 
       {/* =================================================
           PROFESSIONAL DELETE CONFIRMATION
@@ -873,7 +909,7 @@ function Treatments() {
                   text-[#173B32]
                 "
               >
-                Delete Treatment?
+                Archive Treatment?
               </h2>
 
 
@@ -888,9 +924,8 @@ function Treatments() {
                   text-[#68766E]
                 "
               >
-                Are you sure you want to permanently
-                delete this treatment record? This
-                action cannot be undone.
+                Are you sure you want to archive this treatment record?
+You can restore it later from the Treatment Archive.
               </p>
 
 
@@ -1023,12 +1058,12 @@ function Treatments() {
                           border-t-white
                         "
                       />
-                      Deleting...
+                      Archiving...
                     </>
                   ) : (
                     <>
-                      <FiTrash2 size={15} />
-                      Delete Treatment
+                      <FiArchive size={15} />
+                      Archive Treatment
                     </>
                   )}
                 </button>

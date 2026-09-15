@@ -64,6 +64,8 @@ class TenantResponse(TenantBase):
     id: int
     status: TenantStatus
 
+    profile_image_url: str | None = None
+
     created_at: datetime
     updated_at: datetime
 

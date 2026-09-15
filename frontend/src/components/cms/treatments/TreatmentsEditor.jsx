@@ -4,6 +4,9 @@ import {
   FiEdit3,
   FiTrash2,
   FiGrid,
+  FiUpload,
+  FiImage,
+  FiX,
 } from "react-icons/fi";
 import cmsService from "../../../services/cmsService";
 
@@ -14,6 +17,7 @@ function TreatmentsEditor({ onStatsChange }) {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
   const [form, setForm] = useState({
@@ -25,6 +29,8 @@ function TreatmentsEditor({ onStatsChange }) {
     display_order: 0,
     is_active: true,
   });
+
+  const [imagePreview, setImagePreview] = useState("");
 
   // =========================================================
   // LOAD TREATMENTS
@@ -89,8 +95,10 @@ function TreatmentsEditor({ onStatsChange }) {
       is_active: true,
     });
 
+    setImagePreview("");
     setEditingId(null);
     setShowForm(false);
+    setUploadingImage(false);
   };
 
   // =========================================================
@@ -98,8 +106,6 @@ function TreatmentsEditor({ onStatsChange }) {
   // =========================================================
 
   const openAddForm = () => {
-    resetForm();
-
     setForm({
       name: "",
       slug: "",
@@ -110,6 +116,8 @@ function TreatmentsEditor({ onStatsChange }) {
       is_active: true,
     });
 
+    setImagePreview("");
+    setEditingId(null);
     setShowForm(true);
   };
 
@@ -118,17 +126,20 @@ function TreatmentsEditor({ onStatsChange }) {
   // =========================================================
 
   const openEditForm = (treatment) => {
+    const existingImage = treatment.image_url || "";
+
     setForm({
       name: treatment.name || "",
       slug: treatment.slug || "",
       short_description:
         treatment.short_description || "",
       description: treatment.description || "",
-      image_url: treatment.image_url || "",
+      image_url: existingImage,
       display_order: treatment.display_order ?? 0,
       is_active: treatment.is_active ?? true,
     });
 
+    setImagePreview(existingImage);
     setEditingId(treatment.id);
     setShowForm(true);
   };
@@ -174,6 +185,98 @@ function TreatmentsEditor({ onStatsChange }) {
   };
 
   // =========================================================
+  // UPLOAD IMAGE
+  // =========================================================
+
+  const handleImageUpload = async (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      alert(
+        "Please upload a JPG, PNG, or WEBP image."
+      );
+
+      event.target.value = "";
+      return;
+    }
+
+    const maxSize = 10 * 1024 * 1024;
+
+    if (file.size > maxSize) {
+      alert("Image size must be 10 MB or less.");
+
+      event.target.value = "";
+      return;
+    }
+
+    try {
+      setUploadingImage(true);
+
+      // Local preview while uploading
+      const localPreview =
+        URL.createObjectURL(file);
+
+      setImagePreview(localPreview);
+
+      const result =
+        await cmsService.uploadImage(file);
+
+      if (!result?.image_url) {
+        throw new Error(
+          "Image upload succeeded but no image URL was returned."
+        );
+      }
+
+      setForm((previous) => ({
+        ...previous,
+        image_url: result.image_url,
+      }));
+
+      setImagePreview(result.image_url);
+
+      URL.revokeObjectURL(localPreview);
+    } catch (error) {
+      console.error(
+        "Failed to upload treatment image:",
+        error
+      );
+
+      setImagePreview(form.image_url || "");
+
+      alert(
+        error.message ||
+          "Failed to upload treatment image."
+      );
+    } finally {
+      setUploadingImage(false);
+      event.target.value = "";
+    }
+  };
+
+  // =========================================================
+  // REMOVE SELECTED IMAGE
+  // =========================================================
+
+  const removeImage = () => {
+    setForm((previous) => ({
+      ...previous,
+      image_url: "",
+    }));
+
+    setImagePreview("");
+  };
+
+  // =========================================================
   // SAVE / UPDATE TREATMENT
   // =========================================================
 
@@ -199,6 +302,11 @@ function TreatmentsEditor({ onStatsChange }) {
       alert(
         "Treatment slug must be at least 2 characters long."
       );
+      return;
+    }
+
+    if (uploadingImage) {
+      alert("Please wait for the image upload to finish.");
       return;
     }
 
@@ -347,7 +455,7 @@ function TreatmentsEditor({ onStatsChange }) {
               type="button"
               className="cms-close-button"
               onClick={resetForm}
-              disabled={saving}
+              disabled={saving || uploadingImage}
             >
               ×
             </button>
@@ -418,19 +526,155 @@ function TreatmentsEditor({ onStatsChange }) {
             />
           </div>
 
-          {/* IMAGE URL */}
+          {/* =================================================
+              TREATMENT IMAGE UPLOAD
+          ================================================= */}
 
           <div className="cms-field">
-            <label>Image URL</label>
+            <label>Treatment Picture</label>
 
-            <input
-              type="url"
-              name="image_url"
-              value={form.image_url}
-              onChange={handleChange}
-              placeholder="https://example.com/treatment.jpg"
-              disabled={saving}
-            />
+            <div
+              style={{
+                border: "1px dashed #b4935a",
+                borderRadius: "14px",
+                padding: "16px",
+                background: "#fffdf8",
+              }}
+            >
+              {imagePreview ? (
+                <div
+                  style={{
+                    position: "relative",
+                    width: "100%",
+                    maxWidth: "420px",
+                  }}
+                >
+                  <img
+                    src={imagePreview}
+                    alt="Treatment preview"
+                    style={{
+                      width: "100%",
+                      height: "220px",
+                      objectFit: "cover",
+                      borderRadius: "12px",
+                      display: "block",
+                    }}
+                    onError={() => {
+                      setImagePreview("");
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    disabled={saving || uploadingImage}
+                    title="Remove image"
+                    style={{
+                      position: "absolute",
+                      top: "10px",
+                      right: "10px",
+                      width: "34px",
+                      height: "34px",
+                      border: "none",
+                      borderRadius: "50%",
+                      background: "#173B32",
+                      color: "#fff",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <FiX />
+                  </button>
+                </div>
+              ) : (
+                <label
+                  htmlFor="treatment-image-upload"
+                  style={{
+                    minHeight: "150px",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                    cursor:
+                      saving || uploadingImage
+                        ? "not-allowed"
+                        : "pointer",
+                    color: "#173B32",
+                    textAlign: "center",
+                  }}
+                >
+                  <FiImage size={32} />
+
+                  <strong>
+                    {uploadingImage
+                      ? "Uploading picture..."
+                      : "Upload Treatment Picture"}
+                  </strong>
+
+                  <small>
+                    JPG, PNG or WEBP • Maximum 10 MB
+                  </small>
+
+                  {!uploadingImage && (
+                    <span
+                      className="cms-primary-button"
+                      style={{
+                        marginTop: "6px",
+                        display: "inline-flex",
+                      }}
+                    >
+                      <FiUpload />
+                      Choose Picture
+                    </span>
+                  )}
+                </label>
+              )}
+
+              <input
+                id="treatment-image-upload"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleImageUpload}
+                disabled={saving || uploadingImage}
+                style={{ display: "none" }}
+              />
+
+              {imagePreview && (
+                <label
+                  htmlFor="treatment-image-upload"
+                  style={{
+                    marginTop: "12px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "7px",
+                    cursor:
+                      saving || uploadingImage
+                        ? "not-allowed"
+                        : "pointer",
+                    color: "#173B32",
+                    fontWeight: 600,
+                  }}
+                >
+                  <FiUpload />
+                  {uploadingImage
+                    ? "Uploading..."
+                    : "Change Picture"}
+
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleImageUpload}
+                    disabled={
+                      saving || uploadingImage
+                    }
+                    style={{ display: "none" }}
+                  />
+                </label>
+              )}
+            </div>
           </div>
 
           {/* DISPLAY ORDER */}
@@ -483,7 +727,7 @@ function TreatmentsEditor({ onStatsChange }) {
               type="button"
               className="cms-secondary-button"
               onClick={resetForm}
-              disabled={saving}
+              disabled={saving || uploadingImage}
             >
               Cancel
             </button>
@@ -492,7 +736,7 @@ function TreatmentsEditor({ onStatsChange }) {
               type="button"
               className="cms-primary-button"
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || uploadingImage}
             >
               {saving
                 ? "Saving..."
