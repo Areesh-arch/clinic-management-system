@@ -10,6 +10,7 @@ import SkinQuiz from "../components/SkinQuiz";
 import News from "../components/News";
 import Contact from "../components/Contact";
 import Footer from "../components/Footer";
+import WhatsAppButton from "../components/WhatsAppButton";
 
 import publicWebsiteService from "../services/publicWebsiteService";
 
@@ -152,6 +153,10 @@ export default function Home() {
       </main>
 
       <Footer siteSettings={siteSettings} />
+
+      <WhatsAppButton
+        whatsapp={siteSettings?.whatsapp}
+      />
 
       {loading && (
         <div

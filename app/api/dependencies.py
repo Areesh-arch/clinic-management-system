@@ -5,11 +5,11 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.database.session import get_db
-from app.models import user
 from app.models.user import User
 
+
 oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/api/v1/auth/login"
+    tokenUrl="/api/v1/auth/login",
 )
 
 
@@ -17,11 +17,12 @@ def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ):
-    
-
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
+        headers={
+            "WWW-Authenticate": "Bearer",
+        },
     )
 
     try:
@@ -31,34 +32,42 @@ def get_current_user(
             algorithms=[settings.ALGORITHM],
         )
 
-    
+        # -------------------------------------------------
+        # Only ACCESS tokens are accepted here.
+        # -------------------------------------------------
+
+        token_type = payload.get("token_type", "access")
+
+        if token_type != "access":
+            raise credentials_exception
 
         user_id = payload.get("user_id")
-
 
         if user_id is None:
             raise credentials_exception
 
-    except JWTError as e:
+    except JWTError as error:
         print("\n========== JWT ERROR ==========")
-        print(repr(e))
+        print(repr(error))
+
         raise credentials_exception
 
-    user = (
+    current_user = (
         db.query(User)
         .filter(User.id == user_id)
         .first()
     )
 
-    print("\n========== USER ==========")
-    print("\n========== USER ==========")
-    print("USER ID:", user.id if user else None)
-    print("USER EMAIL:", user.email if user else None)
-    print("USER ROLE:", repr(user.role) if user else None)
-    print("TENANT ID:", user.tenant_id if user else None)
-    print(user)
-
-    if user is None:
+    if current_user is None:
         raise credentials_exception
 
-    return user
+    if not current_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account is inactive",
+            headers={
+                "WWW-Authenticate": "Bearer",
+            },
+        )
+
+    return current_user

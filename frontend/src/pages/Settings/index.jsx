@@ -6,7 +6,6 @@ import SettingsHeader from "../../components/settings/SettingsHeader";
 import ProfileSettings from "../../components/settings/ProfileSettings";
 import WebsiteSettings from "../../components/settings/WebsiteSettings";
 import SecuritySettings from "../../components/settings/SecuritySettings";
-import NotificationSettings from "../../components/settings/NotificationSettings";
 
 import { getCurrentUser } from "../../services/settingsService";
 
@@ -157,8 +156,6 @@ export default function Settings() {
                 <WebsiteSettings />
 
                 <SecuritySettings />
-
-                <NotificationSettings />
               </>
             )}
           </>

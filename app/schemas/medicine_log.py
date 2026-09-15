@@ -5,24 +5,34 @@ from pydantic import BaseModel
 
 
 class MedicineLogResponse(BaseModel):
-    prescription_item_id: int
+    # Prescription fields
+    prescription_item_id: int | None = None
+    prescription_id: int | None = None
+    visit_id: int | None = None
 
-    prescription_id: int
-    visit_id: int
+    # Patient / customer
+    patient_id: int | None = None
+    patient_name: str | None = None
+    medical_record_number: str | None = None
+    customer_name: str | None = None
 
-    patient_id: int
-    patient_name: str
-    medical_record_number: str
-
+    # Common medicine information
     date: datetime
-
     medicine_name: str
     medicine_unit: str
-
     quantity: int
 
-    dosage: str
-    frequency: str
-    duration: str
+    # Prescription-specific information
+    dosage: str | None = None
+    frequency: str | None = None
+    duration: str | None = None
 
+    # Amount
     amount: Decimal | None = None
+
+    # Helps frontend distinguish the source
+    source: str
+
+    model_config = {
+        "from_attributes": True,
+    }

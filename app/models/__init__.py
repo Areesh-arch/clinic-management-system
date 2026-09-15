@@ -9,6 +9,7 @@ from app.models.prescription import Prescription
 from app.models.prescription_item import PrescriptionItem
 from app.models.treatment_photo import TreatmentPhoto
 from app.models.inventory_item import InventoryItem
+from app.models.medicine_issue import MedicineIssue
 from app.models.payment import Payment
 from app.models.expense import Expense
 from app.models.outstanding import Outstanding
@@ -19,3 +20,5 @@ from app.models.cms_blog import CMSBlog
 from app.models.cms_quiz import CMSQuiz
 from app.models.cms_testimonial import CMSTestimonial
 from app.models.site_settings import SiteSettings
+from app.models.subscription_plan_config import SubscriptionPlanConfig
+

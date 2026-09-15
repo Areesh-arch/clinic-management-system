@@ -1,15 +1,37 @@
 from pydantic import BaseModel, Field
 
 
+# =========================================================
+# LOGIN
+# =========================================================
+
 class LoginRequest(BaseModel):
     email: str
     password: str
 
 
+# =========================================================
+# TOKEN
+# =========================================================
+
 class Token(BaseModel):
     access_token: str
     token_type: str
 
+
+class TokenResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
+# =========================================================
+# CURRENT USER
+# =========================================================
 
 class CurrentUserResponse(BaseModel):
     id: int
@@ -20,12 +42,11 @@ class CurrentUserResponse(BaseModel):
     is_active: bool
 
 
-class ChangePasswordRequest(BaseModel):
-    current_password: str = Field(
-        ...,
-        min_length=1,
-    )
+# =========================================================
+# CHANGE PASSWORD
+# =========================================================
 
+class ChangePasswordRequest(BaseModel):
     new_password: str = Field(
         ...,
         min_length=8,

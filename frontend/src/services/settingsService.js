@@ -76,6 +76,20 @@ export async function uploadProfileImage(
 
 
 // ============================================================
+// REMOVE PERSONAL PROFILE IMAGE
+// ============================================================
+
+export async function removeProfileImage() {
+  return apiRequest(
+    "/auth/profile-image",
+    {
+      method: "DELETE",
+    }
+  );
+}
+
+
+// ============================================================
 // CLINIC / TENANT PROFILE IMAGE
 // SUPER_ADMIN uploads the image for the SELECTED CLINIC.
 // This does NOT update the SUPER_ADMIN's personal image.

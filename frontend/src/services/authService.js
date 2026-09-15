@@ -3,16 +3,51 @@ const API_URL =
   "http://127.0.0.1:8000/api/v1";
 
 
+// =========================================================
+// STORAGE HELPERS
+// =========================================================
+
+function clearTokens() {
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("refresh_token");
+
+  sessionStorage.removeItem("access_token");
+  sessionStorage.removeItem("refresh_token");
+}
+
+
+function saveTokens(
+  accessToken,
+  refreshToken,
+  rememberMe
+) {
+  clearTokens();
+
+  const storage = rememberMe
+    ? localStorage
+    : sessionStorage;
+
+  storage.setItem(
+    "access_token",
+    accessToken
+  );
+
+  storage.setItem(
+    "refresh_token",
+    refreshToken
+  );
+}
+
+
+// =========================================================
+// LOGIN
+// =========================================================
+
 export async function loginUser(
   email,
   password,
   rememberMe = false
 ) {
-
-  // =====================================================
-  // FORM DATA
-  // =====================================================
-
   const formData =
     new URLSearchParams();
 
@@ -25,11 +60,6 @@ export async function loginUser(
     "password",
     password
   );
-
-
-  // =====================================================
-  // LOGIN REQUEST
-  // =====================================================
 
   const response = await fetch(
     `${API_URL}/auth/login`,
@@ -45,18 +75,11 @@ export async function loginUser(
     }
   );
 
-
-  // =====================================================
-  // ERROR
-  // =====================================================
-
   if (!response.ok) {
-
     let errorMessage =
       "Login failed";
 
     try {
-
       const errorData =
         await response.json();
 
@@ -67,9 +90,8 @@ export async function loginUser(
         errorMessage =
           errorData.detail;
       }
-
     } catch {
-      // Response was not JSON
+      // Ignore invalid response body.
     }
 
     throw new Error(
@@ -77,47 +99,89 @@ export async function loginUser(
     );
   }
 
+  const data =
+    await response.json();
 
-  // =====================================================
-  // RESPONSE
-  // =====================================================
+  saveTokens(
+    data.access_token,
+    data.refresh_token,
+    rememberMe
+  );
+
+  return data;
+}
+
+
+// =========================================================
+// REFRESH TOKEN
+// =========================================================
+
+export async function refreshAccessToken() {
+  const refreshToken =
+    localStorage.getItem(
+      "refresh_token"
+    ) ||
+    sessionStorage.getItem(
+      "refresh_token"
+    );
+
+  if (!refreshToken) {
+    throw new Error(
+      "No refresh token available."
+    );
+  }
+
+  const response = await fetch(
+    `${API_URL}/auth/refresh`,
+    {
+      method: "POST",
+
+      headers: {
+        "Content-Type":
+          "application/json",
+      },
+
+      body: JSON.stringify({
+        refresh_token:
+          refreshToken,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    clearTokens();
+
+    throw new Error(
+      "Refresh token expired."
+    );
+  }
 
   const data =
     await response.json();
 
-
-  // =====================================================
-  // CLEAR OLD TOKENS
-  // =====================================================
-
-  localStorage.removeItem(
-    "access_token"
-  );
-
-  sessionStorage.removeItem(
-    "access_token"
-  );
-
-
-  // =====================================================
-  // SAVE TOKEN
-  // =====================================================
-
-  if (rememberMe) {
-
-    localStorage.setItem(
-      "access_token",
-      data.access_token
+  const useLocalStorage =
+    Boolean(
+      localStorage.getItem(
+        "refresh_token"
+      )
     );
 
-  } else {
+  const storage =
+    useLocalStorage
+      ? localStorage
+      : sessionStorage;
 
-    sessionStorage.setItem(
-      "access_token",
-      data.access_token
+  storage.setItem(
+    "access_token",
+    data.access_token
+  );
+
+  if (data.refresh_token) {
+    storage.setItem(
+      "refresh_token",
+      data.refresh_token
     );
   }
-
 
   return data;
 }
@@ -128,12 +192,5 @@ export async function loginUser(
 // =========================================================
 
 export function logoutUser() {
-
-  localStorage.removeItem(
-    "access_token"
-  );
-
-  sessionStorage.removeItem(
-    "access_token"
-  );
+  clearTokens();
 }

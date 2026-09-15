@@ -1,57 +1,70 @@
+import {
+  refreshAccessToken,
+} from "./authService";
+
+
 const API_BASE_URL =
   import.meta.env.VITE_API_URL ||
   "http://127.0.0.1:8000/api/v1";
 
 
+let refreshPromise = null;
+
+
+// =========================================================
+// TOKEN
+// =========================================================
+
+function getAccessToken() {
+  return (
+    localStorage.getItem(
+      "access_token"
+    ) ||
+    sessionStorage.getItem(
+      "access_token"
+    )
+  );
+}
+
+
+// =========================================================
+// REQUEST
+// =========================================================
+
 export async function apiRequest(
   endpoint,
-  options = {}
+  options = {},
+  retry = true
 ) {
-  // =====================================================
-  // GET AUTH TOKEN
-  // =====================================================
-
   const token =
-    localStorage.getItem("access_token") ||
-    localStorage.getItem("token") ||
-    sessionStorage.getItem("access_token") ||
-    sessionStorage.getItem("token");
-
-
-  // =====================================================
-  // GET SELECTED TENANT
-  // =====================================================
+    getAccessToken();
 
   const selectedTenantId =
     localStorage.getItem(
       "selected_tenant_id"
     );
 
-
-  // =====================================================
-  // HEADERS
-  // =====================================================
-
   const headers = {
     ...(options.headers || {}),
   };
 
 
-  // =====================================================
-  // CONTENT TYPE
-  // =====================================================
+  // -------------------------------------------------------
+  // JSON CONTENT TYPE
+  // -------------------------------------------------------
 
   if (
-    !(options.body instanceof FormData)
+    !(options.body instanceof FormData) &&
+    !headers["Content-Type"]
   ) {
     headers["Content-Type"] =
       "application/json";
   }
 
 
-  // =====================================================
+  // -------------------------------------------------------
   // AUTHORIZATION
-  // =====================================================
+  // -------------------------------------------------------
 
   if (token) {
     headers.Authorization =
@@ -59,27 +72,15 @@ export async function apiRequest(
   }
 
 
-  // =====================================================
-  // SUPER ADMIN TENANT CONTEXT
-  // =====================================================
-  //
-  // Only send the selected tenant when one
-  // has actually been selected.
-  //
-  // The backend remains responsible for
-  // deciding whether the authenticated user
-  // is allowed to use this tenant.
-  //
+  // -------------------------------------------------------
+  // TENANT
+  // -------------------------------------------------------
 
   if (selectedTenantId) {
     headers["X-Tenant-ID"] =
       selectedTenantId;
   }
 
-
-  // =====================================================
-  // REQUEST
-  // =====================================================
 
   const response = await fetch(
     `${API_BASE_URL}${endpoint}`,
@@ -90,9 +91,60 @@ export async function apiRequest(
   );
 
 
-  // =====================================================
-  // UNAUTHORIZED
-  // =====================================================
+  // =======================================================
+  // ACCESS TOKEN EXPIRED
+  // =======================================================
+
+  if (
+    response.status === 401 &&
+    retry &&
+    endpoint !== "/auth/login" &&
+    endpoint !== "/auth/refresh"
+  ) {
+    try {
+
+      // ---------------------------------------------------
+      // Prevent multiple simultaneous refresh requests.
+      // ---------------------------------------------------
+
+      if (!refreshPromise) {
+        refreshPromise =
+          refreshAccessToken()
+            .finally(() => {
+              refreshPromise = null;
+            });
+      }
+
+      await refreshPromise;
+
+
+      // ---------------------------------------------------
+      // Retry the original request once.
+      // ---------------------------------------------------
+
+      return apiRequest(
+        endpoint,
+        options,
+        false
+      );
+
+    } catch (refreshError) {
+
+      console.error(
+        "Authentication refresh failed:",
+        refreshError
+      );
+
+      throw new Error(
+        "Authentication failed. Please log in again."
+      );
+    }
+  }
+
+
+  // =======================================================
+  // OTHER 401
+  // =======================================================
 
   if (response.status === 401) {
     throw new Error(
@@ -101,9 +153,9 @@ export async function apiRequest(
   }
 
 
-  // =====================================================
+  // =======================================================
   // OTHER ERRORS
-  // =====================================================
+  // =======================================================
 
   if (!response.ok) {
     let errorMessage =
@@ -119,8 +171,11 @@ export async function apiRequest(
       ) {
         errorMessage =
           errorData.detail;
+
       } else if (
-        Array.isArray(errorData.detail)
+        Array.isArray(
+          errorData.detail
+        )
       ) {
         errorMessage =
           errorData.detail
@@ -132,25 +187,23 @@ export async function apiRequest(
             .join(", ");
       }
     } catch {
-      // Ignore JSON parsing failure.
+      // Ignore invalid response body.
     }
 
-    throw new Error(errorMessage);
+    throw new Error(
+      errorMessage
+    );
   }
 
 
-  // =====================================================
+  // =======================================================
   // NO CONTENT
-  // =====================================================
+  // =======================================================
 
   if (response.status === 204) {
     return null;
   }
 
-
-  // =====================================================
-  // JSON RESPONSE
-  // =====================================================
 
   return response.json();
 }

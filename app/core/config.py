@@ -1,13 +1,12 @@
 from functools import lru_cache
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import (
+    BaseSettings,
+    SettingsConfigDict,
+)
 
 
 class Settings(BaseSettings):
-    """
-    Application configuration loaded from .env
-    """
-
     APP_NAME: str
     APP_VERSION: str
 
@@ -15,7 +14,9 @@ class Settings(BaseSettings):
 
     SECRET_KEY: str
     ALGORITHM: str
-    ACCESS_TOKEN_EXPIRE_MINUTES: int
+
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
     DEBUG: bool = False
 
@@ -28,9 +29,6 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    """
-    Returns a cached Settings instance.
-    """
     return Settings()
 
 

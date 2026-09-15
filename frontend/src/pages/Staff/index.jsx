@@ -21,7 +21,6 @@ function Staff() {
   const [status, setStatus] = useState("All");
 
   const [showModal, setShowModal] = useState(false);
-
   const [selectedStaff, setSelectedStaff] = useState(null);
 
   const [loading, setLoading] = useState(true);
@@ -38,7 +37,27 @@ function Staff() {
 
       const data = await getStaff();
 
-      setStaff(data);
+      /*
+       * IMPORTANT:
+       * This number is ONLY a display number.
+       *
+       * We do NOT change:
+       * - staff.id
+       * - user.id
+       * - tenant_id
+       *
+       * The API already returns staff for the currently
+       * selected tenant, so numbering starts from 1 for
+       * that tenant's staff list.
+       */
+      const staffWithDisplayNumber = (data || []).map(
+        (member, index) => ({
+          ...member,
+          display_number: index + 1,
+        })
+      );
+
+      setStaff(staffWithDisplayNumber);
 
     } catch (err) {
       console.error(
@@ -83,7 +102,6 @@ function Staff() {
   // =========================================================
 
   const handleDeleteStaff = async (member) => {
-
     const confirmed = window.confirm(
       `Are you sure you want to delete ${member.name}?`
     );
@@ -93,13 +111,11 @@ function Staff() {
     }
 
     try {
-
       await deleteStaff(member.id);
 
       await loadStaff();
 
     } catch (err) {
-
       console.error(
         "Failed to delete staff:",
         err
@@ -118,7 +134,6 @@ function Staff() {
 
   const filteredStaff = staff.filter(
     (member) => {
-
       const searchText =
         search.toLowerCase();
 

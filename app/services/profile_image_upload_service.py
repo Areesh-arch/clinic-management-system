@@ -1,4 +1,3 @@
-
 from pathlib import Path
 from uuid import uuid4
 
@@ -56,59 +55,114 @@ async def save_profile_image(
             "Only JPG, PNG, and WEBP images are allowed."
         )
 
-
     file_content = await upload_file.read()
-
 
     if not file_content:
         raise ValueError(
             "The uploaded image is empty."
         )
 
-
     if len(file_content) > MAX_FILE_SIZE:
         raise ValueError(
             "Image size must be 10 MB or less."
         )
-
 
     user_directory = (
         PROFILE_UPLOAD_DIR
         / str(user_id)
     )
 
-
     user_directory.mkdir(
         parents=True,
         exist_ok=True,
     )
 
-
     extension = ALLOWED_CONTENT_TYPES[
         content_type
     ]
 
-
     filename = (
         f"{uuid4().hex}{extension}"
     )
-
 
     file_path = (
         user_directory
         / filename
     )
 
-
     file_path.write_bytes(
         file_content
     )
-
 
     return (
         f"/uploads/profile_images/"
         f"{user_id}/{filename}"
     )
+
+
+# ============================================================
+# REMOVE USER PROFILE IMAGE
+# ============================================================
+
+def delete_profile_image(
+    image_url: str | None,
+    user_id: int,
+) -> None:
+    """
+    Delete the user's profile image from disk.
+
+    Only files inside the user's own profile-image directory
+    are allowed to be deleted.
+    """
+
+    if not image_url:
+        return
+
+    expected_prefix = (
+        f"/uploads/profile_images/{user_id}/"
+    )
+
+    if not image_url.startswith(expected_prefix):
+        return
+
+    relative_path = image_url.lstrip("/")
+
+    file_path = BASE_DIR / relative_path
+
+    user_directory = (
+        PROFILE_UPLOAD_DIR
+        / str(user_id)
+    ).resolve()
+
+    try:
+        resolved_file = file_path.resolve()
+    except OSError:
+        return
+
+    # Security check: make sure the file is really inside
+    # this user's profile-image directory.
+    try:
+        resolved_file.relative_to(user_directory)
+    except ValueError:
+        return
+
+    if resolved_file.is_file():
+        try:
+            resolved_file.unlink()
+        except OSError:
+            # Do not break profile removal if physical file
+            # deletion fails.
+            pass
+
+    # Remove empty user directory if possible.
+    try:
+        if (
+            user_directory.exists()
+            and not any(user_directory.iterdir())
+        ):
+            user_directory.rmdir()
+    except OSError:
+        pass
 
 
 # ============================================================
@@ -127,54 +181,44 @@ async def save_clinic_image(
             "Only JPG, PNG, and WEBP images are allowed."
         )
 
-
     file_content = await upload_file.read()
-
 
     if not file_content:
         raise ValueError(
             "The uploaded image is empty."
         )
 
-
     if len(file_content) > MAX_FILE_SIZE:
         raise ValueError(
             "Image size must be 10 MB or less."
         )
-
 
     tenant_directory = (
         CLINIC_UPLOAD_DIR
         / str(tenant_id)
     )
 
-
     tenant_directory.mkdir(
         parents=True,
         exist_ok=True,
     )
 
-
     extension = ALLOWED_CONTENT_TYPES[
         content_type
     ]
 
-
     filename = (
         f"{uuid4().hex}{extension}"
     )
-
 
     file_path = (
         tenant_directory
         / filename
     )
 
-
     file_path.write_bytes(
         file_content
     )
-
 
     return (
         f"/uploads/clinic_images/"

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import {
   FiChevronDown,
   FiLogOut,
+  FiMenu,
 } from "react-icons/fi";
 
 import Avatar from "../ui/Avatar";
@@ -56,7 +57,7 @@ function getImageUrl(imageUrl) {
 // NAVBAR
 // ============================================================
 
-function Navbar() {
+function Navbar({ onMenuClick }) {
   const [open, setOpen] = useState(false);
 
   const [user, setUser] = useState(null);
@@ -191,9 +192,43 @@ function Navbar() {
   // ============================================================
 
   return (
-    <header className="flex h-20 items-center justify-end border-b border-[#E6E1D8] bg-[#FCFBF8] px-4 sm:px-8">
+    <header className="flex h-20 items-center justify-between border-b border-[#E6E1D8] bg-[#FCFBF8] px-4 sm:px-8">
 
-      <div className="relative">
+      {/* =====================================================
+          MOBILE MENU BUTTON
+      ===================================================== */}
+
+      <button
+        type="button"
+        onClick={onMenuClick}
+        className="
+          flex
+          h-11
+          w-11
+          items-center
+          justify-center
+          rounded-xl
+          border
+          border-[#E6E1D8]
+          bg-[#F7F3E9]
+          text-[#173B32]
+          shadow-sm
+          transition-all
+          hover:bg-[#EEF3EB]
+          hover:border-[#D8CDB5]
+          lg:hidden
+        "
+        aria-label="Open navigation menu"
+      >
+        <FiMenu size={22} />
+      </button>
+
+
+      {/* =====================================================
+          RIGHT SIDE
+      ===================================================== */}
+
+      <div className="relative ml-auto">
 
         <button
           type="button"

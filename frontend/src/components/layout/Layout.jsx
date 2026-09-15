@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import Sidebar from "./Sidebar";
 import SuperAdminSidebar from "./SuperAdminSidebar";
 import Navbar from "./Navbar";
@@ -8,8 +10,19 @@ import { useAuth } from "../../context/AuthContext";
 function Layout({ children }) {
   const { user, loading } = useAuth();
 
+  const [mobileSidebarOpen, setMobileSidebarOpen] =
+    useState(false);
+
   const isSuperAdmin =
     user?.role?.toLowerCase() === "super_admin";
+
+  const openMobileSidebar = () => {
+    setMobileSidebarOpen(true);
+  };
+
+  const closeMobileSidebar = () => {
+    setMobileSidebarOpen(false);
+  };
 
   return (
     <div className="min-h-screen w-full flex bg-[#F7F9F6] overflow-x-hidden">
@@ -19,9 +32,15 @@ function Layout({ children }) {
       ===================================================== */}
 
       {!loading && isSuperAdmin ? (
-        <SuperAdminSidebar />
+        <SuperAdminSidebar
+          mobileOpen={mobileSidebarOpen}
+          onClose={closeMobileSidebar}
+        />
       ) : (
-        <Sidebar />
+        <Sidebar
+          mobileOpen={mobileSidebarOpen}
+          onClose={closeMobileSidebar}
+        />
       )}
 
       {/* =====================================================
@@ -31,7 +50,10 @@ function Layout({ children }) {
       <div className="flex-1 min-w-0 max-w-full flex flex-col">
 
         {/* Navbar */}
-        <Navbar />
+
+        <Navbar
+          onMenuClick={openMobileSidebar}
+        />
 
         {/* ===================================================
             PAGE CONTENT
@@ -42,6 +64,7 @@ function Layout({ children }) {
         </main>
 
         {/* Footer */}
+
         <Footer />
 
       </div>

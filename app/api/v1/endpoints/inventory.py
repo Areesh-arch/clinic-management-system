@@ -1,22 +1,29 @@
+
 from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
-    status,
 )
 
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+
 from app.api.permissions import require_roles
+from app.api.tenant_context import get_effective_tenant_id
 
 from app.models.enums import UserRole
 from app.models.user import User
 
 from app.schemas.inventory import (
     InventoryCreate,
-    InventoryUpdate,
     InventoryResponse,
+    InventoryUpdate,
+)
+
+from app.schemas.medicine_issue import (
+    MedicineIssueCreate,
+    MedicineIssueResponse,
 )
 
 from app.services.inventory_service import (
@@ -31,6 +38,10 @@ from app.services.inventory_service import (
     permanently_delete_inventory_service,
 )
 
+from app.services.medicine_issue_service import (
+    create_medicine_issue_service,
+)
+
 
 router = APIRouter(
     prefix="",
@@ -40,89 +51,106 @@ router = APIRouter(
 
 # =========================================================
 # CREATE INVENTORY ITEM
+# OWNER + STAFF + SUPER_ADMIN
 # =========================================================
 
 @router.post(
     "/",
     response_model=InventoryResponse,
-    status_code=status.HTTP_201_CREATED,
 )
 def create_inventory(
-    inventory_data: InventoryCreate,
+    data: InventoryCreate,
     db: Session = Depends(get_db),
+
     current_user: User = Depends(
         require_roles(
-            UserRole.SUPER_ADMIN,
             UserRole.OWNER,
             UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
         )
+    ),
+
+    tenant_id: int = Depends(
+        get_effective_tenant_id
     ),
 ):
     try:
         return create_inventory_service(
             db=db,
-            inventory_data=inventory_data,
-            tenant_id=current_user.tenant_id,
+            inventory_data=data,
+            tenant_id=tenant_id,
         )
 
-    except ValueError as e:
+    except ValueError as exc:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
+            status_code=400,
+            detail=str(exc),
         )
 
 
 # =========================================================
 # LIST ACTIVE INVENTORY
+# OWNER + STAFF + SUPER_ADMIN
 # =========================================================
 
 @router.get(
     "/",
     response_model=list[InventoryResponse],
 )
-def list_inventory(
+def get_inventory(
     db: Session = Depends(get_db),
+
     current_user: User = Depends(
         require_roles(
-            UserRole.SUPER_ADMIN,
             UserRole.OWNER,
             UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
         )
+    ),
+
+    tenant_id: int = Depends(
+        get_effective_tenant_id
     ),
 ):
     return list_inventory_service(
         db=db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=tenant_id,
     )
 
 
 # =========================================================
 # LIST ARCHIVED INVENTORY
-# IMPORTANT: BEFORE /{inventory_item_id}
+# OWNER + STAFF + SUPER_ADMIN
 # =========================================================
 
 @router.get(
     "/archived",
     response_model=list[InventoryResponse],
 )
-def list_archived_inventory(
+def get_archived_inventory(
     db: Session = Depends(get_db),
+
     current_user: User = Depends(
         require_roles(
-            UserRole.SUPER_ADMIN,
             UserRole.OWNER,
             UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
         )
+    ),
+
+    tenant_id: int = Depends(
+        get_effective_tenant_id
     ),
 ):
     return list_archived_inventory_service(
         db=db,
-        tenant_id=current_user.tenant_id,
+        tenant_id=tenant_id,
     )
 
 
 # =========================================================
 # ARCHIVE INVENTORY ITEM
+# OWNER + STAFF + SUPER_ADMIN
 # =========================================================
 
 @router.post(
@@ -132,30 +160,36 @@ def list_archived_inventory(
 def archive_inventory(
     inventory_item_id: int,
     db: Session = Depends(get_db),
+
     current_user: User = Depends(
         require_roles(
-            UserRole.SUPER_ADMIN,
             UserRole.OWNER,
             UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
         )
+    ),
+
+    tenant_id: int = Depends(
+        get_effective_tenant_id
     ),
 ):
     try:
         return archive_inventory_service(
             db=db,
             inventory_item_id=inventory_item_id,
-            tenant_id=current_user.tenant_id,
+            tenant_id=tenant_id,
         )
 
-    except ValueError as e:
+    except ValueError as exc:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
+            status_code=404,
+            detail=str(exc),
         )
 
 
 # =========================================================
 # RESTORE INVENTORY ITEM
+# OWNER + STAFF + SUPER_ADMIN
 # =========================================================
 
 @router.post(
@@ -165,99 +199,116 @@ def archive_inventory(
 def restore_inventory(
     inventory_item_id: int,
     db: Session = Depends(get_db),
+
     current_user: User = Depends(
         require_roles(
-            UserRole.SUPER_ADMIN,
             UserRole.OWNER,
             UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
         )
+    ),
+
+    tenant_id: int = Depends(
+        get_effective_tenant_id
     ),
 ):
     try:
         return restore_inventory_service(
             db=db,
             inventory_item_id=inventory_item_id,
-            tenant_id=current_user.tenant_id,
+            tenant_id=tenant_id,
         )
 
-    except ValueError as e:
+    except ValueError as exc:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
+            status_code=404,
+            detail=str(exc),
         )
 
 
 # =========================================================
-# PERMANENT DELETE
-# IMPORTANT: BEFORE /{inventory_item_id}
+# PERMANENT DELETE ARCHIVED INVENTORY ITEM
+# OWNER + SUPER_ADMIN
 # =========================================================
 
 @router.delete(
     "/{inventory_item_id}/permanent",
-    status_code=status.HTTP_204_NO_CONTENT,
 )
 def permanently_delete_inventory(
     inventory_item_id: int,
     db: Session = Depends(get_db),
+
     current_user: User = Depends(
         require_roles(
-            UserRole.SUPER_ADMIN,
             UserRole.OWNER,
-            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
         )
+    ),
+
+    tenant_id: int = Depends(
+        get_effective_tenant_id
     ),
 ):
     try:
         permanently_delete_inventory_service(
             db=db,
             inventory_item_id=inventory_item_id,
-            tenant_id=current_user.tenant_id,
+            tenant_id=tenant_id,
         )
 
-        return None
+        return {
+            "message": "Inventory item permanently deleted."
+        }
 
-    except ValueError as e:
+    except ValueError as exc:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
+            status_code=404,
+            detail=str(exc),
         )
 
 
 # =========================================================
 # GET SINGLE ACTIVE INVENTORY ITEM
+# OWNER + STAFF + SUPER_ADMIN
 # =========================================================
 
 @router.get(
     "/{inventory_item_id}",
     response_model=InventoryResponse,
 )
-def get_inventory(
+def get_inventory_item(
     inventory_item_id: int,
     db: Session = Depends(get_db),
+
     current_user: User = Depends(
         require_roles(
-            UserRole.SUPER_ADMIN,
             UserRole.OWNER,
             UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
         )
+    ),
+
+    tenant_id: int = Depends(
+        get_effective_tenant_id
     ),
 ):
     try:
         return get_inventory_service(
             db=db,
             inventory_item_id=inventory_item_id,
-            tenant_id=current_user.tenant_id,
+            tenant_id=tenant_id,
         )
 
-    except ValueError as e:
+    except ValueError as exc:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
+            status_code=404,
+            detail=str(exc),
         )
 
 
 # =========================================================
 # UPDATE INVENTORY ITEM
+# OWNER + STAFF + SUPER_ADMIN
 # =========================================================
 
 @router.put(
@@ -266,60 +317,70 @@ def get_inventory(
 )
 def update_inventory(
     inventory_item_id: int,
-    inventory_data: InventoryUpdate,
+    data: InventoryUpdate,
     db: Session = Depends(get_db),
+
     current_user: User = Depends(
         require_roles(
-            UserRole.SUPER_ADMIN,
             UserRole.OWNER,
             UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
         )
+    ),
+
+    tenant_id: int = Depends(
+        get_effective_tenant_id
     ),
 ):
     try:
         inventory_item = get_inventory_service(
             db=db,
             inventory_item_id=inventory_item_id,
-            tenant_id=current_user.tenant_id,
+            tenant_id=tenant_id,
         )
 
         return update_inventory_service(
             db=db,
             inventory_item=inventory_item,
-            inventory_data=inventory_data,
+            inventory_data=data,
         )
 
-    except ValueError as e:
+    except ValueError as exc:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
+            status_code=400,
+            detail=str(exc),
         )
 
 
 # =========================================================
 # DELETE = ARCHIVE
+# OWNER + STAFF + SUPER_ADMIN
 # =========================================================
 
 @router.delete(
     "/{inventory_item_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
 )
 def delete_inventory(
     inventory_item_id: int,
     db: Session = Depends(get_db),
+
     current_user: User = Depends(
         require_roles(
-            UserRole.SUPER_ADMIN,
             UserRole.OWNER,
             UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
         )
+    ),
+
+    tenant_id: int = Depends(
+        get_effective_tenant_id
     ),
 ):
     try:
         inventory_item = get_inventory_service(
             db=db,
             inventory_item_id=inventory_item_id,
-            tenant_id=current_user.tenant_id,
+            tenant_id=tenant_id,
         )
 
         delete_inventory_service(
@@ -327,10 +388,69 @@ def delete_inventory(
             inventory_item=inventory_item,
         )
 
-        return None
+        return {
+            "message": "Inventory item archived successfully."
+        }
 
-    except ValueError as e:
+    except ValueError as exc:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
+            status_code=404,
+            detail=str(exc),
+        )
+
+
+# =========================================================
+# DIRECT MEDICINE ISSUE
+#
+# This is NOT a separate billing/sales module.
+#
+# Patient:
+#     patient_id provided
+#
+# Non-patient:
+#     patient_id = null
+#
+# Both cases:
+#     stock decreases
+#     medicine issue is recorded
+#
+# OWNER + STAFF + SUPER_ADMIN
+# =========================================================
+
+@router.post(
+    "/{inventory_item_id}/issue",
+    response_model=MedicineIssueResponse,
+)
+def issue_medicine(
+    inventory_item_id: int,
+    data: MedicineIssueCreate,
+    db: Session = Depends(get_db),
+
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
+    ),
+
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
+):
+    try:
+        return create_medicine_issue_service(
+            db=db,
+            tenant_id=tenant_id,
+            inventory_item_id=inventory_item_id,
+            quantity=data.quantity,
+            patient_id=data.patient_id,
+            customer_name=data.customer_name,
+            current_user_id=current_user.id,
+        )
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
         )

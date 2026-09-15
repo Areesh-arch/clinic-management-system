@@ -133,3 +133,31 @@ export async function permanentlyDeleteInventory(
     }
   );
 }
+export async function issueMedicine(
+  inventoryId,
+  {
+    patient_id = null,
+    customer_name = null,
+    quantity,
+  }
+) {
+  return apiRequest(
+    `/inventory/${inventoryId}/issue`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        patient_id:
+          patient_id === "" ||
+          patient_id === null ||
+          patient_id === undefined
+            ? null
+            : Number(patient_id),
+
+        customer_name:
+          customer_name?.trim() || null,
+
+        quantity: Number(quantity),
+      }),
+    }
+  );
+}

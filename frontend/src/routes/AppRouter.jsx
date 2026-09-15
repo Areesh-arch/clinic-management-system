@@ -4,11 +4,13 @@ import {
   Route,
 } from "react-router-dom";
 
+
 import Login from "../pages/Login";
 import ForgotPassword from "../pages/ForgotPassword";
 
 import Dashboard from "../pages/Dashboard";
 import PlatformOverview from "../pages/PlatformOverview/index.jsx";
+import SuperAdmins from "../pages/SuperAdmins/index.jsx";
 import Tenants from "../pages/Tenants";
 import Subscriptions from "../pages/Subscriptions/index.jsx";
 
@@ -82,6 +84,11 @@ function AppRouter() {
           <Route
             path="/platform"
             element={<PlatformOverview />}
+          />
+
+          <Route
+            path="/platform/admins"
+            element={<SuperAdmins />}
           />
 
           <Route
@@ -223,5 +230,6 @@ function AppRouter() {
     </BrowserRouter>
   );
 }
+
 
 export default AppRouter;

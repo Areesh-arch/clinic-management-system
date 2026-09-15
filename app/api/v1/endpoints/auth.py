@@ -7,59 +7,151 @@ from fastapi import (
     status,
 )
 from fastapi.security import OAuth2PasswordRequestForm
+from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from app.api.permissions import require_roles
+from app.core.config import settings
+from app.core.security import (
+    hash_password,
+    verify_password,
+)
 from app.database.session import get_db
 from app.models.enums import UserRole
 from app.models.user import User
-from app.schemas.auth import Token, ChangePasswordRequest
-from app.services.auth_service import authenticate_user
+from app.schemas.auth import (
+    CurrentUserResponse,
+    RefreshTokenRequest,
+    TokenResponse,
+    ChangePasswordRequest,
+)
+from app.services.auth_service import (
+    authenticate_user,
+    refresh_access_token,
+)
 from app.services.profile_image_upload_service import (
     save_profile_image,
+    delete_profile_image,
 )
-from app.core.security import hash_password, verify_password
 
 
 router = APIRouter()
 
 
-# ============================================================
+# =========================================================
 # LOGIN
-# ============================================================
+# =========================================================
 
 @router.post(
     "/login",
-    response_model=Token,
+    response_model=TokenResponse,
 )
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
-    token = authenticate_user(
+    user = authenticate_user(
         db=db,
         email=form_data.username,
         password=form_data.password,
     )
 
-    if token is None:
+    if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
+            headers={
+                "WWW-Authenticate": "Bearer",
+            },
         )
 
+    from app.core.security import (
+        create_access_token,
+        create_refresh_token,
+    )
+
+    access_token = create_access_token(
+        subject=user.id,
+    )
+
+    refresh_token = create_refresh_token(
+        subject=user.id,
+    )
+
     return {
-        "access_token": token,
+        "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": "bearer",
     }
 
 
-# ============================================================
-# CURRENT USER
-# OWNER + SUPER_ADMIN + STAFF
-# ============================================================
+# =========================================================
+# REFRESH TOKEN
+# =========================================================
 
-@router.get("/me")
+@router.post(
+    "/refresh",
+    response_model=TokenResponse,
+)
+def refresh_token(
+    request: RefreshTokenRequest,
+    db: Session = Depends(get_db),
+):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Refresh token is invalid or expired",
+        headers={
+            "WWW-Authenticate": "Bearer",
+        },
+    )
+
+    try:
+        payload = jwt.decode(
+            request.refresh_token,
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
+        )
+
+        token_type = payload.get("token_type")
+
+        if token_type != "refresh":
+            raise credentials_exception
+
+        user_id = payload.get("user_id")
+
+        if user_id is None:
+            raise credentials_exception
+
+        try:
+            user_id = int(user_id)
+        except (TypeError, ValueError):
+            raise credentials_exception
+
+    except JWTError:
+        raise credentials_exception
+
+    tokens = refresh_access_token(
+        db=db,
+        user_id=user_id,
+    )
+
+    if tokens is None:
+        raise credentials_exception
+
+    return {
+        "access_token": tokens["access_token"],
+        "refresh_token": request.refresh_token,
+        "token_type": "bearer",
+    }
+
+
+# =========================================================
+# CURRENT USER
+# =========================================================
+
+@router.get(
+    "/me",
+)
 def me(
     current_user: User = Depends(
         require_roles(
@@ -79,13 +171,9 @@ def me(
     }
 
 
-# ============================================================
-# PERSONAL PROFILE IMAGE
-# OWNER + SUPER_ADMIN + STAFF
-#
-# This is the USER profile image.
-# It is separate from the clinic/tenant profile image.
-# ============================================================
+# =========================================================
+# PROFILE IMAGE - UPLOAD / CHANGE
+# =========================================================
 
 @router.post("/profile-image")
 async def upload_profile_image(
@@ -99,58 +187,29 @@ async def upload_profile_image(
     ),
     db: Session = Depends(get_db),
 ):
-    try:
-        image_url = await save_profile_image(
-            upload_file=image,
-            user_id=current_user.id,
-        )
+    image_url = await save_profile_image(
+        upload_file=image,
+        user_id=current_user.id,
+    )
 
-        current_user.profile_image_url = image_url
+    current_user.profile_image_url = image_url
 
-        db.commit()
-        db.refresh(current_user)
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
 
-        return {
-            "message": "Profile picture updated successfully.",
-            "profile_image_url": current_user.profile_image_url,
-        }
-
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
-        )
-
-
-# ============================================================
-# OWNER TEST
-# OWNER + SUPER_ADMIN
-# ============================================================
-
-@router.get("/owner-test")
-def owner_test(
-    current_user: User = Depends(
-        require_roles(
-            UserRole.OWNER,
-            UserRole.SUPER_ADMIN,
-        )
-    ),
-):
     return {
-        "message": "Access Granted!",
-        "user": current_user.full_name,
-        "role": current_user.role.value,
+        "message": "Profile image uploaded successfully",
+        "profile_image_url": current_user.profile_image_url,
     }
 
 
-# ============================================================
-# CHANGE PASSWORD
-# ALL AUTHENTICATED ROLES
-# ============================================================
+# =========================================================
+# PROFILE IMAGE - REMOVE
+# =========================================================
 
-@router.post("/change-password")
-def change_password(
-    password_data: ChangePasswordRequest,
+@router.delete("/profile-image")
+def remove_profile_image(
     current_user: User = Depends(
         require_roles(
             UserRole.OWNER,
@@ -160,32 +219,54 @@ def change_password(
     ),
     db: Session = Depends(get_db),
 ):
-    # 1. Verify current password
-    if not verify_password(
-        password_data.current_password,
-        current_user.password_hash,
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Current password is incorrect.",
-        )
+    old_image_url = current_user.profile_image_url
 
-    # 2. Prevent same password
-    if (
-        password_data.current_password
-        == password_data.new_password
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="New password must be different from the current password.",
-        )
+    if not old_image_url:
+        return {
+            "message": "Profile picture is already removed.",
+            "profile_image_url": None,
+        }
 
-    # 3. Hash new password
-    current_user.password_hash = hash_password(
-        password_data.new_password,
+    # Clear database reference first.
+    current_user.profile_image_url = None
+
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+
+    # Remove physical uploaded file.
+    delete_profile_image(
+        image_url=old_image_url,
+        user_id=current_user.id,
     )
 
-    # 4. Save to database
+    return {
+        "message": "Profile picture removed successfully.",
+        "profile_image_url": None,
+    }
+
+
+# =========================================================
+# CHANGE PASSWORD
+# =========================================================
+
+@router.post("/change-password")
+def change_password(
+    request: ChangePasswordRequest,
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.SUPER_ADMIN,
+            UserRole.STAFF,
+        )
+    ),
+    db: Session = Depends(get_db),
+):
+    current_user.password_hash = hash_password(
+        request.new_password
+    )
+
+    db.add(current_user)
     db.commit()
 
     return {

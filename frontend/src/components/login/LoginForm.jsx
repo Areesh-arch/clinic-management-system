@@ -8,97 +8,176 @@ import LoginButton from "./LoginButton";
 
 import { useAuth } from "../../context/AuthContext";
 
+
 export default function LoginForm() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [email, setEmail] =
+    useState("");
 
-  const { login } = useAuth();
-  const navigate = useNavigate();
+  const [password, setPassword] =
+    useState("");
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const [rememberMe, setRememberMe] =
+    useState(false);
 
-    setError("");
-    setSuccess("");
+  const [loading, setLoading] =
+    useState(false);
 
-    // Validate email
-    if (!email.trim()) {
-      setError("Please enter your email.");
-      return;
-    }
+  const [error, setError] =
+    useState("");
 
-    // Validate password
-    if (!password) {
-      setError("Please enter your password.");
-      return;
-    }
+  const [success, setSuccess] =
+    useState("");
 
-    try {
-      setLoading(true);
 
-      // Authenticate user
-      // This will:
-      // 1. Call POST /auth/login
-      // 2. Save the JWT token
-      // 3. Call GET /auth/me
-      // 4. Store the current user in AuthContext
-      const user = await login(email.trim(), password, false);
+  const { login } =
+    useAuth();
 
-      console.log("Authenticated user:", user);
+  const navigate =
+    useNavigate();
 
-      setSuccess("Login successful!");
 
-      // Redirect to dashboard after successful authentication
-      navigate("/dashboard");
-    } catch (error) {
-      console.error("Login failed:", error);
+  // =======================================================
+  // SUBMIT
+  // =======================================================
 
-      setError(error.message || "Login failed. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const handleSubmit =
+    async (event) => {
+
+      event.preventDefault();
+
+      setError("");
+      setSuccess("");
+
+
+      if (!email.trim()) {
+        setError(
+          "Please enter your email."
+        );
+        return;
+      }
+
+
+      if (!password) {
+        setError(
+          "Please enter your password."
+        );
+        return;
+      }
+
+
+      try {
+
+        setLoading(true);
+
+
+        const user =
+          await login(
+            email.trim(),
+            password,
+            rememberMe
+          );
+
+
+        console.log(
+          "Authenticated user:",
+          user
+        );
+
+
+        setSuccess(
+          "Login successful!"
+        );
+
+
+        navigate(
+          "/dashboard"
+        );
+
+      } catch (error) {
+
+        console.error(
+          "Login failed:",
+          error
+        );
+
+
+        setError(
+          error.message ||
+            "Login failed. Please try again."
+        );
+
+      } finally {
+
+        setLoading(false);
+
+      }
+    };
+
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Email */}
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-6"
+    >
+
       <LoginInput
         label="Email"
         type="email"
         placeholder="Enter your email"
         value={email}
-        onChange={(event) => setEmail(event.target.value)}
+        onChange={(event) =>
+          setEmail(
+            event.target.value
+          )
+        }
       />
 
-      {/* Password */}
+
       <PasswordInput
         value={password}
-        onChange={(event) => setPassword(event.target.value)}
+        onChange={(event) =>
+          setPassword(
+            event.target.value
+          )
+        }
       />
 
-      {/* Remember Me + Forgot Password */}
-      <RememberMe />
 
-      {/* Error message */}
+      <RememberMe
+        checked={rememberMe}
+        onChange={(event) =>
+          setRememberMe(
+            event.target.checked
+          )
+        }
+      />
+
+
       {error && (
-        <p className="text-sm text-red-600" role="alert">
+        <p
+          className="text-sm text-red-600"
+          role="alert"
+        >
           {error}
         </p>
       )}
 
-      {/* Success message */}
+
       {success && (
-        <p className="text-sm text-green-600" role="status">
+        <p
+          className="text-sm text-green-600"
+          role="status"
+        >
           {success}
         </p>
       )}
 
-      {/* Login button */}
-      <LoginButton loading={loading} />
+
+      <LoginButton
+        loading={loading}
+      />
+
     </form>
   );
 }

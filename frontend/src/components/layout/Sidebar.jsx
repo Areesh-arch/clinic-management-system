@@ -19,7 +19,10 @@ import { NavLink } from "react-router-dom";
 import { getMySubscription } from "../../services/subscriptionService";
 import { getCurrentUser } from "../../services/settingsService";
 
-function Sidebar() {
+function Sidebar({
+  mobileOpen = false,
+  onClose = () => {},
+}) {
   // =====================================================
   // SUBSCRIPTION
   // =====================================================
@@ -33,7 +36,8 @@ function Sidebar() {
   // UPGRADE MODAL
   // =====================================================
 
-  const [upgradeModule, setUpgradeModule] = useState(null);
+  const [upgradeModule, setUpgradeModule] =
+    useState(null);
 
   // =====================================================
   // LOAD USER + SUBSCRIPTION
@@ -81,6 +85,7 @@ function Sidebar() {
           .trim();
 
         setPlan(currentPlan || "BASIC");
+
       } catch (error) {
         console.error(
           "Failed to load sidebar subscription:",
@@ -90,6 +95,7 @@ function Sidebar() {
         if (mounted) {
           setPlan("BASIC");
         }
+
       } finally {
         if (mounted) {
           setLoadingPlan(false);
@@ -103,6 +109,50 @@ function Sidebar() {
       mounted = false;
     };
   }, []);
+
+  // =====================================================
+  // CLOSE MOBILE SIDEBAR ON ESC
+  // =====================================================
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    document.addEventListener(
+      "keydown",
+      handleEscape
+    );
+
+    return () => {
+      document.removeEventListener(
+        "keydown",
+        handleEscape
+      );
+    };
+  }, [mobileOpen, onClose]);
+
+  // =====================================================
+  // PREVENT BODY SCROLL WHEN MOBILE SIDEBAR OPEN
+  // =====================================================
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+
+    const previousOverflow =
+      document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow =
+        previousOverflow;
+    };
+  }, [mobileOpen]);
 
   // =====================================================
   // PLAN LEVEL
@@ -217,26 +267,261 @@ function Sidebar() {
   };
 
   // =====================================================
-  // RENDER
+  // NAVIGATION ITEM
   // =====================================================
+
+  const renderMenuItem = (item) => {
+
+    // -------------------------------------------------
+    // LOADING
+    // -------------------------------------------------
+
+    if (loadingPlan) {
+      return (
+        <div
+          key={item.name}
+          className="
+            flex
+            items-center
+            gap-4
+            rounded-2xl
+            px-5
+            py-4
+            text-[#9A9F9B]
+            animate-pulse
+          "
+        >
+          <span className="text-xl">
+            {item.icon}
+          </span>
+
+          <span className="font-medium">
+            {item.name}
+          </span>
+        </div>
+      );
+    }
+
+    // -------------------------------------------------
+    // CHECK ACCESS
+    // -------------------------------------------------
+
+    const unlocked = hasAccess(
+      item.requiredLevel
+    );
+
+    // -------------------------------------------------
+    // LOCKED MODULE
+    // -------------------------------------------------
+
+    if (!unlocked) {
+      return (
+        <button
+          key={item.name}
+          type="button"
+          onClick={() =>
+            handleLockedClick(item)
+          }
+          title={`Upgrade your plan to access ${item.name}`}
+          className="
+            w-full
+            flex
+            items-center
+            gap-4
+            rounded-2xl
+            px-5
+            py-4
+            text-left
+            text-[#9A9F9B]
+            bg-[#F5F2EB]
+            border
+            border-transparent
+            cursor-not-allowed
+            transition-all
+            duration-200
+            hover:border-[#D8CBAF]
+            hover:bg-[#F1EEE6]
+          "
+        >
+          <span className="text-xl opacity-70">
+            {item.icon}
+          </span>
+
+          <span className="font-medium flex-1">
+            {item.name}
+          </span>
+
+          <FiLock
+            className="
+              text-[#A58B52]
+              text-base
+              shrink-0
+            "
+          />
+        </button>
+      );
+    }
+
+    // -------------------------------------------------
+    // UNLOCKED MODULE
+    // -------------------------------------------------
+
+    return (
+      <NavLink
+        key={item.name}
+        to={item.path}
+        onClick={onClose}
+        className={({ isActive }) =>
+          `
+          flex
+          items-center
+          gap-4
+          rounded-2xl
+          px-5
+          py-4
+          transition-all
+          duration-200
+
+          ${
+            isActive
+              ? "bg-[#173B32] text-white shadow-md"
+              : "text-[#45524A] hover:bg-[#EEF3EB] hover:text-[#315D4B]"
+          }
+          `
+        }
+      >
+        <span className="text-xl">
+          {item.icon}
+        </span>
+
+        <span className="font-medium">
+          {item.name}
+        </span>
+      </NavLink>
+    );
+  };
 
   return (
     <>
-      <aside className="hidden lg:flex flex-col w-72 shrink-0 bg-[#FCFBF8] border-r border-[#E6E1D8]">
+      {/* =====================================================
+          MOBILE BACKDROP
+      ===================================================== */}
+
+      <div
+        className={`
+          fixed
+          inset-0
+          z-9998
+          bg-[#173B32]/40
+          backdrop-blur-[2px]
+          transition-opacity
+          duration-300
+          lg:hidden
+          ${
+            mobileOpen
+              ? "pointer-events-auto opacity-100"
+              : "pointer-events-none opacity-0"
+          }
+        `}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      {/* =====================================================
+          SIDEBAR
+      ===================================================== */}
+
+      <aside
+        className={`
+          fixed
+          inset-y-0
+          left-0
+          z-9999
+          flex
+          w-72.5
+          max-w-[85vw]
+          flex-col
+          bg-[#FCFBF8]
+          border-r
+          border-[#E6E1D8]
+          shadow-2xl
+          transition-transform
+          duration-300
+          ease-out
+          lg:static
+          lg:z-auto
+          lg:w-72
+          lg:max-w-none
+          lg:translate-x-0
+          lg:shrink-0
+          lg:border-r
+          lg:shadow-none
+
+          ${
+            mobileOpen
+              ? "translate-x-0"
+              : "-translate-x-full"
+          }
+        `}
+      >
 
         {/* =================================================
-            BRAND
+            MOBILE HEADER
         ================================================= */}
 
-        <div className="px-8 py-8 border-b border-[#E6E1D8]">
+        <div className="flex items-center justify-between border-b border-[#E6E1D8] px-6 py-5 lg:hidden">
+
+          <div>
+            <h1 className="text-2xl font-bold text-[#173B32]">
+              DermaCare
+            </h1>
+
+            <p className="mt-1 text-xs text-[#7E867F]">
+              Dermatology Clinic
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="
+              flex
+              h-10
+              w-10
+              items-center
+              justify-center
+              rounded-xl
+              border
+              border-[#E6E1D8]
+              bg-[#F7F3E9]
+              text-[#173B32]
+              transition
+              hover:bg-[#EEF3EB]
+            "
+            aria-label="Close navigation menu"
+          >
+            <FiX size={20} />
+          </button>
+
+        </div>
+
+
+        {/* =================================================
+            DESKTOP BRAND
+        ================================================= */}
+
+        <div className="hidden border-b border-[#E6E1D8] px-8 py-8 lg:block">
+
           <h1 className="text-4xl font-bold text-[#173B32]">
             DermaCare
           </h1>
 
-          <p className="text-[#7E867F] mt-2">
+          <p className="mt-2 text-[#7E867F]">
             Dermatology Clinic
           </p>
+
         </div>
+
 
         {/* =================================================
             NAVIGATION
@@ -244,134 +529,8 @@ function Sidebar() {
 
         <nav className="flex-1 overflow-y-auto px-5 py-6 space-y-2">
 
-          {menus.map((item) => {
-            // -------------------------------------------------
-            // LOADING
-            // -------------------------------------------------
+          {menus.map(renderMenuItem)}
 
-            if (loadingPlan) {
-              return (
-                <div
-                  key={item.name}
-                  className="
-                    flex
-                    items-center
-                    gap-4
-                    rounded-2xl
-                    px-5
-                    py-4
-                    text-[#9A9F9B]
-                    animate-pulse
-                  "
-                >
-                  <span className="text-xl">
-                    {item.icon}
-                  </span>
-
-                  <span className="font-medium">
-                    {item.name}
-                  </span>
-                </div>
-              );
-            }
-
-            // -------------------------------------------------
-            // CHECK ACCESS
-            // -------------------------------------------------
-
-            const unlocked = hasAccess(
-              item.requiredLevel
-            );
-
-            // -------------------------------------------------
-            // LOCKED MODULE
-            // -------------------------------------------------
-
-            if (!unlocked) {
-              return (
-                <button
-                  key={item.name}
-                  type="button"
-                  onClick={() =>
-                    handleLockedClick(item)
-                  }
-                  title={`Upgrade your plan to access ${item.name}`}
-                  className="
-                    w-full
-                    flex
-                    items-center
-                    gap-4
-                    rounded-2xl
-                    px-5
-                    py-4
-                    text-left
-                    text-[#9A9F9B]
-                    bg-[#F5F2EB]
-                    border
-                    border-transparent
-                    cursor-not-allowed
-                    transition-all
-                    duration-200
-                    hover:border-[#D8CBAF]
-                    hover:bg-[#F1EEE6]
-                  "
-                >
-                  <span className="text-xl opacity-70">
-                    {item.icon}
-                  </span>
-
-                  <span className="font-medium flex-1">
-                    {item.name}
-                  </span>
-
-                  <FiLock
-                    className="
-                      text-[#A58B52]
-                      text-base
-                      shrink-0
-                    "
-                  />
-                </button>
-              );
-            }
-
-            // -------------------------------------------------
-            // UNLOCKED MODULE
-            // -------------------------------------------------
-
-            return (
-              <NavLink
-                key={item.name}
-                to={item.path}
-                className={({ isActive }) =>
-                  `
-                  flex
-                  items-center
-                  gap-4
-                  rounded-2xl
-                  px-5
-                  py-4
-                  transition-all
-                  duration-200
-
-                  ${
-                    isActive
-                      ? "bg-[#173B32] text-white shadow-md"
-                      : "text-[#45524A] hover:bg-[#EEF3EB] hover:text-[#315D4B]"
-                  }
-                  `
-                }
-              >
-                <span className="text-xl">
-                  {item.icon}
-                </span>
-
-                <span className="font-medium">
-                  {item.name}
-                </span>
-              </NavLink>
-            );
-          })}
 
           {/* =================================================
               SETTINGS
@@ -381,6 +540,7 @@ function Sidebar() {
 
             <NavLink
               to="/settings"
+              onClick={onClose}
               className={({ isActive }) =>
                 `
                 flex
@@ -413,6 +573,7 @@ function Sidebar() {
 
         </nav>
 
+
         {/* =================================================
             CURRENT PLAN
         ================================================= */}
@@ -442,17 +603,21 @@ function Sidebar() {
 
         </div>
 
+
         {/* =================================================
             VERSION
         ================================================= */}
 
-        <div className="p-6 border-t border-[#E6E1D8]">
+        <div className="border-t border-[#E6E1D8] p-6">
+
           <p className="text-sm text-[#8C938D]">
             Version 1.0.0
           </p>
+
         </div>
 
       </aside>
+
 
       {/* ===================================================
           UPGRADE MODAL
@@ -463,7 +628,7 @@ function Sidebar() {
           className="
             fixed
             inset-0
-            z-9999
+            z-10000
             flex
             items-center
             justify-center
@@ -473,6 +638,7 @@ function Sidebar() {
           "
           onClick={closeUpgradeModal}
         >
+
           <div
             className="
               relative
@@ -490,11 +656,7 @@ function Sidebar() {
             }
           >
 
-            {/* Gold top line */}
-
             <div className="h-1.5 bg-[#A58B52]" />
-
-            {/* Close button */}
 
             <button
               type="button"
@@ -519,11 +681,7 @@ function Sidebar() {
               <FiX size={19} />
             </button>
 
-            {/* Content */}
-
             <div className="px-7 py-8 text-center">
-
-              {/* Lock icon */}
 
               <div
                 className="
@@ -543,13 +701,9 @@ function Sidebar() {
                 <FiLock size={26} />
               </div>
 
-              {/* Heading */}
-
               <h2 className="text-2xl font-bold text-[#173B32]">
                 {upgradeModule.name} is locked
               </h2>
-
-              {/* Description */}
 
               <p className="mt-3 text-sm leading-6 text-[#6F776F]">
                 The{" "}
@@ -564,8 +718,6 @@ function Sidebar() {
                 </span>{" "}
                 plan.
               </p>
-
-              {/* Current plan */}
 
               <div
                 className="
@@ -586,8 +738,6 @@ function Sidebar() {
                   {plan}
                 </p>
               </div>
-
-              {/* Upgrade button */}
 
               <button
                 type="button"
@@ -638,6 +788,7 @@ function Sidebar() {
 
             </div>
           </div>
+
         </div>
       )}
     </>

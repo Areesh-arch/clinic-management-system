@@ -1,25 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   FiActivity,
-  FiArrowRight,
   FiBarChart2,
-  FiCalendar,
   FiCreditCard,
+  FiDollarSign,
   FiUsers,
 } from "react-icons/fi";
 
 import Layout from "../../components/layout/Layout";
 import { getPlatformOverview } from "../../services/platformService";
 
-
 const formatLabel = (value) => {
   if (!value) return "—";
 
-  return value
+  return String(value)
     .replace(/_/g, " ")
     .replace(/\b\w/g, (char) => char.toUpperCase());
 };
-
 
 const formatDate = (value) => {
   if (!value) return "—";
@@ -37,6 +34,18 @@ const formatDate = (value) => {
   });
 };
 
+const formatCurrency = (value) => {
+  const amount = Number(value);
+
+  if (!Number.isFinite(amount)) {
+    return "Rs. 0";
+  }
+
+  return `Rs. ${amount.toLocaleString("en-PK", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })}`;
+};
 
 const statusClass = (status) => {
   switch (status) {
@@ -57,36 +66,21 @@ const statusClass = (status) => {
   }
 };
 
-
-function StatCard({
-  icon,
-  title,
-  value,
-  description,
-}) {
+function StatCard({ icon, title, value, description }) {
   return (
     <div className="platform-stat-card">
       <div className="platform-stat-top">
-        <div className="platform-stat-icon">
-          {icon}
-        </div>
+        <div className="platform-stat-icon">{icon}</div>
       </div>
 
-      <p className="platform-stat-title">
-        {title}
-      </p>
+      <p className="platform-stat-title">{title}</p>
 
-      <div className="platform-stat-value">
-        {value}
-      </div>
+      <div className="platform-stat-value">{value}</div>
 
-      <p className="platform-stat-description">
-        {description}
-      </p>
+      <p className="platform-stat-description">{description}</p>
     </div>
   );
 }
-
 
 function PlatformOverview() {
   const [overview, setOverview] = useState(null);
@@ -100,41 +94,44 @@ function PlatformOverview() {
 
       const data = await getPlatformOverview();
 
+      console.log("Platform Overview API response:", data);
+
       setOverview(data);
     } catch (err) {
-      console.error(
-        "Failed to load platform overview:",
-        err
-      );
+      console.error("Failed to load platform overview:", err);
+
+      setOverview(null);
 
       setError(
-        err?.message ||
-          "Unable to load platform overview."
+        err?.message || "Unable to load platform overview."
       );
     } finally {
       setLoading(false);
     }
   };
 
-
   useEffect(() => {
     loadOverview();
   }, []);
 
-
   const stats = overview?.stats || {};
 
   const recentClinics =
-    overview?.recent_clinics || [];
+    Array.isArray(overview?.recent_clinics)
+      ? overview.recent_clinics
+      : [];
 
   const planBreakdown =
     overview?.subscription_breakdown || {};
 
+  const outstanding =
+    Array.isArray(overview?.outstanding)
+      ? overview.outstanding
+      : [];
 
   const planEntries = useMemo(() => {
     return Object.entries(planBreakdown);
   }, [planBreakdown]);
-
 
   const renderStatValue = (value) => {
     if (loading) {
@@ -151,7 +148,6 @@ function PlatformOverview() {
 
     return value;
   };
-
 
   return (
     <Layout>
@@ -330,9 +326,15 @@ function PlatformOverview() {
           padding: 0;
         }
 
+        .platform-table-wrapper {
+          width: 100%;
+          overflow-x: auto;
+        }
+
         .platform-table {
           width: 100%;
           border-collapse: collapse;
+          min-width: 760px;
         }
 
         .platform-table th {
@@ -344,6 +346,7 @@ function PlatformOverview() {
           text-align: left;
           text-transform: uppercase;
           letter-spacing: 0.08em;
+          white-space: nowrap;
         }
 
         .platform-table td {
@@ -351,6 +354,7 @@ function PlatformOverview() {
           border-top: 1px solid #EEE9E0;
           color: #45524A;
           font-size: 14px;
+          white-space: nowrap;
         }
 
         .platform-clinic-name {
@@ -389,22 +393,6 @@ function PlatformOverview() {
         .platform-status-inactive {
           background: #EEE8E2;
           color: #876E60;
-        }
-
-        .platform-manage-button {
-          display: inline-flex;
-          align-items: center;
-          gap: 7px;
-          border: none;
-          background: transparent;
-          color: #557B65;
-          font-size: 13px;
-          font-weight: 700;
-          cursor: pointer;
-        }
-
-        .platform-manage-button:hover {
-          color: #234D3C;
         }
 
         .platform-empty {
@@ -473,6 +461,56 @@ function PlatformOverview() {
           cursor: pointer;
         }
 
+        .platform-outstanding-panel {
+          margin-top: 30px;
+        }
+
+        .platform-outstanding-header-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #F3EBD5;
+          color: #9B8246;
+          font-size: 19px;
+        }
+
+        .platform-money {
+          font-weight: 600;
+          color: #45524A;
+        }
+
+        .platform-paid {
+          color: #557B65;
+          font-weight: 600;
+        }
+
+        .platform-outstanding-amount {
+          color: #A35F45;
+          font-weight: 700;
+        }
+
+        .platform-mrn {
+          margin-top: 4px;
+          color: #8A938C;
+          font-size: 12px;
+        }
+
+        .platform-visit {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 42px;
+          padding: 5px 9px;
+          border-radius: 8px;
+          background: #EEF2EC;
+          color: #557B65;
+          font-size: 12px;
+          font-weight: 700;
+        }
+
         @media (max-width: 1100px) {
           .platform-stats {
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -496,22 +534,19 @@ function PlatformOverview() {
             padding: 28px;
           }
 
-          .platform-table {
-            min-width: 760px;
+          .platform-panel-header {
+            padding: 20px;
           }
 
-          .platform-panel-body {
-            overflow-x: auto;
+          .platform-outstanding-panel {
+            margin-top: 22px;
           }
         }
       `}</style>
 
       <div className="platform-page">
 
-        {/* =====================================================
-            HEADER
-        ====================================================== */}
-
+        {/* HEADER */}
         <div className="platform-eyebrow">
           Platform Administration
         </div>
@@ -526,11 +561,7 @@ function PlatformOverview() {
           overall activity.
         </p>
 
-
-        {/* =====================================================
-            ERROR
-        ====================================================== */}
-
+        {/* ERROR */}
         {error && (
           <div className="platform-error">
             <span>{error}</span>
@@ -545,19 +576,12 @@ function PlatformOverview() {
           </div>
         )}
 
-
-        {/* =====================================================
-            STAT CARDS
-        ====================================================== */}
-
+        {/* STATS */}
         <div className="platform-stats">
-
           <StatCard
             icon={<FiUsers />}
             title="Total Clinics"
-            value={renderStatValue(
-              stats.total_clinics
-            )}
+            value={renderStatValue(stats.total_clinics)}
             description="Platform-wide"
           />
 
@@ -573,30 +597,20 @@ function PlatformOverview() {
           <StatCard
             icon={<FiUsers />}
             title="Total Patients"
-            value={renderStatValue(
-              stats.total_patients
-            )}
+            value={renderStatValue(stats.total_patients)}
             description="Across all clinics"
           />
 
           <StatCard
             icon={<FiBarChart2 />}
             title="Platform Revenue"
-            value={renderStatValue(
-              stats.platform_revenue
-            )}
+            value={renderStatValue(stats.platform_revenue)}
             description="Subscription revenue"
           />
-
         </div>
 
-
-        {/* =====================================================
-            WELCOME
-        ====================================================== */}
-
+        {/* WELCOME */}
         <section className="platform-welcome">
-
           <div className="platform-welcome-eyebrow">
             SaaS Platform
           </div>
@@ -611,22 +625,13 @@ function PlatformOverview() {
             DermaCare platform, subscription activity
             and platform-wide operational metrics.
           </p>
-
         </section>
 
-
-        {/* =====================================================
-            LOWER DASHBOARD
-        ====================================================== */}
-
+        {/* RECENT CLINICS + PLANS */}
         <div className="platform-section-grid">
 
-          {/* RECENT CLINICS */}
-
           <section className="platform-panel">
-
             <div className="platform-panel-header">
-
               <div>
                 <h2 className="platform-panel-heading">
                   Recent Clinics
@@ -636,11 +641,9 @@ function PlatformOverview() {
                   Recently registered clinics on the platform
                 </p>
               </div>
-
             </div>
 
             <div className="platform-panel-body">
-
               {loading ? (
                 <div className="platform-empty">
                   Loading clinics...
@@ -650,76 +653,61 @@ function PlatformOverview() {
                   No clinics found.
                 </div>
               ) : (
-                <table className="platform-table">
-
-                  <thead>
-                    <tr>
-                      <th>Clinic</th>
-                      <th>Plan</th>
-                      <th>Status</th>
-                      <th>Created</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-
-                    {recentClinics.map((clinic) => (
-                      <tr key={clinic.id}>
-
-                        <td>
-                          <div className="platform-clinic-name">
-                            {clinic.business_name}
-                          </div>
-
-                          <div className="platform-clinic-owner">
-                            {clinic.owner_name ||
-                              "Owner not available"}
-                          </div>
-                        </td>
-
-                        <td>
-                          {formatLabel(
-                            clinic.plan
-                          )}
-                        </td>
-
-                        <td>
-                          <span
-                            className={statusClass(
-                              clinic.subscription_status
-                            )}
-                          >
-                            {formatLabel(
-                              clinic.subscription_status
-                            )}
-                          </span>
-                        </td>
-
-                        <td>
-                          {formatDate(
-                            clinic.created_at
-                          )}
-                        </td>
-
+                <div className="platform-table-wrapper">
+                  <table className="platform-table">
+                    <thead>
+                      <tr>
+                        <th>Clinic</th>
+                        <th>Plan</th>
+                        <th>Status</th>
+                        <th>Created</th>
                       </tr>
-                    ))}
+                    </thead>
 
-                  </tbody>
+                    <tbody>
+                      {recentClinics.map((clinic) => (
+                        <tr key={clinic.id}>
+                          <td>
+                            <div className="platform-clinic-name">
+                              {clinic.business_name}
+                            </div>
 
-                </table>
+                            <div className="platform-clinic-owner">
+                              {clinic.owner_name ||
+                                "Owner not available"}
+                            </div>
+                          </td>
+
+                          <td>
+                            {formatLabel(clinic.plan)}
+                          </td>
+
+                          <td>
+                            <span
+                              className={statusClass(
+                                clinic.subscription_status
+                              )}
+                            >
+                              {formatLabel(
+                                clinic.subscription_status
+                              )}
+                            </span>
+                          </td>
+
+                          <td>
+                            {formatDate(clinic.created_at)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
-
             </div>
-
           </section>
 
-
-          {/* SUBSCRIPTION BREAKDOWN */}
-
           <section className="platform-panel">
-
             <div className="platform-panel-header">
-
               <div>
                 <h2 className="platform-panel-heading">
                   Subscription Plans
@@ -736,11 +724,9 @@ function PlatformOverview() {
                   fontSize: "20px",
                 }}
               />
-
             </div>
 
             <div className="platform-plan-list">
-
               {loading ? (
                 <div className="platform-empty">
                   Loading plans...
@@ -750,31 +736,146 @@ function PlatformOverview() {
                   No subscription data available.
                 </div>
               ) : (
-                planEntries.map(
-                  ([plan, count]) => (
-                    <div
-                      className="platform-plan-row"
-                      key={plan}
-                    >
+                planEntries.map(([plan, count]) => (
+                  <div
+                    className="platform-plan-row"
+                    key={plan}
+                  >
+                    <span className="platform-plan-name">
+                      {formatLabel(plan)}
+                    </span>
 
-                      <span className="platform-plan-name">
-                        {formatLabel(plan)}
-                      </span>
-
-                      <span className="platform-plan-count">
-                        {count}
-                      </span>
-
-                    </div>
-                  )
-                )
+                    <span className="platform-plan-count">
+                      {count}
+                    </span>
+                  </div>
+                ))
               )}
+            </div>
+          </section>
+        </div>
 
+        {/* OUTSTANDING PAYMENTS */}
+        <section className="platform-panel platform-outstanding-panel">
+
+          <div className="platform-panel-header">
+            <div>
+              <h2 className="platform-panel-heading">
+                Outstanding Payments
+              </h2>
+
+              <p className="platform-panel-description">
+                Unpaid balances across all clinics
+              </p>
             </div>
 
-          </section>
+            <div className="platform-outstanding-header-icon">
+              <FiDollarSign />
+            </div>
+          </div>
 
-        </div>
+          <div className="platform-panel-body">
+
+            {loading ? (
+              <div className="platform-empty">
+                Loading outstanding payments...
+              </div>
+            ) : outstanding.length === 0 ? (
+              <div className="platform-empty">
+                No outstanding payments found.
+              </div>
+            ) : (
+              <div className="platform-table-wrapper">
+
+                <table className="platform-table">
+
+                  <thead>
+                    <tr>
+                      <th>Clinic</th>
+                      <th>Patient</th>
+                      <th>MRN</th>
+                      <th>Visit</th>
+                      <th>Total Charge</th>
+                      <th>Paid</th>
+                      <th>Outstanding</th>
+                      <th>Updated</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {outstanding.map((item) => (
+                      <tr key={item.id}>
+
+                        <td>
+                          <div className="platform-clinic-name">
+                            {item.clinic_name ||
+                              "Unknown Clinic"}
+                          </div>
+
+                          <div className="platform-clinic-owner">
+                            Tenant #{item.tenant_id}
+                          </div>
+                        </td>
+
+                        <td>
+                          <div className="platform-clinic-name">
+                            {item.patient_name ||
+                              "Unknown Patient"}
+                          </div>
+                        </td>
+
+                        <td>
+                          {item.medical_record_number ? (
+                            item.medical_record_number
+                          ) : (
+                            <span className="platform-clinic-owner">
+                              —
+                            </span>
+                          )}
+                        </td>
+
+                        <td>
+                          <span className="platform-visit">
+                            #{item.visit_id}
+                          </span>
+                        </td>
+
+                        <td className="platform-money">
+                          {formatCurrency(
+                            item.total_charge
+                          )}
+                        </td>
+
+                        <td className="platform-paid">
+                          {formatCurrency(
+                            item.total_paid
+                          )}
+                        </td>
+
+                        <td className="platform-outstanding-amount">
+                          {formatCurrency(
+                            item.outstanding_amount
+                          )}
+                        </td>
+
+                        <td>
+                          {formatDate(
+                            item.updated_at ||
+                              item.created_at
+                          )}
+                        </td>
+
+                      </tr>
+                    ))}
+                  </tbody>
+
+                </table>
+
+              </div>
+            )}
+
+          </div>
+        </section>
 
       </div>
     </Layout>

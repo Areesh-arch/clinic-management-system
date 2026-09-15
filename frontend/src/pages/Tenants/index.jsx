@@ -607,7 +607,7 @@ function Tenants() {
 
                 <tbody>
 
-                  {tenants.map((tenant) => {
+                  {tenants.map((tenant, index) => {
 
                     const isSelected =
                       selectedTenantId &&
@@ -657,7 +657,7 @@ function Tenants() {
                               </div>
 
                               <p className="mt-0.5 text-xs text-[#9B8246]">
-                                Tenant #{tenant.id}
+                                Tenant #{index + 1}
                               </p>
 
                             </div>
