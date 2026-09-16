@@ -473,14 +473,17 @@ function Billing() {
           />
 
           {/* PAYMENT MODAL */}
+      
+
           <PaymentModal
             open={showPaymentModal}
             onClose={closePaymentModal}
             onSubmit={handleCreatePayment}
             patients={patients}
             visits={visits}
+            payments={payments}
             saving={saving}
-          />
+        />
 
           {/* EXPENSE MODAL */}
           <ExpenseModal
