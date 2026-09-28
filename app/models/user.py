@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, Enum, ForeignKey, String
@@ -11,14 +12,25 @@ from app.models.mixins import IDMixin, TimestampMixin
 if TYPE_CHECKING:
     from app.models.tenant import Tenant
     from app.models.staff import Staff
+    from app.models.patient import Patient
 
 
 class User(Base, IDMixin, TimestampMixin):
     """
     Represents a user belonging to a tenant (clinic).
+
+    User is the authentication/account layer.
+
+    Depending on the role, a User may be linked to:
+    - Staff
+    - Patient
     """
 
     __tablename__ = "users"
+
+    # =========================================================
+    # TENANT
+    # =========================================================
 
     tenant_id: Mapped[int | None] = mapped_column(
         ForeignKey(
@@ -28,6 +40,31 @@ class User(Base, IDMixin, TimestampMixin):
         nullable=True,
         index=True,
     )
+
+    # =========================================================
+    # PATIENT LINK
+    # =========================================================
+    #
+    # Only PATIENT users should have this field populated.
+    #
+    # unique=True ensures one portal account per patient.
+    # Multiple NULL values are allowed by PostgreSQL, so existing
+    # OWNER / STAFF / SUPER_ADMIN users are unaffected.
+    #
+
+    patient_id: Mapped[int | None] = mapped_column(
+        ForeignKey(
+            "patients.id",
+            ondelete="CASCADE",
+        ),
+        nullable=True,
+        unique=True,
+        index=True,
+    )
+
+    # =========================================================
+    # BASIC ACCOUNT INFORMATION
+    # =========================================================
 
     full_name: Mapped[str] = mapped_column(
         String(255),
@@ -83,6 +120,13 @@ class User(Base, IDMixin, TimestampMixin):
     staff: Mapped["Staff"] = relationship(
         "Staff",
         back_populates="user",
+        uselist=False,
+        lazy="selectin",
+    )
+
+    patient: Mapped["Patient"] = relationship(
+        "Patient",
+        back_populates="portal_user",
         uselist=False,
         lazy="selectin",
     )

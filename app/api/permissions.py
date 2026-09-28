@@ -23,3 +23,29 @@ def require_roles(*allowed_roles: UserRole):
         return current_user
 
     return role_checker
+
+
+def require_patient(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """
+    Allow access only to authenticated patient portal users.
+
+    The patient must have:
+    - PATIENT role
+    - a linked patient_id
+    """
+
+    if current_user.role != UserRole.PATIENT:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Patient portal access is restricted to patient accounts.",
+        )
+
+    if current_user.patient_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Patient account is not linked to a patient profile.",
+        )
+
+    return current_user

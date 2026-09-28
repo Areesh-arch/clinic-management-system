@@ -5,6 +5,9 @@ from app.api.v1.endpoints.tenant import router as tenant_router
 from app.api.v1.endpoints.patient import router as patient_router
 from app.api.v1.endpoints.user import router as user_router
 from app.api.v1.endpoints.staff import router as staff_router
+from app.api.v1.endpoints.patient_portal import (
+    router as patient_portal_router
+)
 from app.api.v1.endpoints.subscription import router as subscription_router
 from app.api.v1.endpoints.appointment import router as appointment_router
 from app.api.v1.endpoints.visit import router as visit_router
@@ -88,6 +91,15 @@ api_router.include_router(
     tags=["Staff"],
 )
 
+# =========================================================
+# PATIENT PORTAL
+# =========================================================
+
+api_router.include_router(
+    patient_portal_router,
+    prefix="/patient-portal",
+    tags=["Patient Portal"],
+)
 
 # =========================================================
 # SUBSCRIPTIONS

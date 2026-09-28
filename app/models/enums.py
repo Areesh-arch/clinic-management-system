@@ -40,6 +40,7 @@ class UserRole(str, Enum):
     SUPER_ADMIN = "super_admin"
     OWNER = "owner"
     STAFF = "staff"
+    PATIENT = "patient"
 
 
 class VisitStatus(str, Enum):

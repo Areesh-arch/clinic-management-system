@@ -30,3 +30,40 @@ class UserResponse(UserBase):
     model_config = ConfigDict(
         from_attributes=True,
     )
+
+
+# =========================================================
+# PATIENT PORTAL ACCOUNT
+# =========================================================
+
+class PatientPortalAccountCreate(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class PatientPortalAccountResponse(BaseModel):
+    user_id: int
+    patient_id: int
+    tenant_id: int
+    full_name: str
+    email: EmailStr
+    role: UserRole
+    is_active: bool
+
+    model_config = ConfigDict(
+        from_attributes=True,
+    )
+
+
+class PatientPortalAccountStatusResponse(BaseModel):
+    exists: bool
+    user_id: int | None = None
+    patient_id: int
+    tenant_id: int
+    full_name: str | None = None
+    email: EmailStr | None = None
+    is_active: bool = False
+
+    model_config = ConfigDict(
+        from_attributes=True,
+    )

@@ -1,48 +1,26 @@
 import { apiRequest } from "./api";
 
-
-// =====================================================
 // GET ALL PATIENTS
-// =====================================================
-
 export const getPatients = async () => {
   return await apiRequest("/patients/");
 };
 
-
-// =====================================================
 // GET SINGLE PATIENT
-// =====================================================
-
 export const getPatient = async (patientId) => {
   return await apiRequest(`/patients/${patientId}`);
 };
 
-
-// =====================================================
 // GET PATIENT PROFILE DATA
-//
-// We use the existing module endpoints.
-// No duplicate patient data is created.
-// =====================================================
-
 export const getPatientProfile = async (patientId) => {
   const patientPromise = getPatient(patientId);
 
-  const appointmentsPromise = apiRequest(
-    "/appointments/"
-  );
+  const appointmentsPromise = apiRequest("/appointments/");
+  const visitsPromise = apiRequest("/visits/");
+  const paymentsPromise = apiRequest("/payments/payments/");
+  const photosPromise = apiRequest("/treatment-photos/");
 
-  const visitsPromise = apiRequest(
-    "/visits/"
-  );
-
-  const paymentsPromise = apiRequest(
-    "/payments/payments/"
-  );
-
-  const photosPromise = apiRequest(
-    "/treatment-photos/"
+  const portalAccountPromise = apiRequest(
+    `/patients/${patientId}/portal-account`
   );
 
   const results = await Promise.allSettled([
@@ -51,6 +29,7 @@ export const getPatientProfile = async (patientId) => {
     visitsPromise,
     paymentsPromise,
     photosPromise,
+    portalAccountPromise,
   ]);
 
   const getResult = (result, fallback) => {
@@ -66,36 +45,21 @@ export const getPatientProfile = async (patientId) => {
     return fallback;
   };
 
-  const patient = getResult(
-    results[0],
-    null
-  );
+  const patient = getResult(results[0], null);
 
   if (!patient) {
-    throw new Error(
-      "Patient could not be loaded."
-    );
+    throw new Error("Patient could not be loaded.");
   }
 
-  const appointmentsData = getResult(
-    results[1],
-    []
-  );
+  const appointmentsData = getResult(results[1], []);
+  const visitsData = getResult(results[2], []);
+  const paymentsData = getResult(results[3], []);
+  const photosData = getResult(results[4], []);
 
-  const visitsData = getResult(
-    results[2],
-    []
-  );
-
-  const paymentsData = getResult(
-    results[3],
-    []
-  );
-
-  const photosData = getResult(
-    results[4],
-    []
-  );
+  const portalAccountData = getResult(results[5], {
+    exists: false,
+    is_active: false,
+  });
 
   const normalizeList = (data) => {
     if (Array.isArray(data)) {
@@ -113,139 +77,96 @@ export const getPatientProfile = async (patientId) => {
     return [];
   };
 
-  const appointments =
-    normalizeList(appointmentsData);
+  const appointments = normalizeList(appointmentsData);
+  const visits = normalizeList(visitsData);
+  const payments = normalizeList(paymentsData);
+  const photos = normalizeList(photosData);
 
-  const visits =
-    normalizeList(visitsData);
+  const patientAppointments = appointments.filter(
+    (appointment) =>
+      Number(appointment?.patient_id) === Number(patientId)
+  );
 
-  const payments =
-    normalizeList(paymentsData);
+  const patientVisits = visits.filter(
+    (visit) => Number(visit?.patient_id) === Number(patientId)
+  );
 
-  const photos =
-    normalizeList(photosData);
+  const patientPayments = payments.filter(
+    (payment) => Number(payment?.patient_id) === Number(patientId)
+  );
 
-  // ---------------------------------------------------
-  // PATIENT APPOINTMENTS
-  // ---------------------------------------------------
+  const patientVisitIds = new Set(
+    patientVisits
+      .map((visit) => visit?.id)
+      .filter(Boolean)
+      .map(Number)
+  );
 
-  const patientAppointments =
-    appointments.filter(
-      (appointment) =>
-        Number(appointment?.patient_id) ===
-        Number(patientId)
-    );
-
-  // ---------------------------------------------------
-  // PATIENT VISITS
-  // ---------------------------------------------------
-
-  const patientVisits =
-    visits.filter(
-      (visit) =>
-        Number(visit?.patient_id) ===
-        Number(patientId)
-    );
-
-  // ---------------------------------------------------
-  // PATIENT PAYMENTS
-  // ---------------------------------------------------
-
-  const patientPayments =
-    payments.filter(
-      (payment) =>
-        Number(payment?.patient_id) ===
-        Number(patientId)
-    );
-
-  // ---------------------------------------------------
-  // PATIENT VISIT IDS
-  // ---------------------------------------------------
-
-  const patientVisitIds =
-    new Set(
-      patientVisits
-        .map((visit) => visit?.id)
-        .filter(Boolean)
-        .map(Number)
-    );
-
-  // ---------------------------------------------------
-  // PATIENT TREATMENT PHOTOS
-  //
-  // Photos are connected to visits, so we match
-  // photo.visit_id against the patient's visits.
-  // ---------------------------------------------------
-
-  const patientPhotos =
-    photos.filter(
-      (photo) =>
-        patientVisitIds.has(
-          Number(photo?.visit_id)
-        )
-    );
+  const patientPhotos = photos.filter((photo) =>
+    patientVisitIds.has(Number(photo?.visit_id))
+  );
 
   return {
     patient,
-
-    appointments:
-      patientAppointments,
-
-    visits:
-      patientVisits,
-
-    payments:
-      patientPayments,
-
-    photos:
-      patientPhotos,
+    appointments: patientAppointments,
+    visits: patientVisits,
+    payments: patientPayments,
+    photos: patientPhotos,
+    portalAccount: portalAccountData,
   };
 };
 
-
-// =====================================================
 // CREATE PATIENT
-// =====================================================
-
-export const createPatient = async (
-  patientData
-) => {
+export const createPatient = async (patientData) => {
   return await apiRequest("/patients/", {
     method: "POST",
     body: JSON.stringify(patientData),
   });
 };
 
-
-// =====================================================
 // UPDATE PATIENT
-// =====================================================
-
-export const updatePatient = async (
-  patientId,
-  patientData
-) => {
-  return await apiRequest(
-    `/patients/${patientId}`,
-    {
-      method: "PUT",
-      body: JSON.stringify(patientData),
-    }
-  );
+export const updatePatient = async (patientId, patientData) => {
+  return await apiRequest(`/patients/${patientId}`, {
+    method: "PUT",
+    body: JSON.stringify(patientData),
+  });
 };
 
-
-// =====================================================
 // DELETE PATIENT
-// =====================================================
+export const deletePatient = async (patientId) => {
+  return await apiRequest(`/patients/${patientId}`, {
+    method: "DELETE",
+  });
+};
 
-export const deletePatient = async (
-  patientId
+// GET PATIENT PORTAL ACCOUNT
+export const getPatientPortalAccount = async (patientId) => {
+  return await apiRequest(`/patients/${patientId}/portal-account`);
+};
+
+// CREATE PATIENT PORTAL ACCOUNT
+export const createPatientPortalAccount = async (
+  patientId,
+  accountData
+) => {
+  return await apiRequest(`/patients/${patientId}/portal-account`, {
+    method: "POST",
+    body: JSON.stringify(accountData),
+  });
+};
+
+// UPDATE PATIENT PORTAL ACCOUNT STATUS
+export const updatePatientPortalAccountStatus = async (
+  patientId,
+  isActive
 ) => {
   return await apiRequest(
-    `/patients/${patientId}`,
+    `/patients/${patientId}/portal-account/status`,
     {
-      method: "DELETE",
+      method: "PATCH",
+      body: JSON.stringify({
+        is_active: isActive,
+      }),
     }
   );
 };

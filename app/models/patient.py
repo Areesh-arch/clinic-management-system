@@ -27,6 +27,7 @@ from app.models.mixins import (
 
 if TYPE_CHECKING:
     from app.models.tenant import Tenant
+    from app.models.user import User
     from app.models.appointment import Appointment
     from app.models.visit import Visit
     from app.models.payment import Payment
@@ -39,6 +40,8 @@ class Patient(Base, IDMixin, TenantMixin, TimestampMixin):
 
     Medical record numbers are unique within each tenant.
     The same medical record number can exist in different tenants.
+
+    A patient may optionally have one portal User account.
     """
 
     __tablename__ = "patients"
@@ -143,6 +146,21 @@ class Patient(Base, IDMixin, TenantMixin, TimestampMixin):
         default=True,
         nullable=False,
     )
+
+    # =========================================================
+    # PORTAL USER
+    # =========================================================
+
+    portal_user: Mapped["User | None"] = relationship(
+        "User",
+        back_populates="patient",
+        uselist=False,
+        lazy="selectin",
+    )
+
+    # =========================================================
+    # EXISTING RELATIONSHIPS
+    # =========================================================
 
     tenant: Mapped["Tenant"] = relationship(
         "Tenant",

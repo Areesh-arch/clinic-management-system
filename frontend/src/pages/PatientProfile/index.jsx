@@ -1,15 +1,23 @@
-
 import { useEffect, useState } from "react";
 
 import {
   FiArrowLeft,
   FiCalendar,
   FiCamera,
+  FiCheckCircle,
   FiCreditCard,
+  FiEye,
+  FiEyeOff,
   FiFileText,
   FiHeart,
+  FiLock,
+  FiMail,
   FiPlus,
+  FiRefreshCw,
   FiUser,
+  FiUserCheck,
+  FiUserX,
+  FiX,
 } from "react-icons/fi";
 
 import {
@@ -19,7 +27,12 @@ import {
 } from "react-router-dom";
 
 import Layout from "../../components/layout/Layout";
-import { getPatientProfile } from "../../services/patientService";
+
+import {
+  createPatientPortalAccount,
+  getPatientProfile,
+  updatePatientPortalAccountStatus,
+} from "../../services/patientService";
 
 const formatDate = (value) => {
   if (!value) return "—";
@@ -293,20 +306,6 @@ export default function PatientProfile() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  /*
-   * ============================================================
-   * BACK NAVIGATION
-   * ============================================================
-   *
-   * When opened from Appointments:
-   * Appointments -> Patient Profile -> Back to Appointments
-   *
-   * When opened from Patients:
-   * Patients -> Patient Profile -> Back to Patients
-   *
-   * Default remains /patients so existing behavior is preserved.
-   * ============================================================
-   */
   const backPath = location.state?.from || "/patients";
 
   const backLabel =
@@ -317,6 +316,23 @@ export default function PatientProfile() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Patient portal form state
+  const [portalEmail, setPortalEmail] = useState("");
+  const [portalPassword, setPortalPassword] = useState("");
+  const [portalConfirmPassword, setPortalConfirmPassword] = useState("");
+
+  const [showPortalPassword, setShowPortalPassword] = useState(false);
+  const [showPortalConfirmPassword, setShowPortalConfirmPassword] =
+    useState(false);
+
+  const [showPortalForm, setShowPortalForm] = useState(false);
+
+  const [portalActionLoading, setPortalActionLoading] =
+    useState(false);
+
+  const [portalError, setPortalError] = useState("");
+  const [portalSuccess, setPortalSuccess] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -365,6 +381,157 @@ export default function PatientProfile() {
     navigate(`/billing?patient_id=${patientId}`);
   };
 
+  const refreshProfile = async () => {
+    try {
+      const data = await getPatientProfile(patientId);
+      setProfile(data);
+    } catch (err) {
+      console.error("Failed to refresh patient profile:", err);
+    }
+  };
+
+  const openPortalForm = () => {
+    setPortalError("");
+    setPortalSuccess("");
+
+    setPortalEmail(profile?.patient?.email || "");
+    setPortalPassword("");
+    setPortalConfirmPassword("");
+
+    setShowPortalPassword(false);
+    setShowPortalConfirmPassword(false);
+
+    setShowPortalForm(true);
+  };
+
+  const closePortalForm = () => {
+    if (portalActionLoading) {
+      return;
+    }
+
+    setShowPortalForm(false);
+    setPortalError("");
+    setPortalPassword("");
+    setPortalConfirmPassword("");
+    setShowPortalPassword(false);
+    setShowPortalConfirmPassword(false);
+  };
+
+  const handleCreatePortalAccount = async (event) => {
+    event.preventDefault();
+
+    setPortalError("");
+    setPortalSuccess("");
+
+    const email = portalEmail.trim();
+
+    if (!email) {
+      setPortalError("Patient email is required.");
+      return;
+    }
+
+    if (!portalPassword) {
+      setPortalError("Temporary password is required.");
+      return;
+    }
+
+    if (portalPassword.length < 8) {
+      setPortalError(
+        "Password must contain at least 8 characters."
+      );
+      return;
+    }
+
+    if (!portalConfirmPassword) {
+      setPortalError("Please confirm the temporary password.");
+      return;
+    }
+
+    if (portalPassword !== portalConfirmPassword) {
+      setPortalError("Passwords do not match.");
+      return;
+    }
+
+    try {
+      setPortalActionLoading(true);
+
+      await createPatientPortalAccount(patientId, {
+        email,
+        password: portalPassword,
+      });
+
+      setPortalEmail("");
+      setPortalPassword("");
+      setPortalConfirmPassword("");
+
+      setShowPortalPassword(false);
+      setShowPortalConfirmPassword(false);
+      setShowPortalForm(false);
+
+      setPortalSuccess(
+        "Patient portal account created successfully. Give the patient the email and temporary password securely."
+      );
+
+      await refreshProfile();
+    } catch (err) {
+      console.error(
+        "Failed to create patient portal account:",
+        err
+      );
+
+      setPortalError(
+        err.message ||
+          "Failed to create patient portal account."
+      );
+    } finally {
+      setPortalActionLoading(false);
+    }
+  };
+
+  const handlePortalStatusChange = async (isActive) => {
+    const action = isActive ? "reactivate" : "deactivate";
+
+    const confirmed = window.confirm(
+      `Are you sure you want to ${action} this patient's portal account?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setPortalError("");
+    setPortalSuccess("");
+
+    try {
+      setPortalActionLoading(true);
+
+      await updatePatientPortalAccountStatus(
+        patientId,
+        isActive
+      );
+
+      setPortalSuccess(
+        isActive
+          ? "Patient portal account reactivated."
+          : "Patient portal account deactivated."
+      );
+
+      await refreshProfile();
+    } catch (err) {
+      console.error(
+        "Failed to update patient portal account:",
+        err
+      );
+
+      setPortalError(
+        err.message ||
+          "Failed to update patient portal account."
+      );
+    } finally {
+      setPortalActionLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -410,11 +577,16 @@ export default function PatientProfile() {
     visits = [],
     payments = [],
     photos = [],
+    portalAccount = {
+      exists: false,
+      is_active: false,
+    },
   } = profile;
 
   const patientName =
-    `${patient?.first_name || ""} ${patient?.last_name || ""}`.trim() ||
-    "Patient";
+    `${patient?.first_name || ""} ${
+      patient?.last_name || ""
+    }`.trim() || "Patient";
 
   const totalCharges = visits.reduce(
     (total, visit) =>
@@ -439,12 +611,17 @@ export default function PatientProfile() {
     0
   );
 
+  const portalExists = Boolean(portalAccount?.exists);
+
+  const portalActive =
+    portalExists && Boolean(portalAccount?.is_active);
+
   return (
     <Layout>
       <div className="min-h-full bg-[#F7F3E9] p-4 sm:p-6 lg:p-7">
         <div className="mx-auto max-w-375 space-y-5">
-          {/* Back */}
 
+          {/* Back */}
           <button
             type="button"
             onClick={() => navigate(backPath)}
@@ -455,7 +632,6 @@ export default function PatientProfile() {
           </button>
 
           {/* Patient Header */}
-
           <div className="relative overflow-hidden rounded-2xl bg-[#173B32] shadow-[0_8px_28px_rgba(23,59,50,0.12)]">
             <div className="absolute right-0 top-0 h-40 w-40 translate-x-16 -translate-y-16 rounded-full border border-white/10" />
 
@@ -513,7 +689,6 @@ export default function PatientProfile() {
           </div>
 
           {/* Quick Stats */}
-
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Stat
               icon={<FiCalendar size={18} />}
@@ -542,7 +717,6 @@ export default function PatientProfile() {
           </div>
 
           {/* Basic Information */}
-
           <Section
             title="Basic Information"
             icon={<FiUser size={17} />}
@@ -618,7 +792,6 @@ export default function PatientProfile() {
           </Section>
 
           {/* Medical Information */}
-
           <Section
             title="Medical Information"
             icon={<FiHeart size={17} />}
@@ -646,8 +819,377 @@ export default function PatientProfile() {
             </div>
           </Section>
 
-          {/* Appointments */}
+          {/* Patient Portal */}
+          <Section
+            title="Patient Portal"
+            icon={<FiLock size={17} />}
+          >
+            <div className="space-y-5">
 
+              {/* Portal Status */}
+              <div className="flex flex-col gap-4 rounded-xl border border-[#E5E9E4] bg-[#F8FAF7] p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                <div className="flex min-w-0 items-center gap-4">
+                  <div
+                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
+                      !portalExists
+                        ? "bg-[#EEF1EE] text-[#6D7771]"
+                        : portalActive
+                          ? "bg-[#E8F1EA] text-[#426A50]"
+                          : "bg-[#FBEDEC] text-[#A34E4A]"
+                    }`}
+                  >
+                    {!portalExists ? (
+                      <FiLock size={18} />
+                    ) : portalActive ? (
+                      <FiUserCheck size={18} />
+                    ) : (
+                      <FiUserX size={18} />
+                    )}
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[#173B32]">
+                      Portal Status
+                    </p>
+
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                          !portalExists
+                            ? "bg-[#EEF1EE] text-[#626C66]"
+                            : portalActive
+                              ? "bg-[#E8F1EA] text-[#426A50]"
+                              : "bg-[#FBEDEC] text-[#A34E4A]"
+                        }`}
+                      >
+                        {!portalExists
+                          ? "Not Created"
+                          : portalActive
+                            ? "Active"
+                            : "Inactive"}
+                      </span>
+
+                      {portalExists &&
+                        portalAccount?.email && (
+                          <span className="text-xs text-[#7B847E]">
+                            {portalAccount.email}
+                          </span>
+                        )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="shrink-0">
+                  {!portalExists ? (
+                    <button
+                      type="button"
+                      onClick={openPortalForm}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#173B32] px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[#245447] sm:w-auto"
+                    >
+                      <FiPlus size={14} />
+                      Create Portal Account
+                    </button>
+                  ) : portalActive ? (
+                    <button
+                      type="button"
+                      disabled={portalActionLoading}
+                      onClick={() =>
+                        handlePortalStatusChange(false)
+                      }
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#D8DCD8] bg-white px-4 py-2.5 text-xs font-semibold text-[#6D514F] transition-colors hover:bg-[#FBF5F4] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                    >
+                      <FiUserX size={14} />
+
+                      {portalActionLoading
+                        ? "Updating..."
+                        : "Deactivate Portal"}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={portalActionLoading}
+                      onClick={() =>
+                        handlePortalStatusChange(true)
+                      }
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#173B32] px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[#245447] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                    >
+                      <FiRefreshCw size={14} />
+
+                      {portalActionLoading
+                        ? "Updating..."
+                        : "Reactivate Portal"}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Create Portal Account Form */}
+              {showPortalForm && !portalExists && (
+                <form
+                  onSubmit={handleCreatePortalAccount}
+                  className="rounded-xl border border-[#E3E8E2] bg-[#FFFDF8] p-4 sm:p-5"
+                >
+                  <div className="mb-5">
+                    <h3 className="text-sm font-semibold text-[#173B32]">
+                      Create Patient Portal Account
+                    </h3>
+
+                    <p className="mt-1 text-xs leading-5 text-[#7B847E]">
+                      Create login credentials for this patient.
+                      The password will be securely hashed and
+                      cannot be viewed again after account creation.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+
+                    {/* Email */}
+                    <div>
+                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#7C857F]">
+                        Patient Email
+                      </label>
+
+                      <div className="relative">
+                        <FiMail
+                          size={15}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-[#89928C]"
+                        />
+
+                        <input
+                          type="email"
+                          value={portalEmail}
+                          onChange={(event) =>
+                            setPortalEmail(
+                              event.target.value
+                            )
+                          }
+                          placeholder="patient@example.com"
+                          autoComplete="email"
+                          disabled={portalActionLoading}
+                          className="w-full rounded-lg border border-[#DDE3DD] bg-white py-2.5 pl-9 pr-3 text-sm text-[#273C33] outline-none transition focus:border-[#7B9887] focus:ring-2 focus:ring-[#DCE8E0] disabled:cursor-not-allowed disabled:bg-[#F4F6F3]"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Temporary Password */}
+                    <div>
+                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#7C857F]">
+                        Temporary Password
+                      </label>
+
+                      <div className="relative">
+                        <FiLock
+                          size={15}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-[#89928C]"
+                        />
+
+                        <input
+                          type={
+                            showPortalPassword
+                              ? "text"
+                              : "password"
+                          }
+                          value={portalPassword}
+                          onChange={(event) =>
+                            setPortalPassword(
+                              event.target.value
+                            )
+                          }
+                          placeholder="Minimum 8 characters"
+                          minLength={8}
+                          autoComplete="new-password"
+                          disabled={portalActionLoading}
+                          className="w-full rounded-lg border border-[#DDE3DD] bg-white py-2.5 pl-9 pr-10 text-sm text-[#273C33] outline-none transition focus:border-[#7B9887] focus:ring-2 focus:ring-[#DCE8E0] disabled:cursor-not-allowed disabled:bg-[#F4F6F3]"
+                        />
+
+                        <button
+                          type="button"
+                          tabIndex={-1}
+                          onClick={() =>
+                            setShowPortalPassword(
+                              (current) => !current
+                            )
+                          }
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#89928C] transition-colors hover:text-[#173B32]"
+                          aria-label={
+                            showPortalPassword
+                              ? "Hide password"
+                              : "Show password"
+                          }
+                        >
+                          {showPortalPassword ? (
+                            <FiEyeOff size={16} />
+                          ) : (
+                            <FiEye size={16} />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Confirm Password */}
+                    <div className="md:col-span-2">
+                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#7C857F]">
+                        Confirm Temporary Password
+                      </label>
+
+                      <div className="relative">
+                        <FiLock
+                          size={15}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-[#89928C]"
+                        />
+
+                        <input
+                          type={
+                            showPortalConfirmPassword
+                              ? "text"
+                              : "password"
+                          }
+                          value={portalConfirmPassword}
+                          onChange={(event) =>
+                            setPortalConfirmPassword(
+                              event.target.value
+                            )
+                          }
+                          placeholder="Re-enter the temporary password"
+                          minLength={8}
+                          autoComplete="new-password"
+                          disabled={portalActionLoading}
+                          className={`w-full rounded-lg border bg-white py-2.5 pl-9 pr-10 text-sm text-[#273C33] outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:bg-[#F4F6F3] ${
+                            portalConfirmPassword &&
+                            portalPassword !==
+                              portalConfirmPassword
+                              ? "border-[#E2B9B5] focus:border-[#C87870] focus:ring-[#F7DEDB]"
+                              : portalConfirmPassword &&
+                                  portalPassword ===
+                                    portalConfirmPassword
+                                ? "border-[#BFD8C4] focus:border-[#6D9978] focus:ring-[#E2EFE1]"
+                                : "border-[#DDE3DD] focus:border-[#7B9887] focus:ring-[#DCE8E0]"
+                          }`}
+                        />
+
+                        <button
+                          type="button"
+                          tabIndex={-1}
+                          onClick={() =>
+                            setShowPortalConfirmPassword(
+                              (current) => !current
+                            )
+                          }
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#89928C] transition-colors hover:text-[#173B32]"
+                          aria-label={
+                            showPortalConfirmPassword
+                              ? "Hide password"
+                              : "Show password"
+                          }
+                        >
+                          {showPortalConfirmPassword ? (
+                            <FiEyeOff size={16} />
+                          ) : (
+                            <FiEye size={16} />
+                          )}
+                        </button>
+                      </div>
+
+                      {portalConfirmPassword &&
+                        portalPassword ===
+                          portalConfirmPassword && (
+                          <p className="mt-1.5 text-[11px] font-medium text-[#426A50]">
+                            Passwords match.
+                          </p>
+                        )}
+
+                      {portalConfirmPassword &&
+                        portalPassword !==
+                          portalConfirmPassword && (
+                          <p className="mt-1.5 text-[11px] font-medium text-[#A34E4A]">
+                            Passwords do not match.
+                          </p>
+                        )}
+                    </div>
+                  </div>
+
+                  {/* Password note */}
+                  <div className="mt-4 rounded-lg border border-[#E6E1D4] bg-[#FAF7EF] px-4 py-3">
+                    <p className="text-xs leading-5 text-[#756B58]">
+                      Keep this temporary password secure and
+                      provide it to the patient privately. The
+                      password cannot be retrieved from the system
+                      after the account is created.
+                    </p>
+                  </div>
+
+                  {/* Form errors */}
+                  {portalError && (
+                    <div className="mt-4 rounded-lg border border-[#F0D9D7] bg-[#FFF7F6] px-4 py-3">
+                      <p className="text-xs leading-5 text-[#A34E4A]">
+                        {portalError}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Form actions */}
+                  <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <button
+                      type="button"
+                      disabled={portalActionLoading}
+                      onClick={closePortalForm}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#DDE3DD] bg-white px-4 py-2.5 text-xs font-semibold text-[#637069] transition-colors hover:bg-[#F8FAF7] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <FiX size={14} />
+                      Cancel
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={portalActionLoading}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#173B32] px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[#245447] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <FiCheckCircle size={14} />
+
+                      {portalActionLoading
+                        ? "Creating..."
+                        : "Create Account"}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Success message */}
+              {portalSuccess && (
+                <div className="flex items-start gap-3 rounded-xl border border-[#D7E7DA] bg-[#F3F9F4] px-4 py-3">
+                  <FiCheckCircle
+                    size={17}
+                    className="mt-0.5 shrink-0 text-[#426A50]"
+                  />
+
+                  <p className="text-xs leading-5 text-[#426A50]">
+                    {portalSuccess}
+                  </p>
+                </div>
+              )}
+
+              {/* Portal account details */}
+              {portalExists && (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <InfoCard
+                    label="Portal Email"
+                    value={portalAccount?.email}
+                  />
+
+                  <InfoCard
+                    label="Account Status"
+                    value={
+                      portalActive
+                        ? "Active"
+                        : "Inactive"
+                    }
+                  />
+                </div>
+              )}
+            </div>
+          </Section>
+
+          {/* Appointments */}
           <Section
             title="Appointments"
             icon={<FiCalendar size={17} />}
@@ -725,7 +1267,6 @@ export default function PatientProfile() {
           </Section>
 
           {/* Treatment History */}
-
           <Section
             title="Treatment History"
             icon={<FiFileText size={17} />}
@@ -814,7 +1355,6 @@ export default function PatientProfile() {
           </Section>
 
           {/* Payments & Billing */}
-
           <Section
             title="Payments & Billing"
             icon={<FiCreditCard size={17} />}
@@ -910,7 +1450,6 @@ export default function PatientProfile() {
           </Section>
 
           {/* Patient Photos */}
-
           <Section
             title="Patient Photos"
             icon={<FiCamera size={17} />}
