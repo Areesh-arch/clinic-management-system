@@ -158,6 +158,7 @@ def me(
             UserRole.OWNER,
             UserRole.SUPER_ADMIN,
             UserRole.STAFF,
+            UserRole.PATIENT,
         )
     ),
 ):

@@ -15,11 +15,30 @@ function RoleProtectedRoute({ allowedRoles }) {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return (
+      <Navigate
+        to="/login"
+        replace
+      />
+    );
   }
 
   if (!allowedRoles.includes(user.role)) {
-    return <Navigate to="/dashboard" replace />;
+    if (user.role === "patient") {
+      return (
+        <Navigate
+          to="/patient-portal"
+          replace
+        />
+      );
+    }
+
+    return (
+      <Navigate
+        to="/dashboard"
+        replace
+      />
+    );
   }
 
   return <Outlet />;

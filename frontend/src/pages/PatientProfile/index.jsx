@@ -31,6 +31,7 @@ import Layout from "../../components/layout/Layout";
 import {
   createPatientPortalAccount,
   getPatientProfile,
+  resetPatientPortalPassword,
   updatePatientPortalAccountStatus,
 } from "../../services/patientService";
 
@@ -328,6 +329,14 @@ export default function PatientProfile() {
 
   const [showPortalForm, setShowPortalForm] = useState(false);
 
+  // Patient portal password reset state
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetConfirmPassword, setResetConfirmPassword] = useState("");
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [showResetConfirmPassword, setShowResetConfirmPassword] =
+    useState(false);
+  const [showResetForm, setShowResetForm] = useState(false);
+
   const [portalActionLoading, setPortalActionLoading] =
     useState(false);
 
@@ -482,6 +491,90 @@ export default function PatientProfile() {
       setPortalError(
         err.message ||
           "Failed to create patient portal account."
+      );
+    } finally {
+      setPortalActionLoading(false);
+    }
+  };
+
+  const openResetPasswordForm = () => {
+    setPortalError("");
+    setPortalSuccess("");
+
+    setResetPassword("");
+    setResetConfirmPassword("");
+    setShowResetPassword(false);
+    setShowResetConfirmPassword(false);
+    setShowResetForm(true);
+  };
+
+  const closeResetPasswordForm = () => {
+    if (portalActionLoading) {
+      return;
+    }
+
+    setShowResetForm(false);
+    setResetPassword("");
+    setResetConfirmPassword("");
+    setShowResetPassword(false);
+    setShowResetConfirmPassword(false);
+    setPortalError("");
+  };
+
+  const handleResetPortalPassword = async (event) => {
+    event.preventDefault();
+
+    setPortalError("");
+    setPortalSuccess("");
+
+    if (!resetPassword) {
+      setPortalError("New password is required.");
+      return;
+    }
+
+    if (resetPassword.length < 8) {
+      setPortalError("Password must contain at least 8 characters.");
+      return;
+    }
+
+    if (!resetConfirmPassword) {
+      setPortalError("Please confirm the new password.");
+      return;
+    }
+
+    if (resetPassword !== resetConfirmPassword) {
+      setPortalError("Passwords do not match.");
+      return;
+    }
+
+    try {
+      setPortalActionLoading(true);
+
+      await resetPatientPortalPassword(patientId, {
+        password: resetPassword,
+        confirm_password: resetConfirmPassword,
+      });
+
+      setResetPassword("");
+      setResetConfirmPassword("");
+      setShowResetPassword(false);
+      setShowResetConfirmPassword(false);
+      setShowResetForm(false);
+
+      setPortalSuccess(
+        "Patient portal password reset successfully. Provide the new password to the patient securely."
+      );
+
+      await refreshProfile();
+    } catch (err) {
+      console.error(
+        "Failed to reset patient portal password:",
+        err
+      );
+
+      setPortalError(
+        err.message ||
+          "Failed to reset patient portal password."
       );
     } finally {
       setPortalActionLoading(false);
@@ -890,35 +983,59 @@ export default function PatientProfile() {
                       Create Portal Account
                     </button>
                   ) : portalActive ? (
-                    <button
-                      type="button"
-                      disabled={portalActionLoading}
-                      onClick={() =>
-                        handlePortalStatusChange(false)
-                      }
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#D8DCD8] bg-white px-4 py-2.5 text-xs font-semibold text-[#6D514F] transition-colors hover:bg-[#FBF5F4] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-                    >
-                      <FiUserX size={14} />
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                      <button
+                        type="button"
+                        disabled={portalActionLoading}
+                        onClick={openResetPasswordForm}
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#D8DCD8] bg-white px-4 py-2.5 text-xs font-semibold text-[#173B32] transition-colors hover:bg-[#F4F7F4] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                      >
+                        <FiLock size={14} />
+                        Reset Password
+                      </button>
 
-                      {portalActionLoading
-                        ? "Updating..."
-                        : "Deactivate Portal"}
-                    </button>
+                      <button
+                        type="button"
+                        disabled={portalActionLoading}
+                        onClick={() =>
+                          handlePortalStatusChange(false)
+                        }
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#D8DCD8] bg-white px-4 py-2.5 text-xs font-semibold text-[#6D514F] transition-colors hover:bg-[#FBF5F4] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                      >
+                        <FiUserX size={14} />
+
+                        {portalActionLoading
+                          ? "Updating..."
+                          : "Deactivate Portal"}
+                      </button>
+                    </div>
                   ) : (
-                    <button
-                      type="button"
-                      disabled={portalActionLoading}
-                      onClick={() =>
-                        handlePortalStatusChange(true)
-                      }
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#173B32] px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[#245447] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-                    >
-                      <FiRefreshCw size={14} />
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                      <button
+                        type="button"
+                        disabled={portalActionLoading}
+                        onClick={openResetPasswordForm}
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#D8DCD8] bg-white px-4 py-2.5 text-xs font-semibold text-[#173B32] transition-colors hover:bg-[#F4F7F4] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                      >
+                        <FiLock size={14} />
+                        Reset Password
+                      </button>
 
-                      {portalActionLoading
-                        ? "Updating..."
-                        : "Reactivate Portal"}
-                    </button>
+                      <button
+                        type="button"
+                        disabled={portalActionLoading}
+                        onClick={() =>
+                          handlePortalStatusChange(true)
+                        }
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#173B32] px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[#245447] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                      >
+                        <FiRefreshCw size={14} />
+
+                        {portalActionLoading
+                          ? "Updating..."
+                          : "Reactivate Portal"}
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -1154,6 +1271,198 @@ export default function PatientProfile() {
                 </form>
               )}
 
+              {/* Reset Portal Password Form */}
+              {showResetForm && portalExists && (
+                <form
+                  onSubmit={handleResetPortalPassword}
+                  className="rounded-xl border border-[#E3E8E2] bg-[#FFFDF8] p-4 sm:p-5"
+                >
+                  <div className="mb-5">
+                    <h3 className="text-sm font-semibold text-[#173B32]">
+                      Reset Patient Portal Password
+                    </h3>
+
+                    <p className="mt-1 text-xs leading-5 text-[#7B847E]">
+                      Set a new password for this patient portal account.
+                      The previous password will no longer work. The password
+                      is securely hashed and cannot be viewed again.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    {/* New Password */}
+                    <div>
+                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#7C857F]">
+                        New Password
+                      </label>
+
+                      <div className="relative">
+                        <FiLock
+                          size={15}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-[#89928C]"
+                        />
+
+                        <input
+                          type={
+                            showResetPassword
+                              ? "text"
+                              : "password"
+                          }
+                          value={resetPassword}
+                          onChange={(event) =>
+                            setResetPassword(event.target.value)
+                          }
+                          placeholder="Minimum 8 characters"
+                          minLength={8}
+                          autoComplete="new-password"
+                          disabled={portalActionLoading}
+                          className="w-full rounded-lg border border-[#DDE3DD] bg-white py-2.5 pl-9 pr-10 text-sm text-[#273C33] outline-none transition focus:border-[#7B9887] focus:ring-2 focus:ring-[#DCE8E0] disabled:cursor-not-allowed disabled:bg-[#F4F6F3]"
+                        />
+
+                        <button
+                          type="button"
+                          tabIndex={-1}
+                          onClick={() =>
+                            setShowResetPassword(
+                              (current) => !current
+                            )
+                          }
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#89928C] transition-colors hover:text-[#173B32]"
+                          aria-label={
+                            showResetPassword
+                              ? "Hide password"
+                              : "Show password"
+                          }
+                        >
+                          {showResetPassword ? (
+                            <FiEyeOff size={16} />
+                          ) : (
+                            <FiEye size={16} />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Confirm Password */}
+                    <div>
+                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#7C857F]">
+                        Confirm New Password
+                      </label>
+
+                      <div className="relative">
+                        <FiLock
+                          size={15}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-[#89928C]"
+                        />
+
+                        <input
+                          type={
+                            showResetConfirmPassword
+                              ? "text"
+                              : "password"
+                          }
+                          value={resetConfirmPassword}
+                          onChange={(event) =>
+                            setResetConfirmPassword(
+                              event.target.value
+                            )
+                          }
+                          placeholder="Re-enter the new password"
+                          minLength={8}
+                          autoComplete="new-password"
+                          disabled={portalActionLoading}
+                          className={`w-full rounded-lg border bg-white py-2.5 pl-9 pr-10 text-sm text-[#273C33] outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:bg-[#F4F6F3] ${
+                            resetConfirmPassword &&
+                            resetPassword !== resetConfirmPassword
+                              ? "border-[#E2B9B5] focus:border-[#C87870] focus:ring-[#F7DEDB]"
+                              : resetConfirmPassword &&
+                                  resetPassword ===
+                                    resetConfirmPassword
+                                ? "border-[#BFD8C4] focus:border-[#6D9978] focus:ring-[#E2EFE1]"
+                                : "border-[#DDE3DD] focus:border-[#7B9887] focus:ring-[#DCE8E0]"
+                          }`}
+                        />
+
+                        <button
+                          type="button"
+                          tabIndex={-1}
+                          onClick={() =>
+                            setShowResetConfirmPassword(
+                              (current) => !current
+                            )
+                          }
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#89928C] transition-colors hover:text-[#173B32]"
+                          aria-label={
+                            showResetConfirmPassword
+                              ? "Hide password"
+                              : "Show password"
+                          }
+                        >
+                          {showResetConfirmPassword ? (
+                            <FiEyeOff size={16} />
+                          ) : (
+                            <FiEye size={16} />
+                          )}
+                        </button>
+                      </div>
+
+                      {resetConfirmPassword &&
+                        resetPassword === resetConfirmPassword && (
+                          <p className="mt-1.5 text-[11px] font-medium text-[#426A50]">
+                            Passwords match.
+                          </p>
+                        )}
+
+                      {resetConfirmPassword &&
+                        resetPassword !== resetConfirmPassword && (
+                          <p className="mt-1.5 text-[11px] font-medium text-[#A34E4A]">
+                            Passwords do not match.
+                          </p>
+                        )}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 rounded-lg border border-[#E6E1D4] bg-[#FAF7EF] px-4 py-3">
+                    <p className="text-xs leading-5 text-[#756B58]">
+                      Give the new password to the patient privately.
+                      The system stores only a secure password hash and
+                      cannot retrieve the password later.
+                    </p>
+                  </div>
+
+                  {portalError && (
+                    <div className="mt-4 rounded-lg border border-[#F0D9D7] bg-[#FFF7F6] px-4 py-3">
+                      <p className="text-xs leading-5 text-[#A34E4A]">
+                        {portalError}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <button
+                      type="button"
+                      disabled={portalActionLoading}
+                      onClick={closeResetPasswordForm}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#DDE3DD] bg-white px-4 py-2.5 text-xs font-semibold text-[#637069] transition-colors hover:bg-[#F8FAF7] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <FiX size={14} />
+                      Cancel
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={portalActionLoading}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#173B32] px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[#245447] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <FiCheckCircle size={14} />
+                      {portalActionLoading
+                        ? "Resetting..."
+                        : "Reset Password"}
+                    </button>
+                  </div>
+                </form>
+              )}
+
               {/* Success message */}
               {portalSuccess && (
                 <div className="flex items-start gap-3 rounded-xl border border-[#D7E7DA] bg-[#F3F9F4] px-4 py-3">
@@ -1170,20 +1479,30 @@ export default function PatientProfile() {
 
               {/* Portal account details */}
               {portalExists && (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <InfoCard
-                    label="Portal Email"
-                    value={portalAccount?.email}
-                  />
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <InfoCard
+                      label="Portal Email"
+                      value={portalAccount?.email}
+                    />
 
-                  <InfoCard
-                    label="Account Status"
-                    value={
-                      portalActive
-                        ? "Active"
-                        : "Inactive"
-                    }
-                  />
+                    <InfoCard
+                      label="Account Status"
+                      value={
+                        portalActive
+                          ? "Active"
+                          : "Inactive"
+                      }
+                    />
+                  </div>
+
+                  <div className="rounded-lg border border-[#E6E1D4] bg-[#FAF7EF] px-4 py-3">
+                    <p className="text-xs leading-5 text-[#756B58]">
+                      Portal passwords are never displayed in the patient
+                      profile. Use <span className="font-semibold">Reset Password</span>
+                      above whenever the patient needs a new password.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>

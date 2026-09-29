@@ -1,4 +1,3 @@
-
 from fastapi import (
     APIRouter,
     Depends,
@@ -28,6 +27,8 @@ from app.schemas.user import (
     PatientPortalAccountCreate,
     PatientPortalAccountResponse,
     PatientPortalAccountStatusResponse,
+    PatientPortalAccountStatusUpdate,
+    PatientPortalPasswordReset,
 )
 
 from app.services.patient_service import (
@@ -40,6 +41,7 @@ from app.services.patient_service import (
 from app.services.patient_portal_service import (
     create_patient_portal_account_service,
     get_patient_portal_account_service,
+    reset_patient_portal_password_service,
     set_patient_portal_account_status_service,
 )
 
@@ -187,7 +189,7 @@ def get_patient_portal_account(
 )
 def update_patient_portal_account_status(
     patient_id: int,
-    is_active: bool,
+    account_status: PatientPortalAccountStatusUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_roles(
@@ -218,7 +220,63 @@ def update_patient_portal_account_status(
     user = set_patient_portal_account_status_service(
         db=db,
         patient=patient,
-        is_active=is_active,
+        is_active=account_status.is_active,
+    )
+
+    return {
+        "user_id": user.id,
+        "patient_id": user.patient_id,
+        "tenant_id": user.tenant_id,
+        "full_name": user.full_name,
+        "email": user.email,
+        "role": user.role,
+        "is_active": user.is_active,
+    }
+
+
+# =========================================================
+# RESET PATIENT PORTAL PASSWORD
+# =========================================================
+
+@router.post(
+    "/{patient_id}/portal-account/reset-password",
+    response_model=PatientPortalAccountResponse,
+)
+def reset_patient_portal_password(
+    patient_id: int,
+    password_data: PatientPortalPasswordReset,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.OWNER,
+            UserRole.STAFF,
+            UserRole.SUPER_ADMIN,
+        )
+    ),
+    tenant_id: int = Depends(
+        get_effective_tenant_id
+    ),
+    _: User = Depends(
+        require_feature(Feature.PATIENTS)
+    ),
+):
+    patient = get_patient_service(
+        db=db,
+        patient_id=patient_id,
+        tenant_id=tenant_id,
+    )
+
+    if not patient:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Patient not found",
+        )
+
+    user = reset_patient_portal_password_service(
+        db=db,
+        patient=patient,
+        password=password_data.password,
+        confirm_password=password_data.confirm_password,
     )
 
     return {
@@ -416,6 +474,7 @@ def create_patient_portal_account(
         patient=patient,
         email=account_data.email,
         password=account_data.password,
+        confirm_password=account_data.confirm_password,
     )
 
     return {

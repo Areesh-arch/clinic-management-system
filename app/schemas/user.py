@@ -39,6 +39,16 @@ class UserResponse(UserBase):
 class PatientPortalAccountCreate(BaseModel):
     email: EmailStr
     password: str
+    confirm_password: str
+
+
+class PatientPortalPasswordReset(BaseModel):
+    password: str
+    confirm_password: str
+
+
+class PatientPortalAccountStatusUpdate(BaseModel):
+    is_active: bool
 
 
 class PatientPortalAccountResponse(BaseModel):

@@ -4,7 +4,6 @@ import {
   Route,
 } from "react-router-dom";
 
-
 import Login from "../pages/Login";
 import ForgotPassword from "../pages/ForgotPassword";
 
@@ -33,12 +32,12 @@ import CRM from "../pages/CRM";
 import CMS from "../pages/CMS";
 
 import ProtectedRoute from "../components/auth/ProtectedRoute";
+import RoleProtectedRoute from "../components/auth/RoleProtectedRoute";
 
 
 function AppRouter() {
   return (
     <BrowserRouter>
-
       <Routes>
 
         {/* =====================================================
@@ -62,171 +61,225 @@ function AppRouter() {
 
 
         {/* =====================================================
-            PROTECTED ROUTES
+            ALL AUTHENTICATED ROUTES
         ===================================================== */}
 
         <Route element={<ProtectedRoute />}>
 
           {/* ===================================================
-              OWNER DASHBOARD
+              CLINIC APPLICATION
+              OWNER / STAFF / SUPER_ADMIN ONLY
           =================================================== */}
 
           <Route
-            path="/dashboard"
-            element={<Dashboard />}
-          />
+            element={
+              <RoleProtectedRoute
+                allowedRoles={[
+                  "owner",
+                  "staff",
+                  "super_admin",
+                ]}
+              />
+            }
+          >
+
+            {/* =================================================
+                CLINIC DASHBOARD
+            ================================================= */}
+
+            <Route
+              path="/dashboard"
+              element={<Dashboard />}
+            />
+
+
+            {/* =================================================
+                SUPER ADMIN
+            ================================================= */}
+
+            <Route
+              path="/platform"
+              element={<PlatformOverview />}
+            />
+
+            <Route
+              path="/platform/admins"
+              element={<SuperAdmins />}
+            />
+
+            <Route
+              path="/tenants"
+              element={<Tenants />}
+            />
+
+            <Route
+              path="/subscriptions"
+              element={<Subscriptions />}
+            />
+
+
+            {/* =================================================
+                PATIENTS
+            ================================================= */}
+
+            <Route
+              path="/patients"
+              element={<Patients />}
+            />
+
+            <Route
+              path="/patients/:patientId"
+              element={<PatientProfile />}
+            />
+
+
+            {/* =================================================
+                STAFF
+            ================================================= */}
+
+            <Route
+              path="/staff"
+              element={<Staff />}
+            />
+
+
+            {/* =================================================
+                APPOINTMENTS
+            ================================================= */}
+
+            <Route
+              path="/appointments/archive"
+              element={<AppointmentArchive />}
+            />
+
+            <Route
+              path="/appointments"
+              element={<Appointments />}
+            />
+
+
+            {/* =================================================
+                TREATMENTS
+            ================================================= */}
+
+            <Route
+              path="/treatments/archive"
+              element={<TreatmentArchive />}
+            />
+
+            <Route
+              path="/treatments"
+              element={<Treatments />}
+            />
+
+
+            {/* =================================================
+                PHOTOS
+            ================================================= */}
+
+            <Route
+              path="/photos"
+              element={<Photos />}
+            />
+
+
+            {/* =================================================
+                INVENTORY
+            ================================================= */}
+
+            <Route
+              path="/inventory"
+              element={<Inventory />}
+            />
+
+
+            {/* =================================================
+                BILLING
+            ================================================= */}
+
+            <Route
+              path="/billing"
+              element={<Billing />}
+            />
+
+
+            {/* =================================================
+                ARCHIVE
+            ================================================= */}
+
+            <Route
+              path="/archive"
+              element={<Archive />}
+            />
+
+
+            {/* =================================================
+                CRM
+            ================================================= */}
+
+            <Route
+              path="/crm"
+              element={<CRM />}
+            />
+
+
+            {/* =================================================
+                CMS
+            ================================================= */}
+
+            <Route
+              path="/cms"
+              element={<CMS />}
+            />
+
+
+            {/* =================================================
+                SETTINGS
+            ================================================= */}
+
+            <Route
+              path="/settings"
+              element={<Settings />}
+            />
+
+          </Route>
 
 
           {/* ===================================================
-              SUPER ADMIN DASHBOARD
+              PATIENT PORTAL
+              PATIENT ONLY
           =================================================== */}
 
           <Route
-            path="/platform"
-            element={<PlatformOverview />}
-          />
+            element={
+              <RoleProtectedRoute
+                allowedRoles={["patient"]}
+              />
+            }
+          >
 
-          <Route
-            path="/platform/admins"
-            element={<SuperAdmins />}
-          />
+            <Route
+              path="/patient-portal"
+              element={
+                <div className="min-h-screen flex items-center justify-center bg-[#F7F3E9]">
+                  <div className="text-center">
+                    <h1 className="text-3xl font-semibold text-[#173B32]">
+                      Patient Portal
+                    </h1>
 
-          <Route
-            path="/tenants"
-            element={<Tenants />}
-          />
+                    <p className="mt-2 text-[#6F8F7D]">
+                      Welcome to your patient portal.
+                    </p>
+                  </div>
+                </div>
+              }
+            />
 
-          <Route
-            path="/subscriptions"
-            element={<Subscriptions />}
-          />
-
-
-          {/* ===================================================
-              CLINIC MODULES
-          =================================================== */}
-
-          <Route
-            path="/patients"
-            element={<Patients />}
-          />
-
-          {/* PATIENT PROFILE */}
-
-          <Route
-            path="/patients/:patientId"
-            element={<PatientProfile />}
-          />
-
-          <Route
-            path="/staff"
-            element={<Staff />}
-          />
-
-
-          {/* ===================================================
-              APPOINTMENTS
-          =================================================== */}
-
-          <Route
-            path="/appointments/archive"
-            element={<AppointmentArchive />}
-          />
-
-          <Route
-            path="/appointments"
-            element={<Appointments />}
-          />
-
-
-          {/* ===================================================
-              TREATMENTS
-          =================================================== */}
-
-          <Route
-            path="/treatments/archive"
-            element={<TreatmentArchive />}
-          />
-
-          <Route
-            path="/treatments"
-            element={<Treatments />}
-          />
-
-
-          {/* ===================================================
-              PHOTOS
-          =================================================== */}
-
-          <Route
-            path="/photos"
-            element={<Photos />}
-          />
-
-
-          {/* ===================================================
-              INVENTORY
-          =================================================== */}
-
-          <Route
-            path="/inventory"
-            element={<Inventory />}
-          />
-
-
-          {/* ===================================================
-              BILLING
-          =================================================== */}
-
-          <Route
-            path="/billing"
-            element={<Billing />}
-          />
-
-
-          {/* ===================================================
-              ARCHIVE
-          =================================================== */}
-
-          <Route
-            path="/archive"
-            element={<Archive />}
-          />
-
-
-          {/* ===================================================
-              CRM
-          =================================================== */}
-
-          <Route
-            path="/crm"
-            element={<CRM />}
-          />
-
-
-          {/* ===================================================
-              CMS
-          =================================================== */}
-
-          <Route
-            path="/cms"
-            element={<CMS />}
-          />
-
-
-          {/* ===================================================
-              SUPER ADMIN SYSTEM SETTINGS
-          =================================================== */}
-
-          <Route
-            path="/settings"
-            element={<Settings />}
-          />
+          </Route>
 
         </Route>
 
       </Routes>
-
     </BrowserRouter>
   );
 }

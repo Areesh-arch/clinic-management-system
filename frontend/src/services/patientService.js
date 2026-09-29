@@ -1,3 +1,4 @@
+
 import { apiRequest } from "./api";
 
 // GET ALL PATIENTS
@@ -167,6 +168,20 @@ export const updatePatientPortalAccountStatus = async (
       body: JSON.stringify({
         is_active: isActive,
       }),
+    }
+  );
+};
+
+// RESET PATIENT PORTAL PASSWORD
+export const resetPatientPortalPassword = async (
+  patientId,
+  passwordData
+) => {
+  return await apiRequest(
+    `/patients/${patientId}/portal-account/reset-password`,
+    {
+      method: "POST",
+      body: JSON.stringify(passwordData),
     }
   );
 };
